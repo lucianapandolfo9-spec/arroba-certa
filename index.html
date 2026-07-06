@@ -506,11 +506,28 @@ async function renderLotes(){
       </div>`;
     }
     html+='</div>';
-    html+=`<div style="display:flex;gap:8px;margin:16px 0 40px">
+    html+=`<div style="display:flex;gap:8px;margin:16px 0 10px">
       <button class="btn sec" style="flex:1" onclick="novoLote()">+ Novo lote</button>
       <button class="btn sec" style="flex:1" onclick="renderImportar()">📄 Importar planilha</button>
     </div>`;
   }
+
+  const fechados=(lotes||[]).filter(l=>!l.ativo)
+    .sort((a,b)=>String(b.data_saida||'').localeCompare(String(a.data_saida||'')));
+  if(fechados.length){
+    const lucroRealTotal=fechados.reduce((s,l)=>s+(Number(l.lucro_realizado_total)||0),0);
+    html+=`<div class="section-title">✅ Lotes fechados (vendidos) — lucro realizado: <b class="${lucroRealTotal<0?'neg':'pos'}">${brl(lucroRealTotal)}</b></div>
+    <div class="card">`;
+    for(const l of fechados){
+      const lr=Number(l.lucro_realizado_total);
+      html+=`<div class="row" style="cursor:pointer" onclick="renderLote('${l.lote_id}')">
+        <span class="k"><b>${l.nome}</b><br><small>${l.qtd_animais||0} cab · vendido em ${fmtData(l.data_saida)}</small></span>
+        <span class="v ${lr<0?'neg':'pos'}">${isNaN(lr)?'—':brl(lr)}</span>
+      </div>`;
+    }
+    html+='</div>';
+  }
+  html+='<div style="height:30px"></div>';
   body.innerHTML=html;
 }
 
@@ -525,37 +542,63 @@ async function renderLote(id){
     db.from('custo').select('*').eq('lote_id',id).order('data',{ascending:false}),
   ]);
   const v=vs; const lucro=Number(v.lucro_cab);
+  const fechado = !v.ativo;
   const origem = v.preco_arroba_praticado!=null ? 'seu preço' : (v.preco_arroba_referencia!=null?'referência CEPEA':'sem preço definido');
 
   let html=`<button class="back" onclick="renderLotes()">← Voltar</button>
     <div style="display:flex;justify-content:space-between;align-items:center;margin:6px 0;gap:10px">
       <div><div class="nome" style="font-size:22px">${v.nome}</div>
-        <span class="pill">${v.fase||''}</span> <span class="mut">${v.sistema||''} · ${v.qtd_animais} cab</span></div>
+        <span class="pill">${v.fase||''}</span> ${fechado?'<span class="pill" style="background:var(--terra);color:#fff">vendido</span>':''} <span class="mut">${v.sistema||''} · ${v.qtd_animais} cab</span></div>
       <button class="btn sec mini" style="flex-shrink:0" onclick="editarLote('${id}')">✏️ Editar</button>
-    </div>
+    </div>`;
 
+  if(fechado){
+    html+=`
+    <div class="card hero" style="background:linear-gradient(135deg,var(--marrom),var(--terra))">
+      <h3>Lucro REALIZADO (venda fechada)</h3>
+      <div class="big">${brl(v.lucro_realizado_total)}</div>
+      <p style="opacity:.9;font-size:13px;margin-top:6px">${brl(v.lucro_realizado_cab)} por cabeça · vendido em ${fmtData(lote.data_saida)}</p>
+    </div>
+    <div class="card">
+      <h3>✅ Dados da venda</h3>
+      <div class="row"><span class="k">Data da venda</span><span class="v">${fmtData(lote.data_saida)}</span></div>
+      <div class="row"><span class="k">Peso de embarque (médio)</span><span class="v">${num(lote.peso_venda_kg,0)} kg</span></div>
+      <div class="row"><span class="k">Rendimento de carcaça</span><span class="v">${lote.rendimento_venda!=null?Math.round(lote.rendimento_venda*100)+'%':'—'}</span></div>
+      <div class="row"><span class="k">Arrobas por cabeça</span><span class="v">${num(v.arrobas_venda_cab,2)} @</span></div>
+      <div class="row"><span class="k">Preço da @ recebido</span><span class="v">${brl(lote.preco_arroba_venda)}</span></div>
+      <div class="row"><span class="k">Receita do lote</span><span class="v">${brl(v.receita_venda_total)}</span></div>
+      <div class="row"><span class="k">Custo total do lote</span><span class="v">${brl(v.custo_lote_total ?? (Number(v.custo_cab_total)*Number(v.qtd_animais)))}</span></div>
+      ${lote.comprador?`<div class="row"><span class="k">Comprador</span><span class="v">${lote.comprador}</span></div>`:''}
+      <button class="btn ghost" style="width:100%;color:var(--vermelho);margin-top:10px" id="btn-reabrir" onclick="reabrirLote('${id}',this)">↩️ Reabrir lote (desfazer venda)</button>
+      <div id="fech-msg"></div>
+    </div>`;
+  } else {
+    html+=`
     <div class="card hero">
       <h3>Lucro do lote (todos os animais)</h3>
       <div class="big ${lucro<0?'':''}">${brl(v.lucro_lote_total)}</div>
       <p style="opacity:.9;font-size:13px;margin-top:6px">${brl(v.lucro_cab)} por cabeça · margem ${brl(v.margem_por_arroba)}/@</p>
-    </div>
+    </div>`;
+  }
 
+  html+=`
     <div class="card">
-      <h3>💰 Venda & Lucro</h3>
+      <h3>💰 Venda & Lucro ${fechado?'<span class="pill" style="margin-left:6px">estimativa antes da venda</span>':''}</h3>
       <div class="row"><span class="k">Preço da @ usado <span class="pill" style="margin-left:6px">${origem}</span></span><span class="v">${brl(v.preco_arroba_usado)}</span></div>
       <div class="row"><span class="k">Vende por (cabeça)</span><span class="v">${brl(v.receita_cab)}</span></div>
       <div class="row"><span class="k">Custo total (cabeça)</span><span class="v">${brl(v.custo_cab_total)}</span></div>
       <div class="row"><span class="k">Lucro por cabeça</span><span class="v ${lucro<0?'neg':'pos'}">${brl(v.lucro_cab)}</span></div>
       <div class="row"><span class="k">Breakeven <small class="mut">(abaixo disso, prejuízo)</small></span><span class="v">${brl(v.preco_breakeven)}</span></div>
-      <label>Preço da @ que vou receber (R$)</label>
+      ${fechado?'':`<label>Preço da @ que vou receber (R$)</label>
       <div style="display:flex;gap:8px">
         <input id="pl-preco" type="number" step="0.01" placeholder="vazio = usa referência CEPEA (${brl(v.preco_arroba_referencia)})" value="${v.preco_arroba_praticado??''}" />
         <button class="btn mini" onclick="salvarPreco('${id}')">Salvar</button>
       </div>
-      <div id="preco-msg"></div>
+      <div id="preco-msg"></div>`}
     </div>
 
-    <button class="btn" style="margin:2px 0 14px;background:var(--terra)" onclick="simularLote('${id}')">🔮 Simular: vender hoje ou segurar?</button>
+    ${fechado?'':`<button class="btn" style="margin:2px 0 10px;background:var(--terra)" onclick="simularLote('${id}')">🔮 Simular: vender hoje ou segurar?</button>
+    <button class="btn" style="margin:2px 0 14px" onclick="renderFecharLote('${id}')">✅ Vendi este lote — registrar venda</button>`}
 
     <div class="card">
       <h3>📊 Desempenho</h3>
@@ -618,6 +661,58 @@ async function salvarPreco(id){
 }
 let EDIT_PES=null, EDIT_CUS=null;
 const hoje = () => new Date().toISOString().slice(0,10);
+
+// ---------- fechar lote (registrar venda) ----------
+async function renderFecharLote(id){
+  const body=$('app-body'); body.innerHTML='<p class="mut center" style="padding:30px">Carregando…</p>';
+  const {data:v,error}=await db.from('vw_lote_analise').select('*').eq('lote_id',id).single();
+  if(error){ body.innerHTML=`<div class="msg err">${error.message}</div>`; return; }
+  const rendPct = v.rendimento_carcaca!=null ? Math.round(Number(v.rendimento_carcaca)*100) : 53;
+  body.innerHTML=`<button class="back" onclick="renderLote('${id}')">← Voltar ao lote</button>
+    <div class="nome" style="font-size:22px;margin:6px 0">✅ Registrar venda — ${v.nome}</div>
+    <p class="mut">Preenche com os números REAIS da venda (nota do frigorífico). É isso que fecha o ciclo e mostra teu lucro de verdade.</p>
+    <div class="card">
+      <label>Data da venda</label>
+      <input id="fv-data" type="date" value="${hoje()}" />
+      <label>Peso médio de embarque (kg vivo)</label>
+      <input id="fv-peso" type="number" value="${v.peso_atual_kg!=null?Number(v.peso_atual_kg).toFixed(0):''}" placeholder="peso na balança do embarque" />
+      <label>Rendimento de carcaça real (%) — tá na nota do frigorífico</label>
+      <input id="fv-rend" type="number" value="${rendPct}" />
+      <label>Preço da @ recebido (R$)</label>
+      <input id="fv-preco" type="number" step="0.01" value="${v.preco_arroba_usado!=null?Number(v.preco_arroba_usado).toFixed(2):''}" />
+      <label>Comprador (opcional)</label>
+      <input id="fv-comprador" placeholder="Ex: Frigorífico X" />
+      <div id="fv-msg"></div>
+      <button class="btn" style="margin-top:16px" onclick="salvarFechamento('${id}','${v.data_entrada||''}')">Fechar lote e registrar venda</button>
+    </div>
+    <p class="mut" style="margin:4px 2px 30px">O lote fechado sai dos ativos e guarda o lucro realizado no histórico. Errou algo? Dá pra reabrir depois.</p>`;
+}
+async function salvarFechamento(id,dataEntrada){
+  const data=$('fv-data').value, peso=parseFloat($('fv-peso').value),
+        rend=parseFloat($('fv-rend').value), preco=parseFloat($('fv-preco').value),
+        comprador=$('fv-comprador').value.trim();
+  if(!data) return msg('fv-msg','Informe a data da venda.');
+  if(data>hoje()) return msg('fv-msg','Venda no futuro? Confira a data.');
+  if(dataEntrada && data<dataEntrada) return msg('fv-msg','A venda não pode ser antes da entrada do lote ('+fmtData(dataEntrada)+').');
+  if(!peso||peso<=0) return msg('fv-msg','Informe o peso de embarque.');
+  if(!rend||rend<30||rend>65) return msg('fv-msg','Rendimento fora do normal (30–65%). Confira o número da nota.');
+  if(!preco||preco<=0) return msg('fv-msg','Informe o preço da @ que você recebeu.');
+  const {error}=await db.from('lote').update({
+    data_saida:data, peso_venda_kg:peso, rendimento_venda:rend/100,
+    preco_arroba_venda:preco, comprador:comprador||null
+  }).eq('id',id);
+  if(error) return msg('fv-msg',error.message);
+  renderLote(id);
+}
+async function reabrirLote(id,btn){
+  if(btn.dataset.arm!=='1'){ btn.dataset.arm='1'; btn.textContent='↩️ Tem certeza? Clica de novo pra desfazer a venda'; return; }
+  const {error}=await db.from('lote').update({
+    data_saida:null, peso_venda_kg:null, rendimento_venda:null,
+    preco_arroba_venda:null, comprador:null
+  }).eq('id',id);
+  if(error) return msg('fech-msg',error.message);
+  renderLote(id);
+}
 
 async function addPesagem(id){
   const data=$('pes-data').value, peso=parseFloat($('pes-peso').value);
