@@ -134,6 +134,23 @@
     <input id="in-senha" type="password" placeholder="mínimo 6 caracteres" autocomplete="current-password" />
     <div id="login-msg"></div>
     <button class="btn" style="margin-top:16px" id="btn-auth" onclick="doAuth()">Entrar</button>
+    <button class="btn ghost" style="width:100%;margin-top:10px" id="btn-esqueci" onclick="esqueciSenha()">Esqueci minha senha</button>
+  </div>
+</div>
+
+<!-- ================= NOVA SENHA (link do e-mail) ================= -->
+<div id="scr-nova-senha" class="wrap hidden" style="padding-top:60px">
+  <div class="center" style="margin-bottom:8px">
+    <div class="logo" style="font-size:28px">@ ARROBA CERTA</div>
+    <p class="mut">Criar uma senha nova</p>
+  </div>
+  <div class="card">
+    <label>Nova senha</label>
+    <input id="ns-senha" type="password" placeholder="mínimo 6 caracteres" autocomplete="new-password" />
+    <label>Repita a nova senha</label>
+    <input id="ns-senha2" type="password" placeholder="igual à de cima" autocomplete="new-password" />
+    <div id="ns-msg"></div>
+    <button class="btn" style="margin-top:16px" onclick="salvarNovaSenha()">Salvar senha nova</button>
   </div>
 </div>
 
@@ -197,7 +214,7 @@ const brl = v => v==null?"—":new Intl.NumberFormat('pt-BR',{style:'currency',c
 const num = (v,c=2) => v==null?"—":new Intl.NumberFormat('pt-BR',{minimumFractionDigits:c,maximumFractionDigits:c}).format(v);
 const show = id => $(id).classList.remove('hidden');
 const hide = id => $(id).classList.add('hidden');
-function screen(s){['scr-login','scr-app','scr-faz'].forEach(hide);show(s);}
+function screen(s){['scr-login','scr-app','scr-faz','scr-nova-senha'].forEach(hide);show(s);}
 function fmtData(d){ if(!d) return '—'; const [y,m,day]=String(d).split('-'); return `${day}/${m}/${y}`; }
 function setNav(w){
   $('nav-dash').classList.toggle('on',w==='dash');
@@ -225,10 +242,10 @@ async function doAuth(){
   try{
     let res;
     if(AUTHTAB==='entrar') res=await db.auth.signInWithPassword({email,password:senha});
-    else res=await db.auth.signUp({email,password:senha});
+    else res=await db.auth.signUp({email,password:senha,options:{emailRedirectTo: window.location.origin + window.location.pathname}});
     if(res.error) throw res.error;
     if(AUTHTAB==='criar' && !res.data.session){
-      msg('login-msg','Conta criada! Se pedir confirmação de e-mail, avise que a gente libera.','ok');
+      msg('login-msg','Conta criada! Te enviamos um e-mail de confirmação — clica no link lá e depois volta aqui pra entrar. 📧','ok');
     } else { await boot(); }
   }catch(e){ msg('login-msg', traduzErro(e.message)); }
   finally{ btn.innerHTML=AUTHTAB==='entrar'?'Entrar':'Criar conta'; btn.disabled=false; }
@@ -236,17 +253,45 @@ async function doAuth(){
 function traduzErro(m){
   if(/Invalid login/i.test(m)) return 'E-mail ou senha inválidos.';
   if(/already registered/i.test(m)) return 'Esse e-mail já tem conta. Use "Entrar".';
-  if(/Email not confirmed/i.test(m)) return 'E-mail ainda não confirmado. Avise pra liberarmos.';
+  if(/Email not confirmed/i.test(m)) return 'Confirma teu e-mail primeiro — te mandamos um link quando você criou a conta. Não achou? Olha o spam.';
+  if(/rate limit|security purposes/i.test(m)) return 'Muitas tentativas seguidas. Espera um minutinho e tenta de novo.';
   return m;
 }
 async function logout(){ await db.auth.signOut(); screen('scr-login'); }
 async function entrarComGoogle(){
   await db.auth.signInWithOAuth({provider:'google', options:{redirectTo: window.location.origin + window.location.pathname}});
 }
-db.auth.onAuthStateChange((event)=>{ if(event==='SIGNED_IN') boot(); });
+
+// ---------- esqueci minha senha ----------
+let MODO_RECUPERACAO = /type=recovery/.test(window.location.hash);
+async function esqueciSenha(){
+  const email=$('in-email').value.trim();
+  if(!email) return msg('login-msg','Escreve teu e-mail no campo acima e clica de novo em "Esqueci minha senha".');
+  const btn=$('btn-esqueci'); btn.disabled=true;
+  const {error}=await db.auth.resetPasswordForEmail(email,{redirectTo: window.location.origin + window.location.pathname});
+  btn.disabled=false;
+  if(error) return msg('login-msg',traduzErro(error.message));
+  msg('login-msg','Enviamos um link pro teu e-mail. Abre lá e clica pra criar a senha nova. 📧','ok');
+}
+async function salvarNovaSenha(){
+  const s1=$('ns-senha').value, s2=$('ns-senha2').value;
+  if(s1.length<6) return msg('ns-msg','A senha precisa ter no mínimo 6 caracteres.');
+  if(s1!==s2) return msg('ns-msg','As senhas não batem. Confere as duas.');
+  const {error}=await db.auth.updateUser({password:s1});
+  if(error) return msg('ns-msg',traduzErro(error.message));
+  MODO_RECUPERACAO=false;
+  history.replaceState(null,'',window.location.pathname);
+  await boot();
+}
+
+db.auth.onAuthStateChange((event)=>{
+  if(event==='PASSWORD_RECOVERY'){ MODO_RECUPERACAO=true; screen('scr-nova-senha'); return; }
+  if(event==='SIGNED_IN' && !MODO_RECUPERACAO) boot();
+});
 
 // ---------- boot ----------
 async function boot(){
+  if(MODO_RECUPERACAO){ screen('scr-nova-senha'); return; }
   const {data:{user}} = await db.auth.getUser();
   if(!user){ screen('scr-login'); return; }
   const {data:faz} = await db.from('fazenda').select('*').limit(1);
