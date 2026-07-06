@@ -1,0 +1,955 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+<title>Arroba Certa — sua @ no momento certo</title>
+<style>
+  :root{
+    --verde:#3f6212; --verde-claro:#65a30d; --verde-suave:#ecfccb;
+    --marrom:#7c5e3c; --terra:#a16207; --bg:#faf8f0; --card:#ffffff;
+    --texto:#2b2b26; --cinza:#6b7280; --linha:#e7e5dc;
+    --vermelho:#b91c1c; --vermelho-bg:#fee2e2; --verde-bg:#dcfce7;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    background:var(--bg);color:var(--texto);line-height:1.45;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1440px;margin:0 auto;padding:24px 32px}
+  header.top{display:flex;align-items:center;justify-content:space-between;
+    padding:14px 16px;position:sticky;top:0;background:var(--bg);z-index:5;border-bottom:1px solid var(--linha)}
+  .logo{font-weight:800;color:var(--verde);font-size:20px;letter-spacing:-.5px}
+  .logo small{display:block;font-weight:500;font-size:11px;color:var(--cinza);letter-spacing:0}
+  button{font-family:inherit;cursor:pointer;border:none;border-radius:12px;font-size:15px}
+  .btn{background:var(--verde);color:#fff;padding:14px 16px;width:100%;font-weight:700}
+  .btn:active{opacity:.85}
+  .btn.sec{background:var(--verde-suave);color:var(--verde)}
+  .btn.ghost{background:transparent;color:var(--cinza);width:auto;padding:8px}
+  .btn.mini{width:auto;padding:9px 14px;font-size:14px}
+  input,select{font-family:inherit;font-size:16px;width:100%;padding:13px 14px;
+    border:1.5px solid var(--linha);border-radius:12px;background:#fff;color:var(--texto)}
+  input:focus,select:focus{outline:none;border-color:var(--verde-claro)}
+  label{display:block;font-size:13px;font-weight:600;color:var(--cinza);margin:14px 0 6px}
+  .card{background:var(--card);border:1px solid var(--linha);border-radius:18px;padding:18px;margin:14px 0;
+    box-shadow:0 1px 2px rgba(0,0,0,.03)}
+  .card h3{font-size:13px;text-transform:uppercase;letter-spacing:.5px;color:var(--cinza);margin-bottom:12px}
+  .hero{background:linear-gradient(135deg,var(--verde),var(--verde-claro));color:#fff;border:none}
+  .hero h3{color:#e5f5cf}
+  .big{font-size:30px;font-weight:800;letter-spacing:-.5px}
+  .row{display:flex;justify-content:space-between;align-items:baseline;padding:9px 0;border-bottom:1px solid var(--linha)}
+  .row:last-child{border-bottom:none}
+  .row .k{color:var(--cinza);font-size:14px}
+  .row .v{font-weight:700;font-size:16px}
+  .pos{color:var(--verde)} .neg{color:var(--vermelho)}
+  .pill{display:inline-block;font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;
+    background:var(--verde-suave);color:var(--verde);text-transform:uppercase;letter-spacing:.4px}
+  .pill.warn{background:var(--vermelho-bg);color:var(--vermelho)}
+  .lote-card{cursor:pointer;transition:transform .05s}
+  .lote-card:active{transform:scale(.99)}
+  .lote-card .nome{font-weight:800;font-size:18px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .kpi{background:var(--bg);border-radius:12px;padding:12px}
+  .kpi .lbl{font-size:12px;color:var(--cinza)} .kpi .val{font-size:18px;font-weight:800}
+  .msg{padding:12px 14px;border-radius:12px;font-size:14px;margin:10px 0}
+  .msg.err{background:var(--vermelho-bg);color:var(--vermelho)}
+  .msg.ok{background:var(--verde-bg);color:var(--verde)}
+  .center{text-align:center} .mut{color:var(--cinza);font-size:13px}
+  .hidden{display:none}
+  .tabs{display:flex;background:var(--verde-suave);border-radius:12px;padding:4px;margin-bottom:8px}
+  .tabs button{flex:1;background:transparent;color:var(--verde);padding:10px;font-weight:700;border-radius:9px}
+  .tabs button.on{background:#fff}
+  .back{color:var(--verde);font-weight:700;background:none;padding:6px 0;text-align:left}
+  .list-item{display:flex;justify-content:space-between;padding:11px 0;border-bottom:1px solid var(--linha);font-size:14px}
+  .list-item:last-child{border-bottom:none}
+  .fab{position:fixed;right:max(20px,calc(50% - 720px + 32px));bottom:20px}
+  @media(max-width:672px){.fab{right:16px}}
+  .spin{display:inline-block;width:18px;height:18px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:r .7s linear infinite}
+  @keyframes r{to{transform:rotate(360deg)}}
+
+  header.top{display:block;padding:0}
+  .top-row{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 10px}
+  .ticker-wrap{background:var(--verde);overflow:hidden;white-space:nowrap;padding:7px 0;cursor:pointer}
+  .ticker-track{display:inline-block}
+  .ticker-track.anim{animation:ticker linear infinite}
+  .ticker-wrap:hover .ticker-track.anim{animation-play-state:paused}
+  @keyframes ticker{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+  .ticker-item{display:inline-block;padding:0 22px;font-size:13px;font-weight:700;color:#fff}
+  .ticker-item .uf{opacity:.75;font-weight:600;margin-right:4px}
+  .nav{display:flex;border-top:1px solid var(--linha)}
+  .nav button{flex:1;background:#fff;color:var(--cinza);padding:11px 6px;font-weight:700;font-size:13px;border-radius:0;border-bottom:3px solid transparent}
+  .nav button.on{color:var(--verde);border-bottom-color:var(--verde)}
+  table.imp{width:100%;border-collapse:collapse;font-size:12px;margin-top:10px}
+  table.imp th,table.imp td{padding:6px 5px;border-bottom:1px solid var(--linha);text-align:left;white-space:nowrap}
+  table.imp th{color:var(--cinza);font-weight:700;text-transform:uppercase;font-size:10px}
+  table.imp tr.bad td{color:var(--vermelho)}
+  .file-drop{border:1.5px dashed var(--linha);border-radius:12px;padding:18px;text-align:center;margin-top:10px}
+  .cards-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+  .cards-grid .card{margin:0}
+  .quote-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+  .quote-grid .card{margin:0}
+  .dashboard-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin:16px 0}
+  .dashboard-kpi{background:#fff;border:1px solid var(--linha);border-radius:16px;padding:18px}
+  .dashboard-kpi .lbl{font-size:12px;color:var(--cinza);text-transform:uppercase;letter-spacing:.45px;font-weight:700}
+  .dashboard-kpi .val{font-size:25px;font-weight:800;margin-top:8px;letter-spacing:-.4px}
+  .dashboard-columns{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(320px,.75fr);gap:18px;align-items:start}
+  .section-title{color:var(--cinza);font-size:13px;text-transform:uppercase;letter-spacing:.5px;margin:20px 2px 10px}
+  .chat-box{max-height:420px;min-height:180px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding:4px 0}
+  .chat-msg{max-width:85%;padding:10px 13px;border-radius:14px;font-size:14px;white-space:pre-wrap;word-break:break-word}
+  .chat-msg.eu{align-self:flex-end;background:var(--verde);color:#fff;border-bottom-right-radius:4px}
+  .chat-msg.bot{align-self:flex-start;background:var(--verde-suave);color:var(--texto);border-bottom-left-radius:4px}
+  .chat-msg.pensando{color:var(--cinza);font-style:italic;background:var(--bg)}
+  @media(max-width:980px){
+    .wrap{padding:20px}
+    .quote-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .dashboard-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .dashboard-columns{grid-template-columns:1fr}
+  }
+  @media(max-width:672px){
+    .wrap{padding:16px}
+    .cards-grid,.quote-grid,.dashboard-grid{grid-template-columns:1fr}
+    .nav button{font-size:12px;padding:11px 3px}
+  }
+</style>
+</head>
+<body>
+
+<!-- ================= LOGIN ================= -->
+<div id="scr-login" class="wrap hidden" style="padding-top:60px">
+  <div class="center" style="margin-bottom:8px">
+    <div class="logo" style="font-size:32px">@ ARROBA CERTA</div>
+    <p class="mut">Sua @ custa X. O mercado paga Y. Decida.</p>
+  </div>
+  <div class="card">
+    <button class="btn sec" onclick="entrarComGoogle()" style="display:flex;align-items:center;justify-content:center;gap:10px">
+      <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84c-.21 1.13-.84 2.09-1.8 2.73v2.27h2.9c1.7-1.57 2.7-3.87 2.7-6.64z"/><path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.9-2.27c-.8.54-1.84.86-3.06.86-2.35 0-4.34-1.59-5.05-3.72H.98v2.34C2.47 15.98 5.48 18 9 18z"/><path fill="#FBBC05" d="M3.95 10.69c-.18-.54-.28-1.1-.28-1.69s.1-1.15.28-1.69V4.97H.98A8.99 8.99 0 0 0 0 9c0 1.45.35 2.83.98 4.03l2.97-2.34z"/><path fill="#EA4335" d="M9 3.58c1.32 0 2.51.45 3.44 1.35l2.58-2.58C13.46.89 11.43 0 9 0 5.48 0 2.47 2.02.98 4.97l2.97 2.34C4.66 5.17 6.65 3.58 9 3.58z"/></svg>
+      Entrar com Google
+    </button>
+    <div class="mut center" style="margin:14px 0;font-size:13px">ou</div>
+    <div class="tabs">
+      <button id="tab-entrar" class="on" onclick="setAuthTab('entrar')">Entrar</button>
+      <button id="tab-criar" onclick="setAuthTab('criar')">Criar conta</button>
+    </div>
+    <label>E-mail</label>
+    <input id="in-email" type="email" placeholder="voce@email.com" autocomplete="username" />
+    <label>Senha</label>
+    <input id="in-senha" type="password" placeholder="mínimo 6 caracteres" autocomplete="current-password" />
+    <div id="login-msg"></div>
+    <button class="btn" style="margin-top:16px" id="btn-auth" onclick="doAuth()">Entrar</button>
+  </div>
+</div>
+
+<!-- ================= APP ================= -->
+<div id="scr-app" class="hidden">
+  <header class="top">
+    <div class="top-row">
+      <div class="logo">@ ARROBA CERTA <small id="faz-nome">—</small></div>
+      <button class="btn ghost" onclick="logout()">Sair</button>
+    </div>
+    <div class="ticker-wrap" onclick="renderCotacoes()">
+      <div class="ticker-track" id="ticker-track">Carregando cotações da @…</div>
+    </div>
+    <div class="nav">
+      <button class="on" id="nav-dash" onclick="renderDashboard()">📊 Dashboard</button>
+      <button id="nav-lotes" onclick="renderLotes()">🐂 Meus lotes</button>
+      <button id="nav-cot" onclick="renderCotacoes()">📈 Cotações</button>
+      <button id="nav-ajuda" onclick="renderAjuda()">💬 Ajuda</button>
+      <button id="nav-conta" onclick="renderConta()">👤 Conta</button>
+    </div>
+  </header>
+  <div class="wrap" id="app-body"></div>
+</div>
+
+<!-- ================= ONBOARDING FAZENDA ================= -->
+<div id="scr-faz" class="wrap hidden" style="padding-top:40px">
+  <div class="center"><div class="logo" style="font-size:24px">Bem-vinda! 🐂</div>
+  <p class="mut">Vamos criar sua fazenda pra começar.</p></div>
+  <div class="card">
+    <label>Nome da fazenda</label><input id="f-nome" placeholder="Ex: Fazenda Boa Esperança" />
+    <label>Estado (UF)</label><input id="f-uf" placeholder="MS" maxlength="2" style="text-transform:uppercase" />
+    <label>Praça de referência da @ (CEPEA)</label>
+    <select id="f-praca">
+      <option value="SP">SP</option>
+      <option value="MS">MS</option>
+      <option value="GO">GO</option>
+      <option value="MG">MG</option>
+      <option value="MT">MT</option>
+      <option value="RJ">RJ</option>
+    </select>
+    <div class="mut" style="font-size:12px;margin-top:2px">CEPEA só publica essas praças. Fora delas, escolha a mais próxima — é só a referência, o preço real da sua fazenda quem manda é você.</div>
+    <label>Área (hectares)</label><input id="f-area" type="number" placeholder="500" />
+    <label>WhatsApp (com DDD)</label><input id="f-telefone" type="tel" placeholder="(67) 99999-9999" />
+    <div class="mut" style="font-size:12px;margin-top:2px">É pra onde vão os alertas de preço e de lote pronto pra vender.</div>
+    <div id="faz-msg"></div>
+    <button class="btn" style="margin-top:16px" onclick="criarFazenda()">Criar fazenda</button>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script>
+// ---------- config ----------
+const SUPABASE_URL = "https://tscnqvuzlfagotirgjbz.supabase.co";
+const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRzY25xdnV6bGZhZ290aXJnamJ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4Mzc2NjgsImV4cCI6MjA5ODQxMzY2OH0.9PmwjxNPVIVOy3eenYAqlLSKmhyYeQUSQXz_PvixSB0";
+const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+// ---------- helpers ----------
+const $ = id => document.getElementById(id);
+const brl = v => v==null?"—":new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(v);
+const num = (v,c=2) => v==null?"—":new Intl.NumberFormat('pt-BR',{minimumFractionDigits:c,maximumFractionDigits:c}).format(v);
+const show = id => $(id).classList.remove('hidden');
+const hide = id => $(id).classList.add('hidden');
+function screen(s){['scr-login','scr-app','scr-faz'].forEach(hide);show(s);}
+function fmtData(d){ if(!d) return '—'; const [y,m,day]=String(d).split('-'); return `${day}/${m}/${y}`; }
+function setNav(w){
+  $('nav-dash').classList.toggle('on',w==='dash');
+  $('nav-lotes').classList.toggle('on',w==='lotes');
+  $('nav-cot').classList.toggle('on',w==='cot');
+  $('nav-ajuda').classList.toggle('on',w==='ajuda');
+  $('nav-conta').classList.toggle('on',w==='conta');
+}
+let AUTHTAB='entrar', FAZENDA=null, COTACOES_TODAS=null, PARSED_LOTES=null;
+
+function setAuthTab(t){AUTHTAB=t;
+  $('tab-entrar').classList.toggle('on',t==='entrar');
+  $('tab-criar').classList.toggle('on',t==='criar');
+  $('btn-auth').textContent = t==='entrar'?'Entrar':'Criar conta';
+  $('in-senha').autocomplete = t==='entrar'?'current-password':'new-password';
+  $('login-msg').innerHTML='';
+}
+function msg(el,txt,tipo='err'){$(el).innerHTML = txt?`<div class="msg ${tipo}">${txt}</div>`:'';}
+
+// ---------- auth ----------
+async function doAuth(){
+  const email=$('in-email').value.trim(), senha=$('in-senha').value;
+  if(!email||senha.length<6){return msg('login-msg','Preencha e-mail e senha (mín. 6 caracteres).');}
+  const btn=$('btn-auth'); btn.innerHTML='<span class="spin"></span>'; btn.disabled=true;
+  try{
+    let res;
+    if(AUTHTAB==='entrar') res=await db.auth.signInWithPassword({email,password:senha});
+    else res=await db.auth.signUp({email,password:senha});
+    if(res.error) throw res.error;
+    if(AUTHTAB==='criar' && !res.data.session){
+      msg('login-msg','Conta criada! Se pedir confirmação de e-mail, avise que a gente libera.','ok');
+    } else { await boot(); }
+  }catch(e){ msg('login-msg', traduzErro(e.message)); }
+  finally{ btn.innerHTML=AUTHTAB==='entrar'?'Entrar':'Criar conta'; btn.disabled=false; }
+}
+function traduzErro(m){
+  if(/Invalid login/i.test(m)) return 'E-mail ou senha inválidos.';
+  if(/already registered/i.test(m)) return 'Esse e-mail já tem conta. Use "Entrar".';
+  if(/Email not confirmed/i.test(m)) return 'E-mail ainda não confirmado. Avise pra liberarmos.';
+  return m;
+}
+async function logout(){ await db.auth.signOut(); screen('scr-login'); }
+async function entrarComGoogle(){
+  await db.auth.signInWithOAuth({provider:'google', options:{redirectTo: window.location.origin + window.location.pathname}});
+}
+db.auth.onAuthStateChange((event)=>{ if(event==='SIGNED_IN') boot(); });
+
+// ---------- boot ----------
+async function boot(){
+  const {data:{user}} = await db.auth.getUser();
+  if(!user){ screen('scr-login'); return; }
+  const {data:faz} = await db.from('fazenda').select('*').limit(1);
+  if(!faz || !faz.length){ screen('scr-faz'); return; }
+  FAZENDA = faz[0];
+  $('faz-nome').textContent = FAZENDA.nome;
+  screen('scr-app');
+  loadTicker();
+  renderDashboard();
+}
+
+// ---------- ticker & cotações ----------
+async function loadTicker(){
+  const track=$('ticker-track');
+  const {data,error}=await db.from('cotacao_arroba').select('*').order('data',{ascending:false});
+  if(error||!data||!data.length){ track.textContent='Cotação da @ indisponível no momento.'; track.classList.remove('anim'); return; }
+  COTACOES_TODAS=data;
+  const porPraca={};
+  for(const c of data){ if(!porPraca[c.praca]) porPraca[c.praca]=c; }
+  const atuais=Object.values(porPraca).sort((a,b)=>a.praca.localeCompare(b.praca));
+  const itemHtml=atuais.map(c=>`<span class="ticker-item"><span class="uf">${c.praca}</span> ${brl(c.valor_rs)}/@</span>`).join('');
+  track.innerHTML=itemHtml+itemHtml;
+  track.classList.add('anim');
+  track.style.animationDuration=Math.max(14,atuais.length*5)+'s';
+}
+function renderCotacoes(){
+  setNav('cot');
+  const body=$('app-body');
+  if(!COTACOES_TODAS){ body.innerHTML='<p class="mut center" style="padding:30px">Carregando…</p>'; loadTicker().then(renderCotacoes); return; }
+  const porPraca={};
+  for(const c of COTACOES_TODAS){ (porPraca[c.praca]=porPraca[c.praca]||[]).push(c); }
+  const pracas=Object.keys(porPraca).sort();
+  let html=`<div class="nome" style="font-size:20px;margin:10px 0 4px">📈 Cotações da @ por praça</div>
+    <p class="mut" style="margin-bottom:14px">Fonte: Scot Consultoria (preço à vista, dias úteis). É referência de mercado — o preço que entra na sua margem é o que você negocia de verdade no lote.</p>`;
+  if(!pracas.length){ html+='<div class="card center"><p class="mut">Sem cotações ainda.</p></div>'; }
+  html+='<div class="quote-grid">';
+  for(const p of pracas){
+    const hist=porPraca[p], atual=hist[0];
+    html+=`<div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:baseline">
+        <h3 style="margin-bottom:0">${p}</h3><span class="mut" style="font-size:12px">${fmtData(atual.data)}</span>
+      </div>
+      <div class="big" style="margin:6px 0">${brl(atual.valor_rs)}<span style="font-size:14px;font-weight:600;color:var(--cinza)">/@</span></div>
+      ${hist.slice(1,6).map(h=>`<div class="list-item"><span>${fmtData(h.data)}</span><span>${brl(h.valor_rs)}</span></div>`).join('')}
+    </div>`;
+  }
+  html+='</div>';
+  body.innerHTML=html;
+}
+
+function normalizaTelefone(v){
+  let d=(v||'').replace(/\D/g,'');
+  if(!d) return null;
+  if(d.length<=11) d='55'+d; // assume DDD+numero sem cod. do país
+  return d;
+}
+async function criarFazenda(){
+  const nome=$('f-nome').value.trim();
+  if(!nome) return msg('faz-msg','Dê um nome pra fazenda.');
+  const telefone=normalizaTelefone($('f-telefone').value);
+  if(!telefone || telefone.length<12) return msg('faz-msg','Informe um WhatsApp válido com DDD.');
+  const {error}=await db.from('fazenda').insert({
+    nome, estado:$('f-uf').value.trim().toUpperCase()||null,
+    praca_referencia:$('f-praca').value.trim().toUpperCase()||null,
+    area_ha:parseFloat($('f-area').value)||null,
+    telefone
+  });
+  if(error) return msg('faz-msg',error.message);
+  await boot();
+}
+
+// ---------- minha conta ----------
+// Nº do WhatsApp do ARROBA CERTA (usado no wa.me de validação).
+// HOJE: número de teste da Meta Cloud API. Trocar na Etapa 2 (nº BR de produção).
+const WHATSAPP_BOT = '15556210863';
+
+function renderConta(){
+  setNav('conta');
+  const f = FAZENDA;
+  const pracas = ['SP','MS','GO','MG','MT','RJ'];
+  $('app-body').innerHTML = `
+    <div class="nome" style="font-size:20px;margin:10px 0 4px">👤 Minha conta</div>
+    <p class="mut" style="margin-bottom:14px">Dados da fazenda e o WhatsApp que recebe os alertas. Preencheu errado? Corrige aqui.</p>
+    <div class="card" style="max-width:560px">
+      <label>Nome da fazenda</label><input id="c-nome" value="${(f.nome||'').replace(/"/g,'&quot;')}" />
+      <label>Estado (UF)</label><input id="c-uf" value="${f.estado||''}" maxlength="2" style="text-transform:uppercase" />
+      <label>Praça de referência da @ (CEPEA)</label>
+      <select id="c-praca">${pracas.map(p=>`<option value="${p}" ${f.praca_referencia===p?'selected':''}>${p}</option>`).join('')}</select>
+      <label>Área (hectares)</label><input id="c-area" type="number" value="${f.area_ha??''}" />
+      <label>WhatsApp dos alertas (com DDD)</label><input id="c-telefone" type="tel" value="${f.telefone||''}" placeholder="(67) 99999-9999" />
+      <div class="mut" style="font-size:12px;margin-top:2px">É pra onde vão os alertas de preço e de lote pronto pra vender.</div>
+      <div id="conta-msg"></div>
+      <button class="btn" style="margin-top:16px" onclick="salvarConta()">Salvar alterações</button>
+    </div>
+    <div class="card" style="max-width:560px">
+      <h3>Ativar alertas no WhatsApp</h3>
+      <p class="mut" style="margin-bottom:12px">Pra garantir que os alertas chegam, manda um "oi" pro nosso número uma única vez — isso abre o canal no seu WhatsApp.</p>
+      <a href="https://wa.me/${WHATSAPP_BOT}?text=${encodeURIComponent('Oi! Quero ativar os alertas do ARROBA CERTA 🐂')}" target="_blank" rel="noopener" style="text-decoration:none">
+        <button class="btn sec">💬 Ativar alertas agora</button>
+      </a>
+    </div>`;
+}
+
+async function salvarConta(){
+  const nome=$('c-nome').value.trim();
+  if(!nome) return msg('conta-msg','Dê um nome pra fazenda.');
+  const telefone=normalizaTelefone($('c-telefone').value);
+  if(!telefone || telefone.length<12) return msg('conta-msg','Informe um WhatsApp válido com DDD.');
+  const {error}=await db.from('fazenda').update({
+    nome, estado:$('c-uf').value.trim().toUpperCase()||null,
+    praca_referencia:$('c-praca').value.trim().toUpperCase()||null,
+    area_ha:parseFloat($('c-area').value)||null,
+    telefone
+  }).eq('id',FAZENDA.id);
+  if(error) return msg('conta-msg',error.message);
+  const {data:faz}=await db.from('fazenda').select('*').eq('id',FAZENDA.id).limit(1);
+  if(faz && faz.length){ FAZENDA=faz[0]; $('faz-nome').textContent=FAZENDA.nome; }
+  msg('conta-msg','Salvo! ✅','ok');
+}
+
+// ---------- dashboard ----------
+async function renderDashboard(){
+  setNav('dash');
+  const body=$('app-body'); body.innerHTML='<p class="mut center" style="padding:30px">Carregando…</p>';
+  const {data:lotes,error}=await db.from('vw_lote_analise').select('*').order('nome');
+  if(error){ body.innerHTML=`<div class="msg err">${error.message}</div>`; return; }
+  const ativos=(lotes||[]).filter(l=>l.ativo);
+  const totalAnimais=ativos.reduce((s,l)=>s+(l.qtd_animais||0),0);
+  const lucroRebanho=ativos.reduce((s,l)=>s+(Number(l.lucro_lote_total)||0),0);
+  const pesoMedio=totalAnimais?ativos.reduce((s,l)=>s+(Number(l.peso_atual_kg)||0)*(l.qtd_animais||0),0)/totalAnimais:0;
+  const lucroMedio=totalAnimais?lucroRebanho/totalAnimais:0;
+  const ranking=[...ativos].sort((a,b)=>Number(b.lucro_cab||0)-Number(a.lucro_cab||0));
+  const alertas=ativos.filter(l=>Number(l.gmd)>3 || Number(l.lucro_cab)<0);
+  const comPreco=ativos.filter(l=>l.preco_arroba_usado!=null);
+  const precoMedio=comPreco.reduce((s,l)=>s+Number(l.preco_arroba_usado||0),0)/Math.max(comPreco.length,1);
+
+  let html=`<div class="card hero">
+    <h3>Visão geral da fazenda</h3>
+    <div class="big">${brl(lucroRebanho)}</div>
+    <p style="opacity:.85;font-size:13px;margin-top:6px">Lucro estimado de ${totalAnimais} animais em ${ativos.length} lote(s) ativo(s)</p>
+  </div>
+  <div class="dashboard-grid">
+    <div class="dashboard-kpi"><div class="lbl">Animais ativos</div><div class="val">${totalAnimais}</div></div>
+    <div class="dashboard-kpi"><div class="lbl">Lotes ativos</div><div class="val">${ativos.length}</div></div>
+    <div class="dashboard-kpi"><div class="lbl">Peso médio</div><div class="val">${num(pesoMedio,0)} kg</div></div>
+    <div class="dashboard-kpi"><div class="lbl">Lucro médio/cabeça</div><div class="val ${lucroMedio<0?'neg':'pos'}">${brl(lucroMedio)}</div></div>
+  </div>`;
+
+  if(!ativos.length){
+    html+=`<div class="card center"><p class="mut">Nenhum lote ainda.</p><button class="btn" style="margin-top:12px" onclick="novoLote()">+ Criar meu primeiro lote</button></div>`;
+  }else{
+    html+=`<div class="dashboard-columns">
+      <div class="card"><h3>Desempenho dos lotes</h3>
+        ${ranking.map(l=>`<div class="row"><span class="k"><b>${l.nome}</b><br><small>${l.qtd_animais||0} cab · ${num(l.peso_atual_kg,0)} kg</small></span><span class="v ${Number(l.lucro_cab)<0?'neg':'pos'}">${brl(l.lucro_cab)}/cab</span></div>`).join('')}
+        <button class="btn sec" style="margin-top:14px" onclick="renderLotes()">Ver todos os lotes</button>
+      </div>
+      <div class="card"><h3>Alertas e mercado</h3>
+        ${alertas.length?alertas.map(l=>`<div class="msg err"><b>${l.nome}</b><br>${Number(l.gmd)>3?'GMD fora da faixa esperada. Confira pesos e datas.':'Lote com prejuízo estimado.'}</div>`).join(''):'<div class="msg ok">Nenhum alerta crítico nos lotes ativos.</div>'}
+        <div class="row"><span class="k">Melhor resultado/cabeça</span><span class="v pos">${brl(ranking[0]?.lucro_cab)}</span></div>
+        <div class="row"><span class="k">Preço médio da @ usada</span><span class="v">${brl(precoMedio)}</span></div>
+      </div>
+    </div>`;
+  }
+  body.innerHTML=html;
+}
+
+// ---------- meus lotes ----------
+async function renderLotes(){
+  setNav('lotes');
+  const body=$('app-body'); body.innerHTML='<p class="mut center" style="padding:30px">Carregando…</p>';
+  const {data:lotes,error}=await db.from('vw_lote_analise').select('*').order('nome');
+  if(error){ body.innerHTML=`<div class="msg err">${error.message}</div>`; return; }
+  const ativos=(lotes||[]).filter(l=>l.ativo);
+  const totalAnimais=ativos.reduce((s,l)=>s+(l.qtd_animais||0),0);
+  const lucroRebanho=ativos.reduce((s,l)=>s+(Number(l.lucro_lote_total)||0),0);
+  const temPreco=ativos.some(l=>l.preco_arroba_usado!=null);
+
+  let html=`
+    <div class="card hero">
+      <h3>Lucro estimado do rebanho</h3>
+      <div class="big">${brl(lucroRebanho)}</div>
+      <p style="opacity:.85;font-size:13px;margin-top:6px">
+        ${totalAnimais} animais em ${ativos.length} lote(s) ativo(s)
+        ${temPreco?'':' · defina o preço da @ pra ver o lucro'}
+      </p>
+    </div>`;
+
+  if(!ativos.length){
+    html+=`<div class="card center"><p class="mut">Nenhum lote ainda.</p>
+      <button class="btn" style="margin-top:12px" onclick="novoLote()">+ Criar meu primeiro lote</button>
+      <button class="btn sec" style="margin-top:8px" onclick="renderImportar()">📄 Importar planilha de lotes</button></div>`;
+  } else {
+    html+='<div class="section-title">Seus lotes</div><div class="cards-grid">';
+    for(const l of ativos){
+      const lucro=Number(l.lucro_cab);
+      const alerta = l.custo_arroba_produzida!=null && l.preco_breakeven!=null && Number(l.custo_arroba_produzida)>Number(l.preco_breakeven);
+      html+=`
+      <div class="card lote-card" onclick="renderLote('${l.lote_id}')">
+        <div style="display:flex;justify-content:space-between;align-items:start">
+          <div><div class="nome">${l.nome}</div>
+            <span class="pill">${l.fase||''}</span> <span class="mut">${l.qtd_animais||0} cab · ${num(l.peso_atual_kg,0)} kg</span></div>
+          <div class="pill ${lucro<0?'warn':''}">${lucro>=0?'lucro':'prejuízo'}</div>
+        </div>
+        <div class="grid2" style="margin-top:12px">
+          <div class="kpi"><div class="lbl">Custo da @ produzida</div><div class="val">${brl(l.custo_arroba_produzida)}</div></div>
+          <div class="kpi"><div class="lbl">Lucro por cabeça</div><div class="val ${lucro<0?'neg':'pos'}">${brl(l.lucro_cab)}</div></div>
+          <div class="kpi"><div class="lbl">@ usada</div><div class="val">${brl(l.preco_arroba_usado)}</div></div>
+          <div class="kpi"><div class="lbl">GMD (ganho/dia)</div>
+            <div class="val ${l.gmd>3?'neg':''}">${l.gmd!=null?num(l.gmd,2)+' kg/d':'—'}</div>
+            ${l.gmd>3?'<div class="lbl" style="margin-top:3px;color:var(--vermelho)">⚠ impossível — confira peso/datas</div>':''}</div>
+        </div>
+      </div>`;
+    }
+    html+='</div>';
+    html+=`<div style="display:flex;gap:8px;margin:16px 0 40px">
+      <button class="btn sec" style="flex:1" onclick="novoLote()">+ Novo lote</button>
+      <button class="btn sec" style="flex:1" onclick="renderImportar()">📄 Importar planilha</button>
+    </div>`;
+  }
+  body.innerHTML=html;
+}
+
+// ---------- detalhe do lote ----------
+async function renderLote(id){
+  EDIT_PES=null; EDIT_CUS=null;
+  const body=$('app-body'); body.innerHTML='<p class="mut center" style="padding:30px">Carregando…</p>';
+  const [{data:vs},{data:lote},{data:pes},{data:cus}] = await Promise.all([
+    db.from('vw_lote_analise').select('*').eq('lote_id',id).single(),
+    db.from('lote').select('*').eq('id',id).single(),
+    db.from('pesagem').select('*').eq('lote_id',id).order('data',{ascending:false}),
+    db.from('custo').select('*').eq('lote_id',id).order('data',{ascending:false}),
+  ]);
+  const v=vs; const lucro=Number(v.lucro_cab);
+  const origem = v.preco_arroba_praticado!=null ? 'seu preço' : (v.preco_arroba_referencia!=null?'referência CEPEA':'sem preço definido');
+
+  let html=`<button class="back" onclick="renderLotes()">← Voltar</button>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin:6px 0;gap:10px">
+      <div><div class="nome" style="font-size:22px">${v.nome}</div>
+        <span class="pill">${v.fase||''}</span> <span class="mut">${v.sistema||''} · ${v.qtd_animais} cab</span></div>
+      <button class="btn sec mini" style="flex-shrink:0" onclick="editarLote('${id}')">✏️ Editar</button>
+    </div>
+
+    <div class="card hero">
+      <h3>Lucro do lote (todos os animais)</h3>
+      <div class="big ${lucro<0?'':''}">${brl(v.lucro_lote_total)}</div>
+      <p style="opacity:.9;font-size:13px;margin-top:6px">${brl(v.lucro_cab)} por cabeça · margem ${brl(v.margem_por_arroba)}/@</p>
+    </div>
+
+    <div class="card">
+      <h3>💰 Venda & Lucro</h3>
+      <div class="row"><span class="k">Preço da @ usado <span class="pill" style="margin-left:6px">${origem}</span></span><span class="v">${brl(v.preco_arroba_usado)}</span></div>
+      <div class="row"><span class="k">Vende por (cabeça)</span><span class="v">${brl(v.receita_cab)}</span></div>
+      <div class="row"><span class="k">Custo total (cabeça)</span><span class="v">${brl(v.custo_cab_total)}</span></div>
+      <div class="row"><span class="k">Lucro por cabeça</span><span class="v ${lucro<0?'neg':'pos'}">${brl(v.lucro_cab)}</span></div>
+      <div class="row"><span class="k">Breakeven <small class="mut">(abaixo disso, prejuízo)</small></span><span class="v">${brl(v.preco_breakeven)}</span></div>
+      <label>Preço da @ que vou receber (R$)</label>
+      <div style="display:flex;gap:8px">
+        <input id="pl-preco" type="number" step="0.01" placeholder="vazio = usa referência CEPEA (${brl(v.preco_arroba_referencia)})" value="${v.preco_arroba_praticado??''}" />
+        <button class="btn mini" onclick="salvarPreco('${id}')">Salvar</button>
+      </div>
+      <div id="preco-msg"></div>
+    </div>
+
+    <button class="btn" style="margin:2px 0 14px;background:var(--terra)" onclick="simularLote('${id}')">🔮 Simular: vender hoje ou segurar?</button>
+
+    <div class="card">
+      <h3>📊 Desempenho</h3>
+      <div class="grid2">
+        <div class="kpi"><div class="lbl">GMD (ganho por dia)</div>
+          <div class="val ${v.gmd>3?'neg':''}">${v.gmd!=null?num(v.gmd,2)+' kg/d':'—'}</div>
+          ${v.gmd==null?'<div class="lbl" style="margin-top:3px">pese em outra data pra calcular</div>':''}
+          ${v.gmd>3?'<div class="lbl" style="margin-top:3px;color:var(--vermelho)">⚠ impossível na vida real — confira peso e datas</div>':''}</div>
+        <div class="kpi"><div class="lbl">Arrobas/cabeça</div><div class="val">${num(v.arrobas_atuais_cab,2)} @</div></div>
+        <div class="kpi"><div class="lbl">Custo da @ produzida</div><div class="val">${brl(v.custo_arroba_produzida)}</div></div>
+        <div class="kpi"><div class="lbl">Peso atual</div><div class="val">${num(v.peso_atual_kg,0)} kg</div></div>
+      </div>
+      <p class="mut" style="margin-top:10px">${v.peso_inicial_kg} kg → ${v.peso_atual_kg} kg em ${v.dias_periodo} dias</p>
+    </div>
+
+    <div class="card">
+      <h3>⚖️ Pesagens</h3>
+      ${(pes||[]).map(p=>`<div class="list-item"><span>${fmtData(p.data)}</span>
+        <span><b>${num(p.peso_medio_kg,0)} kg</b>
+          <button class="btn ghost mini" title="Editar" onclick="editPesagem('${id}','${p.id}','${p.data}',${p.peso_medio_kg})">✏️</button>
+          <button class="btn ghost mini" title="Excluir" onclick="delPesagem('${id}','${p.id}',this)">🗑️</button>
+        </span></div>`).join('')||'<p class="mut">Sem pesagens.</p>'}
+      <div style="display:flex;gap:8px;margin-top:12px">
+        <input id="pes-data" type="date" value="${new Date().toISOString().slice(0,10)}" />
+        <input id="pes-peso" type="number" placeholder="peso kg" />
+        <button class="btn mini" id="pes-add" onclick="addPesagem('${id}')">+</button>
+      </div>
+      <div id="pes-msg"></div>
+    </div>
+
+    <div class="card">
+      <h3>💵 Custos do período</h3>
+      ${(cus||[]).map(c=>`<div class="list-item"><span>${fmtData(c.data)} · ${c.categoria}</span>
+        <span><b>${brl(c.valor)}</b>
+          <button class="btn ghost mini" title="Editar" onclick="editCusto('${id}','${c.id}','${c.data}','${c.categoria}',${c.valor})">✏️</button>
+          <button class="btn ghost mini" title="Excluir" onclick="delCusto('${id}','${c.id}',this)">🗑️</button>
+        </span></div>`).join('')||'<p class="mut">Sem custos.</p>'}
+      <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+        <input id="cus-data" type="date" value="${new Date().toISOString().slice(0,10)}" style="flex:1;min-width:130px" />
+        <select id="cus-cat" style="flex:1;min-width:130px">
+          <option value="alimentacao">Alimentação</option><option value="sanitario">Sanitário</option>
+          <option value="mao_obra">Mão de obra</option><option value="operacional">Operacional</option>
+          <option value="fixo">Fixo</option><option value="outro">Outro</option>
+        </select>
+        <input id="cus-valor" type="number" placeholder="R$ valor" style="flex:1;min-width:110px" />
+        <button class="btn mini" id="cus-add" onclick="addCusto('${id}')">+</button>
+      </div>
+      <div id="cus-msg"></div>
+    </div>
+    <div style="height:30px"></div>`;
+  body.innerHTML=html;
+}
+
+async function salvarPreco(id){
+  const raw=$('pl-preco').value.trim();
+  const val = raw===''? null : parseFloat(raw);
+  const {error}=await db.from('lote').update({preco_arroba_praticado:val}).eq('id',id);
+  if(error) return msg('preco-msg',error.message);
+  msg('preco-msg','Preço salvo! Recalculando…','ok'); renderLote(id);
+}
+let EDIT_PES=null, EDIT_CUS=null;
+const hoje = () => new Date().toISOString().slice(0,10);
+
+async function addPesagem(id){
+  const data=$('pes-data').value, peso=parseFloat($('pes-peso').value);
+  if(!data||!peso||peso<=0) return msg('pes-msg','Informe data e um peso maior que zero.');
+  if(data>hoje()) return msg('pes-msg','Pesagem no futuro? Confira a data.');
+  let error;
+  if(EDIT_PES){ ({error}=await db.from('pesagem').update({data,peso_medio_kg:peso}).eq('id',EDIT_PES)); EDIT_PES=null; }
+  else ({error}=await db.from('pesagem').insert({lote_id:id,data,peso_medio_kg:peso}));
+  if(error) return msg('pes-msg',error.message);
+  renderLote(id);
+}
+function editPesagem(loteId,pesId,data,peso){
+  EDIT_PES=pesId;
+  $('pes-data').value=data; $('pes-peso').value=peso;
+  $('pes-add').textContent='✓ salvar';
+  msg('pes-msg','Editando a pesagem de '+fmtData(data)+'. Ajuste e clique em ✓.','ok');
+  $('pes-peso').focus();
+}
+async function delPesagem(loteId,pesId,btn){
+  if(btn.dataset.arm!=='1'){ btn.dataset.arm='1'; btn.textContent='confirma?'; btn.style.color='var(--vermelho)'; return; }
+  const {error}=await db.from('pesagem').delete().eq('id',pesId);
+  if(error) return msg('pes-msg',error.message);
+  renderLote(loteId);
+}
+
+async function addCusto(id){
+  const valor=parseFloat($('cus-valor').value), data=$('cus-data').value;
+  if(!valor||valor<=0) return msg('cus-msg','Informe um valor maior que zero.');
+  if(!data||data>hoje()) return msg('cus-msg','Custo no futuro? Confira a data.');
+  let error;
+  if(EDIT_CUS){ ({error}=await db.from('custo').update({data,categoria:$('cus-cat').value,valor}).eq('id',EDIT_CUS)); EDIT_CUS=null; }
+  else ({error}=await db.from('custo').insert({lote_id:id,data,categoria:$('cus-cat').value,valor}));
+  if(error) return msg('cus-msg',error.message);
+  renderLote(id);
+}
+function editCusto(loteId,cusId,data,categoria,valor){
+  EDIT_CUS=cusId;
+  $('cus-data').value=data; $('cus-cat').value=categoria; $('cus-valor').value=valor;
+  $('cus-add').textContent='✓ salvar';
+  msg('cus-msg','Editando o custo de '+fmtData(data)+'. Ajuste e clique em ✓.','ok');
+  $('cus-valor').focus();
+}
+async function delCusto(loteId,cusId,btn){
+  if(btn.dataset.arm!=='1'){ btn.dataset.arm='1'; btn.textContent='confirma?'; btn.style.color='var(--vermelho)'; return; }
+  const {error}=await db.from('custo').delete().eq('id',cusId);
+  if(error) return msg('cus-msg',error.message);
+  renderLote(loteId);
+}
+
+// ---------- simulador vender vs segurar ----------
+let SIM_V=null;
+async function simularLote(id){
+  const body=$('app-body'); body.innerHTML='<p class="mut center" style="padding:30px">Carregando…</p>';
+  const {data:v,error}=await db.from('vw_lote_analise').select('*').eq('lote_id',id).single();
+  if(error){ body.innerHTML=`<div class="msg err">${error.message}</div>`; return; }
+  SIM_V=v;
+  const gmd = v.gmd!=null ? Number(v.gmd) : 1.0;
+  const custoDia = (v.custo_periodo_cab && v.dias_periodo>0) ? (Number(v.custo_periodo_cab)/Number(v.dias_periodo)) : 8;
+  const precoHoje = v.preco_arroba_usado!=null ? Number(v.preco_arroba_usado) : 335;
+  body.innerHTML=`<button class="back" onclick="renderLote('${id}')">← Voltar ao lote</button>
+    <div class="nome" style="font-size:22px;margin:6px 0">🔮 Vender hoje ou segurar?</div>
+    <p class="mut">Simulação pra <b>${v.nome}</b> — ${v.qtd_animais} cabeças. Ajuste os valores e veja o que rende mais.</p>
+    <div class="card">
+      <h3>Seus números (ajuste se quiser)</h3>
+      <label>Segurar por quantos dias?</label>
+      <input id="sm-dias" type="number" value="30" />
+      <label>Preço da @ HOJE (R$)</label>
+      <input id="sm-hoje" type="number" step="0.01" value="${precoHoje.toFixed(2)}" />
+      <label>Preço da @ que você ESPERA daqui a esses dias (R$)</label>
+      <input id="sm-fut" type="number" step="0.01" value="${precoHoje.toFixed(2)}" placeholder="sua aposta pro futuro" />
+      <label>Custo por cabeça por dia pra manter o boi (R$)</label>
+      <input id="sm-custo" type="number" step="0.01" value="${custoDia.toFixed(2)}" />
+      <label>Ganho de peso por dia — GMD (kg)</label>
+      <input id="sm-gmd" type="number" step="0.01" value="${gmd.toFixed(2)}" />
+      <div id="sm-msg"></div>
+      <button class="btn" style="margin-top:16px;background:var(--terra)" onclick="rodarSimulacao('${id}')">Simular</button>
+    </div>
+    <div id="sm-result"></div>`;
+}
+async function rodarSimulacao(id){
+  const v=SIM_V; if(!v) return renderLote(id);
+  const dias=parseFloat($('sm-dias').value), hoje=parseFloat($('sm-hoje').value),
+        fut=parseFloat($('sm-fut').value), custo=parseFloat($('sm-custo').value), gmd=parseFloat($('sm-gmd').value);
+  if([dias,hoje,fut,custo,gmd].some(x=>isNaN(x))) return msg('sm-msg','Preencha todos os campos.');
+  const {data,error}=await db.rpc('calc_simulador_vender_vs_segurar',{
+    peso_atual_kg:Number(v.peso_atual_kg), rendimento:Number(v.rendimento_carcaca), gmd,
+    dias_segurar:dias, preco_arroba_hoje:hoje, preco_arroba_futuro:fut, custo_diario:custo
+  });
+  if(error) return msg('sm-msg',error.message);
+  const r=data, qtd=Number(v.qtd_animais)||1, ganho=Number(r.ganho_de_segurar), segurar=r.recomendacao==='segurar';
+  $('sm-result').innerHTML=`
+    <div class="card ${segurar?'':''}" style="background:${segurar?'var(--verde)':'var(--terra)'};color:#fff;border:none">
+      <h3 style="color:#e5f5cf">Recomendação</h3>
+      <div class="big">${segurar?'📈 Segurar '+num(dias,0)+' dias':'💰 Vender hoje'}</div>
+      <p style="opacity:.92;margin-top:6px">
+        ${segurar
+          ? 'Segurando, você ganha <b>'+brl(ganho)+' por cabeça</b> a mais ('+brl(ganho*qtd)+' no lote).'
+          : 'Segurar não compensa: você perde <b>'+brl(Math.abs(ganho))+' por cabeça</b>. Melhor vender agora.'}
+      </p>
+    </div>
+    <div class="card">
+      <h3>Comparação lado a lado (por cabeça)</h3>
+      <div class="row"><span class="k">&nbsp;</span><span class="v" style="font-size:13px;color:var(--cinza)">Vender hoje&nbsp;&nbsp;·&nbsp;&nbsp;Segurar</span></div>
+      <div class="row"><span class="k">Peso</span><span class="v">${num(v.peso_atual_kg,0)} → ${num(r.peso_futuro_kg,0)} kg</span></div>
+      <div class="row"><span class="k">Arrobas</span><span class="v">${num(r.arrobas_hoje,2)} → ${num(r.arrobas_futuro,2)} @</span></div>
+      <div class="row"><span class="k">Receita</span><span class="v">${brl(r.receita_hoje)} → ${brl(r.receita_futuro)}</span></div>
+      <div class="row"><span class="k">Custo extra pra segurar</span><span class="v">${brl(r.custo_extra)}</span></div>
+      <div class="row"><span class="k">Ganho de segurar</span><span class="v ${ganho<0?'neg':'pos'}">${brl(ganho)}/cab</span></div>
+    </div>
+    <div class="card" style="background:var(--verde-suave);border:none">
+      <h3 style="color:var(--verde)">⚠ Ponto de virada</h3>
+      <p>Sua conta só compensa segurar se a @ daqui a ${num(dias,0)} dias ficar <b>acima de ${brl(r.preco_futuro_breakeven)}</b>.
+      Se você acha que vai cair abaixo disso, venda hoje.</p>
+    </div>
+    <div style="height:30px"></div>`;
+  $('sm-result').scrollIntoView({behavior:'smooth'});
+}
+
+// ---------- editar lote ----------
+async function editarLote(id){
+  const body=$('app-body');
+  const {data:l,error}=await db.from('lote').select('*').eq('id',id).single();
+  if(error){ body.innerHTML=`<div class="msg err">${error.message}</div>`; return; }
+  const rendPct = l.rendimento_carcaca!=null ? Math.round(l.rendimento_carcaca*100) : 53;
+  body.innerHTML=`<button class="back" onclick="renderLote('${id}')">← Voltar</button>
+    <div class="card"><h3>Editar lote</h3>
+      <label>Nome</label><input id="el-nome" value="${l.nome??''}" />
+      <label>Fase</label><select id="el-fase">
+        ${['engorda','recria','cria'].map(o=>`<option value="${o}" ${l.fase===o?'selected':''}>${o[0].toUpperCase()+o.slice(1)}</option>`).join('')}
+      </select>
+      <label>Sistema</label><select id="el-sist">
+        ${['pasto','semiconfinamento','confinamento'].map(o=>`<option value="${o}" ${l.sistema===o?'selected':''}>${o[0].toUpperCase()+o.slice(1)}</option>`).join('')}
+      </select>
+      <label>Quantidade de animais</label><input id="el-qtd" type="number" value="${l.qtd_animais??''}" />
+      <label>Data de entrada</label><input id="el-data" type="date" value="${l.data_entrada??''}" />
+      <label>Peso médio de entrada (kg)</label><input id="el-peso" type="number" value="${l.peso_entrada_medio_kg??''}" />
+      <label>Custo total da compra (R$)</label><input id="el-compra" type="number" value="${l.custo_compra_total??''}" />
+      <label>Rendimento de carcaça (%)</label><input id="el-rend" type="number" value="${rendPct}" />
+      <div id="el-msg"></div>
+      <button class="btn" style="margin-top:16px" onclick="salvarEdicao('${id}')">Salvar alterações</button>
+      <button class="btn ghost" style="width:100%;color:var(--vermelho);margin-top:8px" onclick="excluirLote('${id}')">🗑️ Excluir este lote</button>
+    </div>`;
+}
+async function salvarEdicao(id){
+  const nome=$('el-nome').value.trim();
+  if(!nome) return msg('el-msg','Dê um nome ao lote.');
+  const {error}=await db.from('lote').update({
+    nome, fase:$('el-fase').value, sistema:$('el-sist').value,
+    qtd_animais:parseInt($('el-qtd').value)||null, data_entrada:$('el-data').value||null,
+    peso_entrada_medio_kg:parseFloat($('el-peso').value)||null,
+    custo_compra_total:parseFloat($('el-compra').value)||null,
+    rendimento_carcaca:(parseFloat($('el-rend').value)||53)/100
+  }).eq('id',id);
+  if(error) return msg('el-msg',error.message);
+  renderLote(id);
+}
+let _confirmaExcluir=null;
+async function excluirLote(id){
+  if(_confirmaExcluir!==id){
+    _confirmaExcluir=id;
+    msg('el-msg','Tem certeza? Isso apaga o lote e todas as pesagens/custos dele. Clique de novo em Excluir pra confirmar.','err');
+    return;
+  }
+  _confirmaExcluir=null;
+  // apaga filhos primeiro (caso não haja cascade), depois o lote
+  await db.from('pesagem').delete().eq('lote_id',id);
+  await db.from('custo').delete().eq('lote_id',id);
+  const {error}=await db.from('lote').delete().eq('id',id);
+  if(error) return msg('el-msg',error.message);
+  renderLotes();
+}
+
+// ---------- novo lote ----------
+function novoLote(){
+  const body=$('app-body');
+  body.innerHTML=`<button class="back" onclick="renderLotes()">← Voltar</button>
+    <div class="card"><h3>Novo lote</h3>
+      <label>Nome</label><input id="nl-nome" placeholder="Ex: Lote Nelore 02" />
+      <label>Fase</label><select id="nl-fase"><option value="engorda">Engorda</option><option value="recria">Recria</option><option value="cria">Cria</option></select>
+      <label>Sistema</label><select id="nl-sist"><option value="pasto">Pasto</option><option value="semiconfinamento">Semiconfinamento</option><option value="confinamento">Confinamento</option></select>
+      <label>Quantidade de animais</label><input id="nl-qtd" type="number" placeholder="50" />
+      <label>Data de entrada</label><input id="nl-data" type="date" value="${new Date().toISOString().slice(0,10)}" />
+      <label>Peso médio de entrada (kg)</label><input id="nl-peso" type="number" placeholder="360" />
+      <label>Custo total da compra (R$)</label><input id="nl-compra" type="number" placeholder="125000" />
+      <label>Rendimento de carcaça (%)</label><input id="nl-rend" type="number" value="53" />
+      <div id="nl-msg"></div>
+      <button class="btn" style="margin-top:16px" onclick="salvarLote()">Criar lote</button>
+    </div>`;
+}
+async function salvarLote(){
+  const nome=$('nl-nome').value.trim();
+  if(!nome) return msg('nl-msg','Dê um nome ao lote.');
+  const {error}=await db.from('lote').insert({
+    fazenda_id:FAZENDA.id, nome, fase:$('nl-fase').value, sistema:$('nl-sist').value,
+    qtd_animais:parseInt($('nl-qtd').value)||null, data_entrada:$('nl-data').value||null,
+    peso_entrada_medio_kg:parseFloat($('nl-peso').value)||null,
+    custo_compra_total:parseFloat($('nl-compra').value)||null,
+    rendimento_carcaca:(parseFloat($('nl-rend').value)||53)/100
+  });
+  if(error) return msg('nl-msg',error.message);
+  renderLotes();
+}
+
+// ---------- importar lotes por planilha ----------
+const COLUNAS_MODELO=['Nome','Fase','Sistema','Quantidade de Animais','Data de Entrada','Peso Médio de Entrada (kg)','Custo Total da Compra (R$)','Rendimento de Carcaça (%)'];
+function baixarModelo(){
+  const exemplo=['Lote Nelore 01','engorda','pasto',50,'15/01/2026',360,125000,53];
+  const ws=XLSX.utils.aoa_to_sheet([COLUNAS_MODELO,exemplo]);
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'Lotes');
+  XLSX.writeFile(wb,'modelo-lotes-arroba-certa.xlsx');
+}
+function renderImportar(){
+  const body=$('app-body');
+  body.innerHTML=`<button class="back" onclick="renderLotes()">← Voltar</button>
+    <div class="card">
+      <h3>Importar lotes por planilha</h3>
+      <p class="mut">Sobe um arquivo .xlsx, .xls ou .csv com seus lotes. Colunas esperadas (nessa ordem, mas os nomes das colunas podem variar um pouco):</p>
+      <p class="mut" style="margin-top:6px"><b>${COLUNAS_MODELO.join(' · ')}</b></p>
+      <button class="btn sec mini" style="margin-top:12px" onclick="baixarModelo()">⬇️ Baixar modelo (.xlsx)</button>
+      <div class="file-drop">
+        <input type="file" id="imp-file" accept=".xlsx,.xls,.csv" onchange="lerPlanilha(event)" />
+      </div>
+      <div id="imp-msg"></div>
+    </div>
+    <div id="imp-preview"></div>`;
+}
+function normalizarCabecalho(h){
+  return String(h||'').replace(/\([^)]*\)/g,'').toLowerCase()
+    .replace(/[áàâãä]/g,'a').replace(/[éèêë]/g,'e').replace(/[íìîï]/g,'i')
+    .replace(/[óòôõö]/g,'o').replace(/[úùûü]/g,'u').replace(/ç/g,'c')
+    .replace(/[^a-z0-9]/g,'');
+}
+function parseDataCell(v){
+  if(v==null||v==='') return null;
+  if(v instanceof Date) return v.toISOString().slice(0,10);
+  const s=String(v).trim();
+  const m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+  if(m){ let [,d,mo,y]=m; if(y.length===2) y='20'+y; return `${y}-${mo.padStart(2,'0')}-${d.padStart(2,'0')}`; }
+  if(/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0,10);
+  return null;
+}
+const FASES_VALIDAS=['engorda','recria','cria'], SISTEMAS_VALIDOS=['pasto','semiconfinamento','confinamento'];
+function lerPlanilha(ev){
+  const file=ev.target.files[0]; if(!file) return;
+  msg('imp-msg','');
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const wb=XLSX.read(e.target.result,{type:'array',cellDates:true});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      const linhas=XLSX.utils.sheet_to_json(ws,{defval:null});
+      if(!linhas.length){ return msg('imp-msg','Planilha vazia.'); }
+      const mapaChaves={nome:'nome',fase:'fase',sistema:'sistema',
+        quantidadedeanimais:'qtd_animais',quantidade:'qtd_animais',qtdanimais:'qtd_animais',animais:'qtd_animais',
+        datadeentrada:'data_entrada',dataentrada:'data_entrada',data:'data_entrada',
+        pesomediodeentrada:'peso_entrada_medio_kg',pesodeentrada:'peso_entrada_medio_kg',pesoentrada:'peso_entrada_medio_kg',peso:'peso_entrada_medio_kg',
+        custototaldacompra:'custo_compra_total',custodacompra:'custo_compra_total',custocompra:'custo_compra_total',custo:'custo_compra_total',
+        rendimentodecarcaca:'rendimento_carcaca',rendimento:'rendimento_carcaca'};
+      PARSED_LOTES=linhas.map(row=>{
+        const out={};
+        for(const k in row){ const alvo=mapaChaves[normalizarCabecalho(k)]; if(alvo) out[alvo]=row[k]; }
+        const fase=String(out.fase||'').toLowerCase().trim();
+        const sistema=String(out.sistema||'').toLowerCase().trim();
+        return {
+          nome: out.nome? String(out.nome).trim(): null,
+          fase: FASES_VALIDAS.includes(fase)?fase:'engorda',
+          sistema: SISTEMAS_VALIDOS.includes(sistema)?sistema:'pasto',
+          qtd_animais: out.qtd_animais!=null? parseInt(out.qtd_animais):null,
+          data_entrada: parseDataCell(out.data_entrada),
+          peso_entrada_medio_kg: out.peso_entrada_medio_kg!=null? parseFloat(out.peso_entrada_medio_kg):null,
+          custo_compra_total: out.custo_compra_total!=null? parseFloat(out.custo_compra_total):null,
+          rendimento_carcaca: out.rendimento_carcaca!=null? (parseFloat(out.rendimento_carcaca)/100):0.53,
+        };
+      });
+      renderPreviewImportacao();
+    }catch(err){ msg('imp-msg','Não consegui ler esse arquivo: '+err.message); }
+  };
+  reader.readAsArrayBuffer(file);
+}
+function renderPreviewImportacao(){
+  const linhas=PARSED_LOTES||[];
+  const validas=linhas.filter(l=>l.nome && l.qtd_animais);
+  const rows=linhas.map(l=>{
+    const ok = l.nome && l.qtd_animais;
+    return `<tr class="${ok?'':'bad'}"><td>${l.nome||'— sem nome —'}</td><td>${l.fase}</td><td>${l.sistema}</td>
+      <td>${l.qtd_animais??'— falta —'}</td><td>${fmtData(l.data_entrada)}</td><td>${num(l.peso_entrada_medio_kg,0)}</td>
+      <td>${brl(l.custo_compra_total)}</td><td>${Math.round((l.rendimento_carcaca||0)*100)}%</td></tr>`;
+  }).join('');
+  $('imp-preview').innerHTML=`<div class="card">
+    <h3>Prévia (${validas.length} de ${linhas.length} linhas prontas pra importar)</h3>
+    ${linhas.length>validas.length?'<p class="mut" style="color:var(--vermelho)">Linhas em vermelho faltam Nome e/ou Quantidade de animais — não serão importadas.</p>':''}
+    <div style="overflow-x:auto"><table class="imp">
+      <tr><th>Nome</th><th>Fase</th><th>Sistema</th><th>Qtd</th><th>Entrada</th><th>Peso kg</th><th>Custo</th><th>Rend.</th></tr>
+      ${rows}
+    </table></div>
+    <button class="btn" style="margin-top:14px" ${validas.length?'':'disabled'} onclick="confirmarImportacao()">Importar ${validas.length} lote(s)</button>
+  </div>`;
+}
+async function confirmarImportacao(){
+  const validas=(PARSED_LOTES||[]).filter(l=>l.nome && l.qtd_animais)
+    .map(l=>({...l, fazenda_id:FAZENDA.id}));
+  if(!validas.length) return;
+  const {error}=await db.from('lote').insert(validas);
+  if(error) return msg('imp-msg',error.message);
+  PARSED_LOTES=null;
+  renderLotes();
+}
+
+// ---------- ajuda / suporte (chat IA) ----------
+// WhatsApp humano (Luh) pro botão "Falar com a gente" — escalação de último caso.
+const WHATSAPP_SUPORTE = '5584994127476';
+const SUPORTE_URL = 'https://n8n.luhpanda.com.br/webhook/arroba-certa-suporte';
+let CHAT_MSGS = [];
+
+const esc = s => String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+function renderAjuda(){
+  setNav('ajuda');
+  $('app-body').innerHTML = `
+    <div class="nome" style="font-size:20px;margin:10px 0 4px">💬 Perguntas & Suporte</div>
+    <p class="mut" style="margin-bottom:14px">Tira dúvida sobre o app ou sobre pecuária de corte com nosso assistente. Resposta na hora, a qualquer hora.</p>
+    <div class="card" style="max-width:720px">
+      <div id="chat-box" class="chat-box"></div>
+      <div style="display:flex;gap:8px;margin-top:12px">
+        <input id="chat-in" placeholder="Escreva sua pergunta…" onkeydown="if(event.key==='Enter')enviarPergunta()" />
+        <button class="btn mini" id="chat-send" onclick="enviarPergunta()">Enviar</button>
+      </div>
+    </div>
+    <div class="card" style="max-width:720px">
+      <h3>Precisa de uma pessoa?</h3>
+      <p class="mut" style="margin-bottom:12px">Se o assistente não resolver — ou o assunto for pagamento, conta ou algum erro chato — fala direto com a gente.</p>
+      <a href="https://wa.me/${WHATSAPP_SUPORTE}?text=${encodeURIComponent('Oi! Preciso de ajuda no ARROBA CERTA 🐂')}" target="_blank" rel="noopener" style="text-decoration:none">
+        <button class="btn sec">💬 Falar com a gente no WhatsApp</button>
+      </a>
+    </div>`;
+  desenharChat();
+  $('chat-in').focus();
+}
+function desenharChat(){
+  const box=$('chat-box'); if(!box) return;
+  if(!CHAT_MSGS.length){
+    box.innerHTML='<p class="mut center" style="padding:14px">Exemplos: "Como cadastro um lote?" · "O que é custo da @ produzida?" · "GMD de 0,6 no pasto tá bom?"</p>';
+  } else {
+    box.innerHTML=CHAT_MSGS.map(m=>m.pensando
+      ? '<div class="chat-msg bot pensando">pensando…</div>'
+      : `<div class="chat-msg ${m.de}">${esc(m.texto)}</div>`).join('');
+  }
+  box.scrollTop=box.scrollHeight;
+}
+async function enviarPergunta(){
+  const inp=$('chat-in'), pergunta=inp.value.trim();
+  if(!pergunta || $('chat-send').disabled) return;
+  inp.value='';
+  CHAT_MSGS.push({de:'eu',texto:pergunta});
+  CHAT_MSGS.push({de:'bot',pensando:true});
+  desenharChat();
+  $('chat-send').disabled=true;
+  const historico=CHAT_MSGS.slice(0,-2).slice(-8)
+    .map(m=>(m.de==='eu'?'Produtor: ':'Assistente: ')+(m.texto||'')).join('\n')||'(sem histórico)';
+  try{
+    const resp=await fetch(SUPORTE_URL,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({pergunta,historico,fazenda:FAZENDA?.nome||'produtor'})});
+    if(!resp.ok) throw new Error('HTTP '+resp.status);
+    const j=await resp.json();
+    CHAT_MSGS[CHAT_MSGS.length-1]={de:'bot',texto:j.resposta||'Não consegui responder agora. Tenta de novo ou usa o botão do WhatsApp aqui embaixo. 🙏'};
+  }catch(e){
+    CHAT_MSGS[CHAT_MSGS.length-1]={de:'bot',texto:'Deu um erro aqui do meu lado 😕 Tenta de novo em instantes ou fala com a gente no WhatsApp aqui embaixo.'};
+  }
+  $('chat-send').disabled=false;
+  desenharChat();
+  const inp2=$('chat-in'); if(inp2) inp2.focus();
+}
+
+// ---------- start ----------
+setAuthTab('entrar');
+boot();
+</script>
+</body>
+</html>
