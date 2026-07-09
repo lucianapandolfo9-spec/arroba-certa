@@ -661,6 +661,7 @@ async function renderLote(id){
 
     <div class="card">
       <h3>⚖️ Pesagens</h3>
+      <p class="mut">Pese esse lote de tempos em tempos (a cada 30 dias é um bom intervalo). É a partir de duas pesagens que calculamos o ganho de peso por dia (GMD).</p>
       ${(pes||[]).length>1?'<div style="height:140px;margin-bottom:12px"><canvas id="chart-peso"></canvas></div>':''}
       ${(pes||[]).map(p=>`<div class="list-item"><span>${fmtData(p.data)}</span>
         <span><b>${num(p.peso_medio_kg,0)} kg</b>
@@ -669,14 +670,16 @@ async function renderLote(id){
         </span></div>`).join('')||'<p class="mut">Sem pesagens.</p>'}
       <div style="display:flex;gap:8px;margin-top:12px">
         <input id="pes-data" type="date" value="${new Date().toISOString().slice(0,10)}" />
-        <input id="pes-peso" type="number" placeholder="peso kg" />
+        <input id="pes-peso" type="number" placeholder="peso médio kg" />
         <button class="btn mini" id="pes-add" onclick="addPesagem('${id}')">+</button>
       </div>
+      <div class="mut" style="font-size:12px;margin-top:6px">Não precisa pesar cada animal — pega uma amostra ou usa a média da balança/embarque.</div>
       <div id="pes-msg"></div>
     </div>
 
     <div class="card">
       <h3>💵 Custos do período</h3>
+      <p class="mut">Registre tudo que você gasta com esse lote — é o que define se ele está dando lucro de verdade.</p>
       ${(cus||[]).map(c=>`<div class="list-item"><span>${fmtData(c.data)} · ${c.categoria}</span>
         <span><b>${brl(c.valor)}</b>
           <button class="btn ghost mini" title="Editar" onclick="editCusto('${id}','${c.id}','${c.data}','${c.categoria}',${c.valor})">✏️</button>
@@ -692,11 +695,13 @@ async function renderLote(id){
         <input id="cus-valor" type="number" placeholder="R$ valor" style="flex:1;min-width:110px" />
         <button class="btn mini" id="cus-add" onclick="addCusto('${id}')">+</button>
       </div>
+      <div class="mut" style="font-size:12px;margin-top:6px">Alimentação = ração/sal/pasto pago · Sanitário = vacina/remédio/veterinário · Mão de obra = quem cuida do lote · Operacional = combustível/manutenção · Fixo = custos que existem mesmo sem esse lote (rateados).</div>
       <div id="cus-msg"></div>
     </div>
 
     <div class="card">
       <h3>💉 Sanitário</h3>
+      <p class="mut">Registre vacina, vermífugo, exame ou tratamento. Vacinas obrigatórias no Brasil: Febre Aftosa (calendário MAPA) e Brucelose (fêmeas de 3-8 meses). Preencha "próxima dose" pra receber o aviso aqui antes de vencer.</p>
       ${proximasSanitario(san).map(s=>`<div class="msg err">⚠ ${labelEvento(s.evento)}${s.produto?' — '+esc(s.produto):''} — próxima dose ${fmtData(s.proxima_data)}</div>`).join('')}
       ${(san||[]).map(s=>`<div class="list-item"><span>${fmtData(s.data)} · ${labelEvento(s.evento)}${s.produto?' — '+esc(s.produto):''}${s.proxima_data?' <span class="mut">(próx.: '+fmtData(s.proxima_data)+')</span>':''}</span>
         <span><b>${s.custo!=null?brl(s.custo):''}</b>
@@ -713,7 +718,7 @@ async function renderLote(id){
         <input id="san-custo" type="number" placeholder="R$ custo (opc.)" style="flex:1;min-width:110px" />
         <button class="btn mini" id="san-add" onclick="addSanitario('${id}')">+</button>
       </div>
-      <div class="mut" style="font-size:12px;margin-top:6px">Preencha "próxima dose" pra receber o alerta aqui quando estiver perto de vencer.</div>
+      <div class="mut" style="font-size:12px;margin-top:6px">Vermífugo = contra verme · Exame = de rotina ou pré-venda · Tratamento = remédio pra doença específica. "Próxima dose" fica vazio se o evento não se repete.</div>
       <div id="san-msg"></div>
     </div>
     <div style="height:30px"></div>`;
@@ -897,8 +902,10 @@ async function simularLote(id){
       <input id="sm-fut" type="number" step="0.01" value="${precoHoje.toFixed(2)}" placeholder="sua aposta pro futuro" />
       <label>Custo por cabeça por dia pra manter o boi (R$)</label>
       <input id="sm-custo" type="number" step="0.01" value="${custoDia.toFixed(2)}" />
+      <div class="mut" style="font-size:12px;margin-top:2px">Ração + mão de obra + tudo que você gasta por dia, dividido pelo número de cabeças. Já vem calculado com base no histórico do lote — ajuste se achar que vai mudar.</div>
       <label>Ganho de peso por dia — GMD (kg)</label>
       <input id="sm-gmd" type="number" step="0.01" value="${gmd.toFixed(2)}" />
+      <div class="mut" style="font-size:12px;margin-top:2px">Quanto o animal engorda por dia, em média. Referência: 0,4-0,8 no pasto, 0,8-1,2 no semiconfinamento, 1,0-1,6 no confinamento.</div>
       <div id="sm-msg"></div>
       <button class="btn" style="margin-top:16px;background:var(--terra)" onclick="rodarSimulacao('${id}')">Simular</button>
     </div>
@@ -955,14 +962,19 @@ async function editarLote(id){
       <label>Fase</label><select id="el-fase">
         ${['engorda','recria','cria'].map(o=>`<option value="${o}" ${l.fase===o?'selected':''}>${o[0].toUpperCase()+o.slice(1)}</option>`).join('')}
       </select>
+      <div class="mut" style="font-size:12px;margin-top:2px">Cria = da cria ao desmame · Recria = do desmame até virar boi magro · Engorda = fase final até o abate.</div>
       <label>Sistema</label><select id="el-sist">
         ${['pasto','semiconfinamento','confinamento'].map(o=>`<option value="${o}" ${l.sistema===o?'selected':''}>${o[0].toUpperCase()+o.slice(1)}</option>`).join('')}
       </select>
+      <div class="mut" style="font-size:12px;margin-top:2px">Pasto = só capim · Semiconfinamento = pasto + ração/suplemento · Confinamento = curral fechado, só ração.</div>
       <label>Quantidade de animais</label><input id="el-qtd" type="number" value="${l.qtd_animais??''}" />
       <label>Data de entrada</label><input id="el-data" type="date" value="${l.data_entrada??''}" />
       <label>Peso médio de entrada (kg)</label><input id="el-peso" type="number" value="${l.peso_entrada_medio_kg??''}" />
+      <div class="mut" style="font-size:12px;margin-top:2px">Peso vivo médio dos animais no dia da entrada nesse lote.</div>
       <label>Custo total da compra (R$)</label><input id="el-compra" type="number" value="${l.custo_compra_total??''}" />
+      <div class="mut" style="font-size:12px;margin-top:2px">Valor TOTAL pago por todos os animais do lote (não é por cabeça).</div>
       <label>Rendimento de carcaça (%)</label><input id="el-rend" type="number" value="${rendPct}" />
+      <div class="mut" style="font-size:12px;margin-top:2px">Quanto do peso vivo vira carcaça no abate. Não sabe? Deixe 53%.</div>
       <div id="el-msg"></div>
       <button class="btn" style="margin-top:16px" onclick="salvarEdicao('${id}')">Salvar alterações</button>
       <button class="btn ghost" style="width:100%;color:var(--vermelho);margin-top:8px" onclick="excluirLote('${id}')">🗑️ Excluir este lote</button>
@@ -1002,14 +1014,21 @@ function novoLote(){
   const body=$('app-body');
   body.innerHTML=`<button class="back" onclick="renderLotes()">← Voltar</button>
     <div class="card"><h3>Novo lote</h3>
+      <p class="mut">Lote é o grupo de animais que você acompanha junto (mesma entrada, mesmo manejo). Não sabe algum número exato agora? Estime — dá pra ajustar depois em "Editar".</p>
       <label>Nome</label><input id="nl-nome" placeholder="Ex: Lote Nelore 02" />
       <label>Fase</label><select id="nl-fase"><option value="engorda">Engorda</option><option value="recria">Recria</option><option value="cria">Cria</option></select>
+      <div class="mut" style="font-size:12px;margin-top:2px">Cria = da cria ao desmame (~7-8 meses) · Recria = do desmame até virar boi magro · Engorda = fase final até o abate.</div>
       <label>Sistema</label><select id="nl-sist"><option value="pasto">Pasto</option><option value="semiconfinamento">Semiconfinamento</option><option value="confinamento">Confinamento</option></select>
+      <div class="mut" style="font-size:12px;margin-top:2px">Pasto = só capim · Semiconfinamento = pasto + ração/suplemento · Confinamento = curral fechado, só ração.</div>
       <label>Quantidade de animais</label><input id="nl-qtd" type="number" placeholder="50" />
       <label>Data de entrada</label><input id="nl-data" type="date" value="${new Date().toISOString().slice(0,10)}" />
+      <div class="mut" style="font-size:12px;margin-top:2px">O dia em que esse lote começou (chegou na fazenda ou entrou nessa fase).</div>
       <label>Peso médio de entrada (kg)</label><input id="nl-peso" type="number" placeholder="360" />
+      <div class="mut" style="font-size:12px;margin-top:2px">Peso vivo médio dos animais no dia da entrada — pesou na balança ou fez uma estimativa visual.</div>
       <label>Custo total da compra (R$)</label><input id="nl-compra" type="number" placeholder="125000" />
+      <div class="mut" style="font-size:12px;margin-top:2px">Quanto você pagou no TOTAL por todos os animais do lote (não é o valor por cabeça).</div>
       <label>Rendimento de carcaça (%)</label><input id="nl-rend" type="number" value="53" />
+      <div class="mut" style="font-size:12px;margin-top:2px">Quanto do peso vivo vira carcaça no abate — usado pra calcular arrobas. Não sabe? Deixe 53%, é a média do mercado.</div>
       <div id="nl-msg"></div>
       <button class="btn" style="margin-top:16px" onclick="salvarLote()">Criar lote</button>
     </div>`;
