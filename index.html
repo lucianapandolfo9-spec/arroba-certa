@@ -202,6 +202,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 <script>
 // ---------- config ----------
 const SUPABASE_URL = "https://tscnqvuzlfagotirgjbz.supabase.co";
@@ -317,6 +318,32 @@ async function loadTicker(){
   track.classList.add('anim');
   track.style.animationDuration=Math.max(14,atuais.length*5)+'s';
 }
+let CHARTS_COT={};
+function renderGraficoCotacao(praca,hist){
+  const ctx=document.getElementById('chart-'+praca); if(!ctx) return;
+  if(CHARTS_COT[praca]){ CHARTS_COT[praca].destroy(); delete CHARTS_COT[praca]; }
+  const asc=[...hist].sort((a,b)=>a.data.localeCompare(b.data));
+  if(asc.length<2) return;
+  CHARTS_COT[praca]=new Chart(ctx,{
+    type:'line',
+    data:{labels:asc.map(h=>fmtData(h.data).slice(0,5)),
+      datasets:[{data:asc.map(h=>Number(h.valor_rs)),borderColor:'#3f6212',
+        backgroundColor:'rgba(101,163,13,.15)',fill:true,tension:.25,pointRadius:2}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},
+      tooltip:{callbacks:{label:c=>brl(c.parsed.y)}}},
+      scales:{y:{ticks:{callback:v=>'R$'+v}},x:{ticks:{maxTicksLimit:6}}}}
+  });
+}
+function calcularRelacaoTroca(){
+  const magro=parseFloat($('rt-magro').value), praca=$('rt-praca').value;
+  if(!magro||magro<=0) return $('rt-result').innerHTML='<div class="msg err">Informe o preço do boi magro/reposição.</div>';
+  const hist=(COTACOES_TODAS||[]).filter(c=>c.praca===praca).sort((a,b)=>b.data.localeCompare(a.data));
+  if(!hist.length) return $('rt-result').innerHTML='<div class="msg err">Sem cotação pra essa praça ainda.</div>';
+  const cot=hist[0], relacao=magro/Number(cot.valor_rs);
+  $('rt-result').innerHTML=`<div class="kpi"><div class="lbl">Relação de troca</div><div class="val">${num(relacao,2)} @</div></div>
+    <p class="mut" style="margin-top:8px">Quantas arrobas do boi gordo pagam esse boi magro. <b>Menor = magro mais barato = melhor hora de comprar.</b>
+    Compare com o histórico dessa praça pra saber se tá bom — @ ${praca} usada: ${brl(cot.valor_rs)}, de ${fmtData(cot.data)}.</p>`;
+}
 function renderCotacoes(){
   setNav('cot');
   const body=$('app-body');
@@ -335,11 +362,23 @@ function renderCotacoes(){
         <h3 style="margin-bottom:0">${p}</h3><span class="mut" style="font-size:12px">${fmtData(atual.data)}</span>
       </div>
       <div class="big" style="margin:6px 0">${brl(atual.valor_rs)}<span style="font-size:14px;font-weight:600;color:var(--cinza)">/@</span></div>
+      ${hist.length>1?`<div style="height:90px;margin:8px 0"><canvas id="chart-${p}"></canvas></div>`:''}
       ${hist.slice(1,6).map(h=>`<div class="list-item"><span>${fmtData(h.data)}</span><span>${brl(h.valor_rs)}</span></div>`).join('')}
     </div>`;
   }
   html+='</div>';
+  html+=`<div class="section-title">Relação de troca — hora de comprar reposição?</div>
+    <div class="card" style="max-width:520px">
+      <p class="mut" style="margin-bottom:10px">Quantas arrobas do boi gordo pagam 1 boi magro/reposição hoje.</p>
+      <label>Preço do boi magro/reposição (R$/cabeça)</label>
+      <input id="rt-magro" type="number" placeholder="Ex: 2800" />
+      <label>Praça de referência</label>
+      <select id="rt-praca">${pracas.map(p=>`<option value="${p}" ${p===FAZENDA?.praca_referencia?'selected':''}>${p}</option>`).join('')}</select>
+      <button class="btn mini" style="margin-top:10px" onclick="calcularRelacaoTroca()">Calcular</button>
+      <div id="rt-result" style="margin-top:10px"></div>
+    </div>`;
   body.innerHTML=html;
+  for(const p of pracas) renderGraficoCotacao(p,porPraca[p].slice(0,15));
 }
 
 function normalizaTelefone(v){
@@ -416,7 +455,10 @@ async function salvarConta(){
 async function renderDashboard(){
   setNav('dash');
   const body=$('app-body'); body.innerHTML='<p class="mut center" style="padding:30px">Carregando…</p>';
-  const {data:lotes,error}=await db.from('vw_lote_analise').select('*').order('nome');
+  const [{data:lotes,error},{data:vacinasProx}]=await Promise.all([
+    db.from('vw_lote_analise').select('*').order('nome'),
+    db.from('sanitario').select('*, lote:lote_id(nome)').not('proxima_data','is',null).lte('proxima_data',addDias(hoje(),14)).order('proxima_data'),
+  ]);
   if(error){ body.innerHTML=`<div class="msg err">${error.message}</div>`; return; }
   const ativos=(lotes||[]).filter(l=>l.ativo);
   const totalAnimais=ativos.reduce((s,l)=>s+(l.qtd_animais||0),0);
@@ -449,7 +491,9 @@ async function renderDashboard(){
         <button class="btn sec" style="margin-top:14px" onclick="renderLotes()">Ver todos os lotes</button>
       </div>
       <div class="card"><h3>Alertas e mercado</h3>
-        ${alertas.length?alertas.map(l=>`<div class="msg err"><b>${l.nome}</b><br>${Number(l.gmd)>3?'GMD fora da faixa esperada. Confira pesos e datas.':'Lote com prejuízo estimado.'}</div>`).join(''):'<div class="msg ok">Nenhum alerta crítico nos lotes ativos.</div>'}
+        ${alertas.length?alertas.map(l=>`<div class="msg err"><b>${l.nome}</b><br>${Number(l.gmd)>3?'GMD fora da faixa esperada. Confira pesos e datas.':'Lote com prejuízo estimado.'}</div>`).join(''):''}
+        ${(vacinasProx||[]).map(s=>`<div class="msg err"><b>${s.lote?.nome||'Lote'}</b><br>${labelEvento(s.evento)}${s.produto?' — '+esc(s.produto):''} vence ${fmtData(s.proxima_data)}</div>`).join('')}
+        ${(!alertas.length && !(vacinasProx||[]).length)?'<div class="msg ok">Nenhum alerta crítico nos lotes ativos.</div>':''}
         <div class="row"><span class="k">Melhor resultado/cabeça</span><span class="v pos">${brl(ranking[0]?.lucro_cab)}</span></div>
         <div class="row"><span class="k">Preço médio da @ usada</span><span class="v">${brl(precoMedio)}</span></div>
       </div>
@@ -533,13 +577,14 @@ async function renderLotes(){
 
 // ---------- detalhe do lote ----------
 async function renderLote(id){
-  EDIT_PES=null; EDIT_CUS=null;
+  EDIT_PES=null; EDIT_CUS=null; EDIT_SAN=null;
   const body=$('app-body'); body.innerHTML='<p class="mut center" style="padding:30px">Carregando…</p>';
-  const [{data:vs},{data:lote},{data:pes},{data:cus}] = await Promise.all([
+  const [{data:vs},{data:lote},{data:pes},{data:cus},{data:san}] = await Promise.all([
     db.from('vw_lote_analise').select('*').eq('lote_id',id).single(),
     db.from('lote').select('*').eq('id',id).single(),
     db.from('pesagem').select('*').eq('lote_id',id).order('data',{ascending:false}),
     db.from('custo').select('*').eq('lote_id',id).order('data',{ascending:false}),
+    db.from('sanitario').select('*').eq('lote_id',id).order('data',{ascending:false}),
   ]);
   const v=vs; const lucro=Number(v.lucro_cab);
   const fechado = !v.ativo;
@@ -616,6 +661,7 @@ async function renderLote(id){
 
     <div class="card">
       <h3>⚖️ Pesagens</h3>
+      ${(pes||[]).length>1?'<div style="height:140px;margin-bottom:12px"><canvas id="chart-peso"></canvas></div>':''}
       ${(pes||[]).map(p=>`<div class="list-item"><span>${fmtData(p.data)}</span>
         <span><b>${num(p.peso_medio_kg,0)} kg</b>
           <button class="btn ghost mini" title="Editar" onclick="editPesagem('${id}','${p.id}','${p.data}',${p.peso_medio_kg})">✏️</button>
@@ -648,8 +694,31 @@ async function renderLote(id){
       </div>
       <div id="cus-msg"></div>
     </div>
+
+    <div class="card">
+      <h3>💉 Sanitário</h3>
+      ${proximasSanitario(san).map(s=>`<div class="msg err">⚠ ${labelEvento(s.evento)}${s.produto?' — '+esc(s.produto):''} — próxima dose ${fmtData(s.proxima_data)}</div>`).join('')}
+      ${(san||[]).map(s=>`<div class="list-item"><span>${fmtData(s.data)} · ${labelEvento(s.evento)}${s.produto?' — '+esc(s.produto):''}${s.proxima_data?' <span class="mut">(próx.: '+fmtData(s.proxima_data)+')</span>':''}</span>
+        <span><b>${s.custo!=null?brl(s.custo):''}</b>
+          <button class="btn ghost mini" title="Excluir" onclick="delSanitario('${id}','${s.id}',this)">🗑️</button>
+        </span></div>`).join('')||'<p class="mut">Sem eventos sanitários.</p>'}
+      <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+        <input id="san-data" type="date" value="${hoje()}" style="flex:1;min-width:130px" />
+        <select id="san-evento" style="flex:1;min-width:130px">
+          <option value="vacina">Vacina</option><option value="vermifugo">Vermífugo</option>
+          <option value="exame">Exame</option><option value="tratamento">Tratamento</option>
+        </select>
+        <input id="san-produto" placeholder="Produto (ex: Aftosa)" style="flex:1;min-width:140px" />
+        <input id="san-proxima" type="date" style="flex:1;min-width:130px" title="Próxima dose (opcional)" />
+        <input id="san-custo" type="number" placeholder="R$ custo (opc.)" style="flex:1;min-width:110px" />
+        <button class="btn mini" id="san-add" onclick="addSanitario('${id}')">+</button>
+      </div>
+      <div class="mut" style="font-size:12px;margin-top:6px">Preencha "próxima dose" pra receber o alerta aqui quando estiver perto de vencer.</div>
+      <div id="san-msg"></div>
+    </div>
     <div style="height:30px"></div>`;
   body.innerHTML=html;
+  renderGraficoPeso(pes);
 }
 
 async function salvarPreco(id){
@@ -760,6 +829,49 @@ async function delCusto(loteId,cusId,btn){
   const {error}=await db.from('custo').delete().eq('id',cusId);
   if(error) return msg('cus-msg',error.message);
   renderLote(loteId);
+}
+
+// ---------- sanitário (vacinas/vermífugo/exames) ----------
+let EDIT_SAN=null;
+function labelEvento(e){ return {vacina:'💉 Vacina',vermifugo:'🪱 Vermífugo',exame:'🔬 Exame',tratamento:'🩺 Tratamento'}[e]||e; }
+function addDias(dataStr,dias){ const d=new Date(dataStr+'T00:00:00'); d.setDate(d.getDate()+dias); return d.toISOString().slice(0,10); }
+function proximasSanitario(san){
+  const limite=addDias(hoje(),14);
+  return (san||[]).filter(s=>s.proxima_data && s.proxima_data<=limite);
+}
+async function addSanitario(id){
+  const data=$('san-data').value, evento=$('san-evento').value,
+        produto=$('san-produto').value.trim()||null, proxima=$('san-proxima').value||null,
+        custoRaw=$('san-custo').value, custo=custoRaw?parseFloat(custoRaw):null;
+  if(!data) return msg('san-msg','Informe a data do evento.');
+  if(data>hoje()) return msg('san-msg','Data no futuro? Confira.');
+  const {error}=await db.from('sanitario').insert({lote_id:id,data,evento,produto,proxima_data:proxima,custo});
+  if(error) return msg('san-msg',error.message);
+  renderLote(id);
+}
+async function delSanitario(loteId,sanId,btn){
+  if(btn.dataset.arm!=='1'){ btn.dataset.arm='1'; btn.textContent='confirma?'; btn.style.color='var(--vermelho)'; return; }
+  const {error}=await db.from('sanitario').delete().eq('id',sanId);
+  if(error) return msg('san-msg',error.message);
+  renderLote(loteId);
+}
+
+// ---------- gráfico de peso/GMD do lote ----------
+let CHART_PESO=null;
+function renderGraficoPeso(pes){
+  const ctx=document.getElementById('chart-peso'); if(!ctx) return;
+  if(CHART_PESO){ CHART_PESO.destroy(); CHART_PESO=null; }
+  const asc=[...(pes||[])].sort((a,b)=>a.data.localeCompare(b.data));
+  if(asc.length<2) return;
+  CHART_PESO=new Chart(ctx,{
+    type:'line',
+    data:{labels:asc.map(p=>fmtData(p.data)),
+      datasets:[{data:asc.map(p=>Number(p.peso_medio_kg)),borderColor:'#a16207',
+        backgroundColor:'rgba(161,98,7,.12)',fill:true,tension:.25,pointRadius:3}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},
+      tooltip:{callbacks:{label:c=>num(c.parsed.y,0)+' kg'}}},
+      scales:{y:{ticks:{callback:v=>v+'kg'}}}}
+  });
 }
 
 // ---------- simulador vender vs segurar ----------
