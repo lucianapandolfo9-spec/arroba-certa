@@ -175,6 +175,20 @@
   <div class="wrap" id="app-body"></div>
 </div>
 
+<!-- ================= SEM ACESSO (BETA FECHADO) ================= -->
+<div id="scr-sem-acesso" class="wrap hidden" style="padding-top:40px">
+  <div class="center"><div class="logo" style="font-size:24px">Acesso por convite 🔒</div>
+  <p class="mut">O ARROBA CERTA ainda está em fase fechada de testes.</p></div>
+  <div class="card" style="text-align:center">
+    <p>Sua conta foi criada, mas o acesso ao sistema ainda não foi liberado pra esse e-mail.</p>
+    <p class="mut" style="font-size:13px">Fala com a gente pra pedir liberação.</p>
+    <a id="link-wa-sem-acesso" href="#" target="_blank" rel="noopener" style="text-decoration:none">
+      <button class="btn" style="margin-top:12px">Falar no WhatsApp</button>
+    </a>
+    <div style="margin-top:16px"><a href="#" onclick="logout();return false;" class="mut" style="font-size:13px">Sair</a></div>
+  </div>
+</div>
+
 <!-- ================= ONBOARDING FAZENDA ================= -->
 <div id="scr-faz" class="wrap hidden" style="padding-top:40px">
   <div class="center"><div class="logo" style="font-size:24px">Bem-vinda! 🐂</div>
@@ -215,7 +229,7 @@ const brl = v => v==null?"—":new Intl.NumberFormat('pt-BR',{style:'currency',c
 const num = (v,c=2) => v==null?"—":new Intl.NumberFormat('pt-BR',{minimumFractionDigits:c,maximumFractionDigits:c}).format(v);
 const show = id => $(id).classList.remove('hidden');
 const hide = id => $(id).classList.add('hidden');
-function screen(s){['scr-login','scr-app','scr-faz','scr-nova-senha'].forEach(hide);show(s);}
+function screen(s){['scr-login','scr-app','scr-faz','scr-nova-senha','scr-sem-acesso'].forEach(hide);show(s);}
 function fmtData(d){ if(!d) return '—'; const [y,m,day]=String(d).split('-'); return `${day}/${m}/${y}`; }
 function setNav(w){
   $('nav-dash').classList.toggle('on',w==='dash');
@@ -295,6 +309,11 @@ async function boot(){
   if(MODO_RECUPERACAO){ screen('scr-nova-senha'); return; }
   const {data:{user}} = await db.auth.getUser();
   if(!user){ screen('scr-login'); return; }
+  const {data:liberado} = await db.rpc('acesso_liberado');
+  if(!liberado){
+    $('link-wa-sem-acesso').href = 'https://wa.me/5584994127476?text='+encodeURIComponent('Oi! Quero pedir acesso ao ARROBA CERTA 🐂 (e-mail: '+user.email+')');
+    screen('scr-sem-acesso'); return;
+  }
   const {data:faz} = await db.from('fazenda').select('*').limit(1);
   if(!faz || !faz.length){ screen('scr-faz'); return; }
   FAZENDA = faz[0];
@@ -701,7 +720,8 @@ async function renderLote(id){
 
     <div class="card">
       <h3>💉 Sanitário</h3>
-      <p class="mut">Registre vacina, vermífugo, exame ou tratamento. Vacinas obrigatórias no Brasil: Febre Aftosa (calendário MAPA) e Brucelose (fêmeas de 3-8 meses). Preencha "próxima dose" pra receber o aviso aqui antes de vencer.</p>
+      <p class="mut">Registre vacina, vermífugo, exame ou tratamento. Preencha "próxima dose" pra receber o aviso aqui antes de vencer.</p>
+      ${guiaVacinacaoHTML(v.fase)}
       ${proximasSanitario(san).map(s=>`<div class="msg err">⚠ ${labelEvento(s.evento)}${s.produto?' — '+esc(s.produto):''} — próxima dose ${fmtData(s.proxima_data)}</div>`).join('')}
       ${(san||[]).map(s=>`<div class="list-item"><span>${fmtData(s.data)} · ${labelEvento(s.evento)}${s.produto?' — '+esc(s.produto):''}${s.proxima_data?' <span class="mut">(próx.: '+fmtData(s.proxima_data)+')</span>':''}</span>
         <span><b>${s.custo!=null?brl(s.custo):''}</b>
@@ -839,6 +859,53 @@ async function delCusto(loteId,cusId,btn){
 // ---------- sanitário (vacinas/vermífugo/exames) ----------
 let EDIT_SAN=null;
 function labelEvento(e){ return {vacina:'💉 Vacina',vermifugo:'🪱 Vermífugo',exame:'🔬 Exame',tratamento:'🩺 Tratamento'}[e]||e; }
+
+// Guia de vacinação por fase do gado (conteúdo educativo — Brasil).
+// ob:true = obrigatória por lei/exportação. Aftosa segue o calendário do estado
+// (vários estados já são livre SEM vacinação — por isso não cravamos data).
+const GUIA_VACINA = {
+  cria: { titulo:'Cria (nascimento ao desmame · 0 a 8 meses)', itens:[
+    {n:'Clostridioses (polivalente)', q:'1ª dose a partir dos 4 meses + reforço 30 dias depois. Protege contra manqueira, gangrena, tétano, botulismo e enterotoxemia.', ob:false},
+    {n:'Brucelose (B19)', q:'SÓ fêmeas, entre 3 e 8 meses, dose ÚNICA na vida. Aplicada por veterinário credenciado.', ob:true},
+    {n:'Raiva', q:'Em região com morcego hematófago (endêmica), a partir dos 3 meses e reforço anual.', ob:false},
+    {n:'Febre Aftosa', q:'Conforme a campanha do seu estado/MAPA. Muitos estados já são livre SEM vacinação — confira o seu.', ob:true},
+  ], nota:'Matrizes (vacas de cria): reforço anual de clostridioses + botulismo, e vacinas reprodutivas (IBR/BVD e Leptospirose) antes da estação de monta.' },
+  recria: { titulo:'Recria (desmame ao boi magro · ~8 a 20 meses)', itens:[
+    {n:'Clostridioses (polivalente)', q:'Reforço anual.', ob:false},
+    {n:'Raiva', q:'Anual, em região endêmica (morcego hematófago).', ob:false},
+    {n:'Febre Aftosa', q:'Conforme a campanha do seu estado/MAPA.', ob:true},
+  ], nota:'Vermifugação estratégica (não é vacina) conforme a carga de vermes — pesa no ganho de peso.' },
+  engorda: { titulo:'Engorda / Terminação (boi magro ao abate)', itens:[
+    {n:'Febre Aftosa', q:'Não perca a campanha oficial do estado — animal sem vacina em dia trava a venda.', ob:true},
+    {n:'Clostridioses (polivalente)', q:'Manutenção anual, se o lote ainda não recebeu no ano.', ob:false},
+    {n:'Botulismo', q:'Anual, onde há deficiência de fósforo / gado roendo osso (osteofagia).', ob:false},
+  ], nota:'Na terminação o foco é não perder campanha oficial e evitar qualquer bloqueio sanitário pra venda.' },
+};
+function guiaVacinacaoHTML(fase){
+  const g = GUIA_VACINA[fase] || GUIA_VACINA.recria;
+  return `<details class="guia-vac" style="background:#f4f1ea;border-radius:8px;padding:10px 12px;margin:10px 0">
+    <summary style="cursor:pointer;font-weight:700;color:#2e5230">📋 O que vacinar nesta fase — ${g.titulo}</summary>
+    <div style="margin-top:8px">
+      ${g.itens.map(i=>`<div style="padding:7px 0;border-bottom:1px solid #e2ddd2">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+          <b>${i.n}</b>
+          <span style="display:flex;gap:6px;align-items:center;flex-shrink:0">
+            ${i.ob?'<span class="pill" style="background:var(--vermelho,#b23b3b);color:#fff;font-size:10px">obrigatória</span>':''}
+            <button class="btn ghost mini" onclick="usarVacina('${i.n.replace(/'/g,"\\'")}')">usar</button>
+          </span>
+        </div>
+        <div class="mut" style="font-size:12px;margin-top:2px">${i.q}</div>
+      </div>`).join('')}
+      <p class="mut" style="font-size:12px;margin-top:8px">💡 ${g.nota}</p>
+      <p class="mut" style="font-size:11px;margin-top:6px">Guia geral pra orientar — o calendário exato muda por região, estação de monta e recomendação do seu veterinário.</p>
+    </div>
+  </details>`;
+}
+function usarVacina(nome){
+  const p=$('san-produto'); if(!p) return;
+  $('san-evento').value='vacina'; p.value=nome;
+  p.scrollIntoView({behavior:'smooth',block:'center'}); p.focus();
+}
 function addDias(dataStr,dias){ const d=new Date(dataStr+'T00:00:00'); d.setDate(d.getDate()+dias); return d.toISOString().slice(0,10); }
 function proximasSanitario(san){
   const limite=addDias(hoje(),14);
