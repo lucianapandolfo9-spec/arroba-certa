@@ -178,6 +178,7 @@
       <button id="nav-cot" onclick="renderCotacoes()">📈 Cotações</button>
       <button id="nav-ajuda" onclick="renderAjuda()">💬 Ajuda</button>
       <button id="nav-conta" onclick="renderConta()">👤 Conta</button>
+      <button id="nav-admin" class="hidden" onclick="renderAdmin()">🛠️ Admin</button>
     </div>
   </header>
   <div class="wrap" id="app-body"></div>
@@ -245,7 +246,9 @@ function setNav(w){
   $('nav-cot').classList.toggle('on',w==='cot');
   $('nav-ajuda').classList.toggle('on',w==='ajuda');
   $('nav-conta').classList.toggle('on',w==='conta');
+  $('nav-admin').classList.toggle('on',w==='admin');
 }
+const ADMIN_EMAIL='lucianapandolfo9@gmail.com';
 let AUTHTAB='entrar', FAZENDA=null, COTACOES_TODAS=null, PARSED_LOTES=null;
 
 function setAuthTab(t){AUTHTAB=t;
@@ -326,6 +329,7 @@ async function boot(){
   if(!faz || !faz.length){ screen('scr-faz'); return; }
   FAZENDA = faz[0];
   $('faz-nome').textContent = FAZENDA.nome;
+  $('nav-admin').classList.toggle('hidden', user.email!==ADMIN_EMAIL);
   screen('scr-app');
   loadTicker();
   renderDashboard();
@@ -476,6 +480,114 @@ async function salvarConta(){
   const {data:faz}=await db.from('fazenda').select('*').eq('id',FAZENDA.id).limit(1);
   if(faz && faz.length){ FAZENDA=faz[0]; $('faz-nome').textContent=FAZENDA.nome; }
   msg('conta-msg','Salvo! ✅','ok');
+}
+
+// ---------- admin (uso interno — só ADMIN_EMAIL) ----------
+const ADMIN_STATUS_OPCOES=['trial','cortesia','ativa','vencida','cancelada'];
+let ADMIN_PLANOS=null;
+
+async function renderAdmin(){
+  setNav('admin');
+  const body=$('app-body'); body.innerHTML='<p class="mut center" style="padding:30px">Carregando…</p>';
+  const [{data:clientes,error},{data:planos}]=await Promise.all([
+    db.rpc('admin_dashboard_clientes'),
+    db.from('plano_faixa').select('*').order('ordem')
+  ]);
+  if(error){ body.innerHTML=`<div class="msg err">${error.message}</div>`; return; }
+  ADMIN_PLANOS=planos||[];
+  const total=clientes.length;
+  const ativos=clientes.filter(c=>c.status_engajamento==='ativo').length;
+  const risco=clientes.filter(c=>c.status_engajamento==='risco').length;
+  const mrr=clientes.reduce((s,c)=> s + ((c.assinatura_status||'').toLowerCase()==='ativa' ? Number(c.plano_valor||0) : 0),0);
+  const badgeEng=s=> s==='ativo' ? '<span class="pill">ativo</span>'
+    : s==='atencao' ? '<span class="pill" style="background:var(--areia);color:var(--marrom)">atenção</span>'
+    : '<span class="pill warn">risco</span>';
+
+  let html=`<div class="nome" style="font-size:20px;margin:10px 0 4px">🛠️ Admin — clientes</div>
+    <p class="mut" style="margin-bottom:14px">Uso, engajamento e gestão de acesso/plano de cada fazenda. Essa tela só aparece pra você.</p>
+    <div class="dashboard-grid">
+      <div class="dashboard-kpi"><div class="lbl">Clientes</div><div class="val">${total}</div></div>
+      <div class="dashboard-kpi"><div class="lbl">Ativos (≤7 dias)</div><div class="val pos">${ativos}</div></div>
+      <div class="dashboard-kpi"><div class="lbl">Em risco (&gt;21 dias)</div><div class="val neg">${risco}</div></div>
+      <div class="dashboard-kpi"><div class="lbl">MRR (assinaturas ativas)</div><div class="val">${brl(mrr)}</div></div>
+    </div>
+    <div class="section-title">Fazendas</div>`;
+
+  if(!total){
+    html+='<div class="card center"><p class="mut">Nenhum cliente cadastrado ainda.</p></div>';
+  } else {
+    for(const c of clientes){
+      const fid=c.fazenda_id;
+      const planoOpts=ADMIN_PLANOS.map(p=>`<option value="${p.id}" ${c.plano_faixa_id===p.id?'selected':''}>${p.nome} (${brl(p.preco_mensal)}/mês)</option>`).join('');
+      const statusOpts=ADMIN_STATUS_OPCOES.map(s=>`<option value="${s}" ${c.assinatura_status===s?'selected':''}>${s}</option>`).join('');
+      html+=`<div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px">
+          <div>
+            <div class="nome" style="font-size:17px">${c.nome||'—'} ${c.estado?`<span class="mut" style="font-size:13px;font-weight:600">· ${c.estado}</span>`:''}</div>
+            <div class="mut" style="font-size:13px">${c.owner_email||'sem e-mail vinculado'}</div>
+          </div>
+          ${badgeEng(c.status_engajamento)}
+        </div>
+
+        <div class="grid2" style="margin-top:12px">
+          <div class="kpi"><div class="lbl">Lotes</div><div class="val">${c.qtd_lotes} <span class="mut" style="font-size:12px;font-weight:500">(${c.qtd_lotes_ativos} ativos)</span></div></div>
+          <div class="kpi"><div class="lbl">Pesagens / Custos</div><div class="val">${c.qtd_pesagens} / ${c.qtd_custos}</div></div>
+          <div class="kpi"><div class="lbl">Última atividade</div><div class="val">${c.dias_desde_atividade!=null?c.dias_desde_atividade+'d atrás':'—'}</div></div>
+          <div class="kpi"><div class="lbl">Último login</div><div class="val" style="font-size:14px">${c.ultimo_login?fmtData(String(c.ultimo_login).slice(0,10)):'—'}</div></div>
+        </div>
+
+        <div class="section-title" style="margin:16px 0 8px">Acesso beta</div>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <span class="pill ${c.acesso_beta_ativo?'':'warn'}">${c.acesso_beta_ativo?'liberado':'bloqueado'}</span>
+          <button class="btn mini ${c.acesso_beta_ativo?'sec':''}" ${c.owner_email?'':'disabled'}
+            onclick="adminToggleAcesso('${(c.owner_email||'').replace(/'/g,"\\'")}',${!c.acesso_beta_ativo},this)">
+            ${c.acesso_beta_ativo?'Revogar acesso':'Liberar acesso'}
+          </button>
+        </div>
+
+        <div class="section-title" style="margin:16px 0 8px">Assinatura</div>
+        <div class="grid2">
+          <div><label>Plano</label>
+            <select id="adm-plano-${fid}"><option value="">— sem plano —</option>${planoOpts}</select>
+          </div>
+          <div><label>Ciclo</label>
+            <select id="adm-ciclo-${fid}">
+              <option value="mensal" ${c.ciclo==='mensal'||!c.ciclo?'selected':''}>Mensal</option>
+              <option value="anual" ${c.ciclo==='anual'?'selected':''}>Anual</option>
+            </select>
+          </div>
+        </div>
+        <label>Status</label>
+        <select id="adm-status-${fid}">${statusOpts}</select>
+        <div id="adm-msg-${fid}"></div>
+        <button class="btn mini" style="margin-top:10px" onclick="adminSalvarAssinatura('${fid}')">Salvar assinatura</button>
+      </div>`;
+    }
+  }
+  body.innerHTML=html;
+}
+
+async function adminToggleAcesso(email,novoValor,btn){
+  if(!email) return;
+  btn.disabled=true; const original=btn.innerHTML; btn.innerHTML='<span class="spin"></span>';
+  const {error}=await db.rpc('admin_set_acesso_beta',{p_email:email,p_ativo:novoValor});
+  if(error){ btn.disabled=false; btn.innerHTML=original; alert(error.message); return; }
+  renderAdmin();
+}
+
+async function adminSalvarAssinatura(fazendaId){
+  const planoVal=$('adm-plano-'+fazendaId).value;
+  const ciclo=$('adm-ciclo-'+fazendaId).value;
+  const status=$('adm-status-'+fazendaId).value;
+  const {error}=await db.rpc('admin_set_assinatura',{
+    p_fazenda_id:fazendaId,
+    p_plano_faixa_id: planoVal?parseInt(planoVal,10):null,
+    p_ciclo:ciclo,
+    p_status:status
+  });
+  if(error) return msg('adm-msg-'+fazendaId,error.message);
+  msg('adm-msg-'+fazendaId,'Salvo! ✅','ok');
+  setTimeout(renderAdmin,600);
 }
 
 // ---------- dashboard ----------
