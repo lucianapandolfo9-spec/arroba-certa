@@ -102,15 +102,29 @@
   .chat-msg.eu{align-self:flex-end;background:var(--verde);color:#fff;border-bottom-right-radius:4px}
   .chat-msg.bot{align-self:flex-start;background:var(--verde-suave);color:var(--texto);border-bottom-left-radius:4px}
   .chat-msg.pensando{color:var(--cinza);font-style:italic;background:var(--bg)}
+  .planos-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin:16px 0}
+  .plano-card{display:flex;flex-direction:column;position:relative;margin:0;padding:18px;border:1px solid var(--linha);border-radius:16px;background:#fff}
+  .plano-card.recomendado{border:2px solid var(--dourado);padding:17px}
+  .plano-card.atual{box-shadow:0 0 0 3px var(--verde-suave)}
+  .plano-card h3{margin:0 0 7px;color:var(--verde);font-size:16px;text-transform:none;letter-spacing:0}
+  .plano-card .plano-faixa{min-height:36px;color:var(--cinza);font-size:12px}
+  .plano-preco{font-size:24px;font-weight:800;color:var(--verde);margin:16px 0 2px}
+  .plano-preco small{font-size:12px;font-weight:600;color:var(--cinza)}
+  .plano-card .btn{margin-top:auto}
+  .plano-badge{position:absolute;right:12px;top:12px;background:var(--areia);color:var(--marrom);font-size:10px;font-weight:800;padding:4px 7px;border-radius:999px}
+  .ciclo-toggle{max-width:420px;margin:16px auto}
+  .pagamento-resumo{background:var(--verde-suave);border-radius:14px;padding:14px;margin:14px 0}
   @media(max-width:980px){
     .wrap{padding:20px}
     .quote-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
     .dashboard-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
     .dashboard-columns{grid-template-columns:1fr}
+    .planos-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
   }
   @media(max-width:672px){
     .wrap{padding:16px}
     .cards-grid,.quote-grid,.dashboard-grid{grid-template-columns:1fr}
+    .planos-grid{grid-template-columns:1fr}
     .nav button{font-size:12px;padding:11px 3px}
   }
 </style>
@@ -188,6 +202,12 @@
       <button id="nav-admin" class="hidden" onclick="renderAdmin()">🛠️ Admin</button>
     </div>
   </header>
+  <div id="modo-leitura-banner" class="wrap hidden" style="padding:12px 32px 0">
+    <div class="msg err" style="margin:0;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+      <span><strong>Seu período de teste terminou.</strong> Seus dados continuam disponíveis para consulta, mas novos lançamentos e alterações estão bloqueados.</span>
+      <button class="btn mini" onclick="renderPagamento()">Escolher plano</button>
+    </div>
+  </div>
   <div class="wrap" id="app-body"></div>
 </div>
 
@@ -223,8 +243,6 @@
     </select>
     <div class="mut" style="font-size:12px;margin-top:2px">CEPEA só publica essas praças. Fora delas, escolha a mais próxima — é só a referência, o preço real da sua fazenda quem manda é você.</div>
     <label>Área (hectares)</label><input id="f-area" type="number" placeholder="500" />
-    <label>WhatsApp (com DDD)</label><input id="f-telefone" type="tel" placeholder="(67) 99999-9999" />
-    <div class="mut" style="font-size:12px;margin-top:2px">É pra onde vão os alertas de preço e de lote pronto pra vender.</div>
     <div id="faz-msg"></div>
     <button class="btn" style="margin-top:16px" onclick="criarFazenda()">Criar fazenda</button>
   </div>
@@ -256,7 +274,7 @@ function setNav(w){
   $('nav-admin').classList.toggle('on',w==='admin');
 }
 const ADMIN_EMAIL='lucianapandolfo9@gmail.com';
-let AUTHTAB='entrar', FAZENDA=null, COTACOES_TODAS=null, PARSED_LOTES=null;
+let AUTHTAB='entrar', FAZENDA=null, COTACOES_TODAS=null, PARSED_LOTES=null, MODO_LEITURA=false;
 
 function setAuthTab(t){AUTHTAB=t;
   $('tab-entrar').classList.toggle('on',t==='entrar');
@@ -335,11 +353,29 @@ async function boot(){
   const {data:faz} = await db.from('fazenda').select('*').limit(1);
   if(!faz || !faz.length){ screen('scr-faz'); return; }
   FAZENDA = faz[0];
+  await atualizarModoAcesso();
   $('faz-nome').textContent = FAZENDA.nome;
   $('nav-admin').classList.toggle('hidden', user.email!==ADMIN_EMAIL);
   screen('scr-app');
   loadTicker();
   renderDashboard();
+}
+
+async function atualizarModoAcesso(){
+  MODO_LEITURA=false;
+  const banner=$('modo-leitura-banner');
+  const {data:a}=await db.from('assinatura').select('status,data_inicio_trial').eq('fazenda_id',FAZENDA.id).limit(1);
+  const assinatura=a&&a.length?a[0]:null;
+  const inicio=assinatura?.data_inicio_trial ? new Date(assinatura.data_inicio_trial).getTime() : null;
+  const trialVencido=assinatura?.status==='trial' && inicio && Date.now() >= inicio + (7*24*60*60*1000);
+  MODO_LEITURA=Boolean(trialVencido || ['vencida','cancelada'].includes((assinatura?.status||'').toLowerCase()));
+  if(banner) banner.classList.toggle('hidden',!MODO_LEITURA);
+}
+function podeEditar(){
+  if(!MODO_LEITURA) return true;
+  const banner=$('modo-leitura-banner');
+  if(banner) banner.scrollIntoView({behavior:'smooth',block:'center'});
+  return false;
 }
 
 // ---------- ticker & cotações ----------
@@ -419,69 +455,135 @@ function renderCotacoes(){
   for(const p of pracas) renderGraficoCotacao(p,porPraca[p].slice(0,15));
 }
 
-function normalizaTelefone(v){
-  let d=(v||'').replace(/\D/g,'');
-  if(!d) return null;
-  if(d.length<=11) d='55'+d; // assume DDD+numero sem cod. do país
-  return d;
-}
 async function criarFazenda(){
   const nome=$('f-nome').value.trim();
   if(!nome) return msg('faz-msg','Dê um nome pra fazenda.');
-  const telefone=normalizaTelefone($('f-telefone').value);
-  if(!telefone || telefone.length<12) return msg('faz-msg','Informe um WhatsApp válido com DDD.');
   const {error}=await db.from('fazenda').insert({
     nome, estado:$('f-uf').value.trim().toUpperCase()||null,
     praca_referencia:$('f-praca').value.trim().toUpperCase()||null,
-    area_ha:parseFloat($('f-area').value)||null,
-    telefone
+    area_ha:parseFloat($('f-area').value)||null
   });
   if(error) return msg('faz-msg',error.message);
   await boot();
 }
 
-// ---------- minha conta ----------
-// Nº do WhatsApp do Certo Agro (usado no wa.me de validação).
-// HOJE: número de teste da Meta Cloud API. Trocar na Etapa 2 (nº BR de produção).
-const WHATSAPP_BOT = '15556210863';
+// ---------- minha conta + pagamento ----------
+const PAGAMENTO_URL = 'https://n8n.luhpanda.com.br/webhook/arroba-certa-criar-assinatura';
+// Só vira true depois de a credencial oficial do Mercado Pago estar no n8n e o checkout de produção ser homologado.
+const PAGAMENTO_PRODUCAO_ATIVO = false;
+let PLANOS_PAGAMENTO = [], ASSINATURA_ATUAL = null, CICLO_PAGAMENTO = 'mensal';
 
-function renderConta(){
+async function renderConta(){
   setNav('conta');
   const f = FAZENDA;
+  $('app-body').innerHTML = '<p class="mut center" style="padding:30px">Carregando conta…</p>';
+  const [{data:planos},{data:assinaturas}] = await Promise.all([
+    db.from('plano_faixa').select('*').eq('ativo',true).order('ordem'),
+    db.from('assinatura').select('*').eq('fazenda_id',f.id).limit(1)
+  ]);
+  PLANOS_PAGAMENTO = planos || [];
+  ASSINATURA_ATUAL = assinaturas && assinaturas.length ? assinaturas[0] : null;
   const pracas = ['SP','MS','GO','MG','MT','RJ'];
   $('app-body').innerHTML = `
     <div class="nome" style="font-size:20px;margin:10px 0 4px">👤 Minha conta</div>
-    <p class="mut" style="margin-bottom:14px">Dados da fazenda e o WhatsApp que recebe os alertas. Preencheu errado? Corrige aqui.</p>
+    <p class="mut" style="margin-bottom:14px">Dados-base da fazenda usados nas cotações, análises e cálculos do sistema. Preencheu errado? Corrige aqui.</p>
     <div class="card" style="max-width:560px">
       <label>Nome da fazenda</label><input id="c-nome" value="${(f.nome||'').replace(/"/g,'&quot;')}" />
       <label>Estado (UF)</label><input id="c-uf" value="${f.estado||''}" maxlength="2" style="text-transform:uppercase" />
       <label>Praça de referência da @ (CEPEA)</label>
       <select id="c-praca">${pracas.map(p=>`<option value="${p}" ${f.praca_referencia===p?'selected':''}>${p}</option>`).join('')}</select>
       <label>Área (hectares)</label><input id="c-area" type="number" value="${f.area_ha??''}" />
-      <label>WhatsApp dos alertas (com DDD)</label><input id="c-telefone" type="tel" value="${f.telefone||''}" placeholder="(67) 99999-9999" />
-      <div class="mut" style="font-size:12px;margin-top:2px">É pra onde vão os alertas de preço e de lote pronto pra vender.</div>
       <div id="conta-msg"></div>
-      <button class="btn" style="margin-top:16px" onclick="salvarConta()">Salvar alterações</button>
+      <button class="btn" style="margin-top:16px" onclick="salvarConta()" ${MODO_LEITURA?'disabled':''}>Salvar alterações</button>
     </div>
     <div class="card" style="max-width:560px">
-      <h3>Ativar alertas no WhatsApp</h3>
-      <p class="mut" style="margin-bottom:12px">Pra garantir que os alertas chegam, manda um "oi" pro nosso número uma única vez — isso abre o canal no seu WhatsApp.</p>
-      <a href="https://wa.me/${WHATSAPP_BOT}?text=${encodeURIComponent('Oi! Quero ativar os alertas do Certo Agro 🐂')}" target="_blank" rel="noopener" style="text-decoration:none">
-        <button class="btn sec">💬 Ativar alertas agora</button>
-      </a>
+      <h3>Meu plano</h3>
+      ${renderResumoPlano()}
+      <button class="btn" style="margin-top:14px" onclick="renderPagamento()">${ASSINATURA_ATUAL?'Ver planos e alterar':'Escolher meu plano'}</button>
     </div>`;
 }
 
+function renderResumoPlano(){
+  const a=ASSINATURA_ATUAL, p=a && (a.plano || PLANOS_PAGAMENTO.find(x=>String(x.id)===String(a.plano_faixa_id)));
+  if(!a) return '<p>Você está no período inicial de testes. Escolha um plano quando quiser continuar usando o Certo Agro.</p><p class="mut" style="margin-top:6px">Pagamento seguro pelo Mercado Pago. O Certo Agro não vê os dados do seu cartão.</p>';
+  const nome=p?.nome||'Plano não definido';
+  const status=(a.status||'').toLowerCase();
+  const classe=status==='ativa'?'':'warn';
+  const valor=a.valor!=null?brl(a.valor):(p?(a.ciclo==='anual'?brl(p.preco_anual):brl(p.preco_mensal)):'—');
+  return `<div style="display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap"><strong>${nome}</strong><span class="pill ${classe}">${a.status||'—'}</span></div><p class="mut" style="margin-top:6px">${a.ciclo==='anual'?'Cobrança anual':'Cobrança mensal'} · ${valor}</p>`;
+}
+
+function alternarCicloPagamento(ciclo){
+  CICLO_PAGAMENTO=ciclo;
+  $('pag-ciclo-mensal').classList.toggle('on',ciclo==='mensal');
+  $('pag-ciclo-anual').classList.toggle('on',ciclo==='anual');
+  const grid=$('planos-grid'); if(grid) grid.innerHTML=renderPlanosPagamento();
+}
+
+function renderPlanosPagamento(){
+  if(!PLANOS_PAGAMENTO.length) return '<div class="card"><p class="mut">Nenhum plano disponível no momento. Fala com a gente.</p></div>';
+  const atual=ASSINATURA_ATUAL?.plano_faixa_id;
+  return PLANOS_PAGAMENTO.map((p,i)=>{
+    const anual=CICLO_PAGAMENTO==='anual';
+    const preco=anual?p.preco_anual:p.preco_mensal;
+    const faixa=p.cabecas_max?`Até ${p.cabecas_max} cabeças`:`A partir de ${p.cabecas_min||701} cabeças`;
+    const atualCls=String(atual)===String(p.id)?' atual':'';
+    const destaque=i===1?' recomendado':'';
+    return `<div class="plano-card${atualCls}${destaque}">
+      ${i===1?'<span class="plano-badge">MAIS ESCOLHIDO</span>':''}
+      <h3>${p.nome}</h3><div class="plano-faixa">${faixa}</div>
+      <div class="plano-preco">${brl(preco)} <small>/${anual?'ano':'mês'}</small></div>
+      ${anual?'<div class="mut" style="color:var(--verde);font-weight:700;margin-bottom:14px">Paga 10, leva 12</div>':'<div class="mut" style="margin-bottom:14px">Cancele quando quiser</div>'}
+      <button class="btn mini" onclick="iniciarPagamento(${Number(p.id)})" ${PAGAMENTO_PRODUCAO_ATIVO?'':'disabled'}>${PAGAMENTO_PRODUCAO_ATIVO?(String(atual)===String(p.id)?'Continuar com este plano':'Escolher plano'):'Pagamento em ativação'}</button>
+    </div>`;
+  }).join('');
+}
+
+function renderPagamento(){
+  setNav('conta');
+  $('app-body').innerHTML=`<div class="nome" style="font-size:20px;margin:10px 0 4px">💳 Escolha seu plano</div>
+    <p class="mut" style="margin-bottom:14px">O Certo Agro cresce junto com o tamanho do seu rebanho. O pagamento acontece no Mercado Pago.</p>
+    <div class="tabs ciclo-toggle">
+      <button id="pag-ciclo-mensal" class="${CICLO_PAGAMENTO==='mensal'?'on':''}" onclick="alternarCicloPagamento('mensal')">Mensal</button>
+      <button id="pag-ciclo-anual" class="${CICLO_PAGAMENTO==='anual'?'on':''}" onclick="alternarCicloPagamento('anual')">Anual · 2 meses grátis</button>
+    </div>
+    <div id="planos-grid" class="planos-grid">${renderPlanosPagamento()}</div>
+    <div class="pagamento-resumo"><strong>${PAGAMENTO_PRODUCAO_ATIVO?'Como funciona':'Pagamento em ativação'}</strong><div class="mut" style="margin-top:5px">${PAGAMENTO_PRODUCAO_ATIVO?'Você escolhe o plano, confirma os dados no Mercado Pago e volta com a assinatura registrada. Os valores são definidos pelo banco do sistema.':'Os planos já estão definidos. O checkout será liberado assim que a credencial oficial do Mercado Pago for conectada e homologada.'}</div></div>
+    <button class="btn ghost" style="width:auto" onclick="renderConta()">← Voltar para minha conta</button>
+    <div id="pagamento-msg"></div>`;
+}
+
+async function iniciarPagamento(planoId){
+  const msgEl='pagamento-msg';
+  if(!PAGAMENTO_PRODUCAO_ATIVO) return msg(msgEl,'O pagamento ainda está em ativação. Nenhuma cobrança foi criada.');
+  const plano=PLANOS_PAGAMENTO.find(p=>Number(p.id)===Number(planoId));
+  if(!plano) return msg(msgEl,'Esse plano não está disponível no momento.');
+  const {data:{user}}=await db.auth.getUser();
+  if(!user?.email || !FAZENDA?.id) return msg(msgEl,'Não consegui identificar sua conta. Sai e entra novamente.');
+  const botoes=document.querySelectorAll('#planos-grid button'); botoes.forEach(b=>b.disabled=true);
+  msg(msgEl,'Gerando seu checkout seguro…','ok');
+  try{
+    const res=await fetch(PAGAMENTO_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+      fazenda_id:FAZENDA.id, plano_faixa_id:Number(planoId), ciclo:CICLO_PAGAMENTO, payer_email:user.email
+    })});
+    const data=await res.json().catch(()=>null);
+    if(!res.ok) throw new Error(data?.message||data?.error||`Erro ${res.status} ao gerar checkout`);
+    if(!data?.checkout_url) throw new Error('O Mercado Pago não devolveu um link de checkout.');
+    window.location.href=data.checkout_url;
+  }catch(e){
+    msg(msgEl,e.message||'Não foi possível gerar o pagamento. Tenta novamente.');
+    botoes.forEach(b=>b.disabled=false);
+  }
+}
+
 async function salvarConta(){
+  if(!podeEditar()) return;
   const nome=$('c-nome').value.trim();
   if(!nome) return msg('conta-msg','Dê um nome pra fazenda.');
-  const telefone=normalizaTelefone($('c-telefone').value);
-  if(!telefone || telefone.length<12) return msg('conta-msg','Informe um WhatsApp válido com DDD.');
   const {error}=await db.from('fazenda').update({
     nome, estado:$('c-uf').value.trim().toUpperCase()||null,
     praca_referencia:$('c-praca').value.trim().toUpperCase()||null,
-    area_ha:parseFloat($('c-area').value)||null,
-    telefone
+    area_ha:parseFloat($('c-area').value)||null
   }).eq('id',FAZENDA.id);
   if(error) return msg('conta-msg',error.message);
   const {data:faz}=await db.from('fazenda').select('*').eq('id',FAZENDA.id).limit(1);
@@ -874,6 +976,7 @@ async function renderLote(id){
 }
 
 async function salvarPreco(id){
+  if(!podeEditar()) return;
   const raw=$('pl-preco').value.trim();
   const val = raw===''? null : parseFloat(raw);
   const {error}=await db.from('lote').update({preco_arroba_praticado:val}).eq('id',id);
@@ -909,6 +1012,7 @@ async function renderFecharLote(id){
     <p class="mut" style="margin:4px 2px 30px">O lote fechado sai dos ativos e guarda o lucro realizado no histórico. Errou algo? Dá pra reabrir depois.</p>`;
 }
 async function salvarFechamento(id,dataEntrada){
+  if(!podeEditar()) return;
   const data=$('fv-data').value, peso=parseFloat($('fv-peso').value),
         rend=parseFloat($('fv-rend').value), preco=parseFloat($('fv-preco').value),
         comprador=$('fv-comprador').value.trim();
@@ -926,6 +1030,7 @@ async function salvarFechamento(id,dataEntrada){
   renderLote(id);
 }
 async function reabrirLote(id,btn){
+  if(!podeEditar()) return;
   if(btn.dataset.arm!=='1'){ btn.dataset.arm='1'; btn.textContent='↩️ Tem certeza? Clica de novo pra desfazer a venda'; return; }
   const {error}=await db.from('lote').update({
     data_saida:null, peso_venda_kg:null, rendimento_venda:null,
@@ -936,6 +1041,7 @@ async function reabrirLote(id,btn){
 }
 
 async function addPesagem(id){
+  if(!podeEditar()) return;
   const data=$('pes-data').value, peso=parseFloat($('pes-peso').value);
   if(!data||!peso||peso<=0) return msg('pes-msg','Informe data e um peso maior que zero.');
   if(data>hoje()) return msg('pes-msg','Pesagem no futuro? Confira a data.');
@@ -953,6 +1059,7 @@ function editPesagem(loteId,pesId,data,peso){
   $('pes-peso').focus();
 }
 async function delPesagem(loteId,pesId,btn){
+  if(!podeEditar()) return;
   if(btn.dataset.arm!=='1'){ btn.dataset.arm='1'; btn.textContent='confirma?'; btn.style.color='var(--vermelho)'; return; }
   const {error}=await db.from('pesagem').delete().eq('id',pesId);
   if(error) return msg('pes-msg',error.message);
@@ -960,6 +1067,7 @@ async function delPesagem(loteId,pesId,btn){
 }
 
 async function addCusto(id){
+  if(!podeEditar()) return;
   const valor=parseFloat($('cus-valor').value), data=$('cus-data').value;
   if(!valor||valor<=0) return msg('cus-msg','Informe um valor maior que zero.');
   if(!data||data>hoje()) return msg('cus-msg','Custo no futuro? Confira a data.');
@@ -977,6 +1085,7 @@ function editCusto(loteId,cusId,data,categoria,valor){
   $('cus-valor').focus();
 }
 async function delCusto(loteId,cusId,btn){
+  if(!podeEditar()) return;
   if(btn.dataset.arm!=='1'){ btn.dataset.arm='1'; btn.textContent='confirma?'; btn.style.color='var(--vermelho)'; return; }
   const {error}=await db.from('custo').delete().eq('id',cusId);
   if(error) return msg('cus-msg',error.message);
@@ -1039,6 +1148,7 @@ function proximasSanitario(san){
   return (san||[]).filter(s=>s.proxima_data && s.proxima_data<=limite);
 }
 async function addSanitario(id){
+  if(!podeEditar()) return;
   const data=$('san-data').value, evento=$('san-evento').value,
         produto=$('san-produto').value.trim()||null, proxima=$('san-proxima').value||null,
         custoRaw=$('san-custo').value, custo=custoRaw?parseFloat(custoRaw):null;
@@ -1049,6 +1159,7 @@ async function addSanitario(id){
   renderLote(id);
 }
 async function delSanitario(loteId,sanId,btn){
+  if(!podeEditar()) return;
   if(btn.dataset.arm!=='1'){ btn.dataset.arm='1'; btn.textContent='confirma?'; btn.style.color='var(--vermelho)'; return; }
   const {error}=await db.from('sanitario').delete().eq('id',sanId);
   if(error) return msg('san-msg',error.message);
@@ -1175,6 +1286,7 @@ async function editarLote(id){
     </div>`;
 }
 async function salvarEdicao(id){
+  if(!podeEditar()) return;
   const nome=$('el-nome').value.trim();
   if(!nome) return msg('el-msg','Dê um nome ao lote.');
   const {error}=await db.from('lote').update({
@@ -1189,6 +1301,7 @@ async function salvarEdicao(id){
 }
 let _confirmaExcluir=null;
 async function excluirLote(id){
+  if(!podeEditar()) return;
   if(_confirmaExcluir!==id){
     _confirmaExcluir=id;
     msg('el-msg','Tem certeza? Isso apaga o lote e todas as pesagens/custos dele. Clique de novo em Excluir pra confirmar.','err');
@@ -1228,6 +1341,7 @@ function novoLote(){
     </div>`;
 }
 async function salvarLote(){
+  if(!podeEditar()) return;
   const nome=$('nl-nome').value.trim();
   if(!nome) return msg('nl-msg','Dê um nome ao lote.');
   const {error}=await db.from('lote').insert({
@@ -1338,6 +1452,7 @@ function renderPreviewImportacao(){
   </div>`;
 }
 async function confirmarImportacao(){
+  if(!podeEditar()) return;
   const validas=(PARSED_LOTES||[]).filter(l=>l.nome && l.qtd_animais)
     .map(l=>({...l, fazenda_id:FAZENDA.id}));
   if(!validas.length) return;
