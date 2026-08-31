@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-<title>@certo — Gestão inteligente. Resultados no campo.</title>
+<title>Certo Agro — Gestão inteligente. Resultados no campo.</title>
 <link rel="icon" type="image/png" href="assets/favicon.png" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -120,7 +120,10 @@
 <!-- ================= LOGIN ================= -->
 <div id="scr-login" class="wrap hidden" style="padding-top:60px">
   <div class="center" style="margin-bottom:8px">
-    <img src="assets/logo-horizontal.png" alt="@certo" style="height:46px" />
+    <div style="display:inline-flex;align-items:center;gap:10px">
+      <img src="assets/logo-simbolo.png" alt="" style="height:46px" />
+      <span style="font-weight:800;font-size:26px;letter-spacing:-.5px"><span style="color:var(--verde)">Certo</span> <span style="color:var(--dourado)">Agro</span></span>
+    </div>
     <p class="mut" style="margin-top:10px">Sua @ custa X. O mercado paga Y. Decida.</p>
   </div>
   <div class="card">
@@ -146,7 +149,10 @@
 <!-- ================= NOVA SENHA (link do e-mail) ================= -->
 <div id="scr-nova-senha" class="wrap hidden" style="padding-top:60px">
   <div class="center" style="margin-bottom:8px">
-    <img src="assets/logo-horizontal.png" alt="@certo" style="height:40px" />
+    <div style="display:inline-flex;align-items:center;gap:9px">
+      <img src="assets/logo-simbolo.png" alt="" style="height:40px" />
+      <span style="font-weight:800;font-size:22px;letter-spacing:-.5px"><span style="color:var(--verde)">Certo</span> <span style="color:var(--dourado)">Agro</span></span>
+    </div>
     <p class="mut" style="margin-top:10px">Criar uma senha nova</p>
   </div>
   <div class="card">
@@ -163,8 +169,9 @@
 <div id="scr-app" class="hidden">
   <header class="top">
     <div class="top-row">
-      <div class="logo" style="display:flex;align-items:center;gap:8px">
-        <img src="assets/logo-horizontal.png" alt="@certo" style="height:26px" />
+      <div class="logo" style="display:flex;align-items:center;gap:7px">
+        <img src="assets/logo-simbolo.png" alt="" style="height:26px" />
+        <span style="font-weight:800;font-size:14px;letter-spacing:-.3px;white-space:nowrap"><span style="color:var(--verde)">Certo</span> <span style="color:var(--dourado)">Agro</span></span>
         <small id="faz-nome">—</small>
       </div>
       <button class="btn ghost" onclick="logout()">Sair</button>
@@ -187,7 +194,7 @@
 <!-- ================= SEM ACESSO (BETA FECHADO) ================= -->
 <div id="scr-sem-acesso" class="wrap hidden" style="padding-top:40px">
   <div class="center"><div class="logo" style="font-size:24px">Acesso por convite 🔒</div>
-  <p class="mut">O @certo ainda está em fase fechada de testes.</p></div>
+  <p class="mut">O Certo Agro ainda está em fase fechada de testes.</p></div>
   <div class="card" style="text-align:center">
     <p>Sua conta foi criada, mas o acesso ao sistema ainda não foi liberado pra esse e-mail.</p>
     <p class="mut" style="font-size:13px">Fala com a gente pra pedir liberação.</p>
@@ -322,7 +329,7 @@ async function boot(){
   if(!user){ screen('scr-login'); return; }
   const {data:liberado} = await db.rpc('acesso_liberado');
   if(!liberado){
-    $('link-wa-sem-acesso').href = 'https://wa.me/5584994127476?text='+encodeURIComponent('Oi! Quero pedir acesso ao @certo 🐂 (e-mail: '+user.email+')');
+    $('link-wa-sem-acesso').href = 'https://wa.me/5584994127476?text='+encodeURIComponent('Oi! Quero pedir acesso ao Certo Agro 🐂 (e-mail: '+user.email+')');
     screen('scr-sem-acesso'); return;
   }
   const {data:faz} = await db.from('fazenda').select('*').limit(1);
@@ -434,7 +441,7 @@ async function criarFazenda(){
 }
 
 // ---------- minha conta ----------
-// Nº do WhatsApp do @certo (usado no wa.me de validação).
+// Nº do WhatsApp do Certo Agro (usado no wa.me de validação).
 // HOJE: número de teste da Meta Cloud API. Trocar na Etapa 2 (nº BR de produção).
 const WHATSAPP_BOT = '15556210863';
 
@@ -459,7 +466,7 @@ function renderConta(){
     <div class="card" style="max-width:560px">
       <h3>Ativar alertas no WhatsApp</h3>
       <p class="mut" style="margin-bottom:12px">Pra garantir que os alertas chegam, manda um "oi" pro nosso número uma única vez — isso abre o canal no seu WhatsApp.</p>
-      <a href="https://wa.me/${WHATSAPP_BOT}?text=${encodeURIComponent('Oi! Quero ativar os alertas do @certo 🐂')}" target="_blank" rel="noopener" style="text-decoration:none">
+      <a href="https://wa.me/${WHATSAPP_BOT}?text=${encodeURIComponent('Oi! Quero ativar os alertas do Certo Agro 🐂')}" target="_blank" rel="noopener" style="text-decoration:none">
         <button class="btn sec">💬 Ativar alertas agora</button>
       </a>
     </div>`;
@@ -1241,7 +1248,7 @@ function baixarModelo(){
   const ws=XLSX.utils.aoa_to_sheet([COLUNAS_MODELO,exemplo]);
   const wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb,ws,'Lotes');
-  XLSX.writeFile(wb,'modelo-lotes-arroba-certa.xlsx');
+  XLSX.writeFile(wb,'modelo-lotes-certo-agro.xlsx');
 }
 function renderImportar(){
   const body=$('app-body');
@@ -1363,7 +1370,7 @@ function renderAjuda(){
     <div class="card" style="max-width:720px">
       <h3>Precisa de uma pessoa?</h3>
       <p class="mut" style="margin-bottom:12px">Se o assistente não resolver — ou o assunto for pagamento, conta ou algum erro chato — fala direto com a gente.</p>
-      <a href="https://wa.me/${WHATSAPP_SUPORTE}?text=${encodeURIComponent('Oi! Preciso de ajuda no @certo 🐂')}" target="_blank" rel="noopener" style="text-decoration:none">
+      <a href="https://wa.me/${WHATSAPP_SUPORTE}?text=${encodeURIComponent('Oi! Preciso de ajuda no Certo Agro 🐂')}" target="_blank" rel="noopener" style="text-decoration:none">
         <button class="btn sec">💬 Falar com a gente no WhatsApp</button>
       </a>
     </div>`;
