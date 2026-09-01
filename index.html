@@ -649,8 +649,17 @@ function renderPlanosPagamento(){
   }).join('');
 }
 
-function renderPagamento(){
+// Carrega os planos sob demanda. Antes só "Minha conta" carregava, então
+// chegar aqui pelo banner do trial, pelas boas-vindas ou pelo bloqueio
+// mostrava "nenhum plano disponível" mesmo com os planos no banco.
+async function garantirPlanosCarregados(){
+  if(PLANOS_PAGAMENTO.length) return;
+  const {data:planos}=await db.from('plano_faixa').select('*').eq('ativo',true).order('ordem');
+  PLANOS_PAGAMENTO = planos || [];
+}
+async function renderPagamento(){
   setNav('conta');
+  await garantirPlanosCarregados();
   const lotesN=STATS_BLOQUEIO?.lotes ?? 0, lancN=STATS_BLOQUEIO?.lancamentos ?? 0;
   const bloqueioHtml = MODO_LEITURA ? `<div class="msg err">
       <strong>Seu teste terminou.</strong> Seus ${lotesN} ${lotesN===1?'lote':'lotes'} e ${lancN} ${lancN===1?'lançamento':'lançamentos'} continuam salvos e visíveis aqui. Escolha um plano pra voltar a lançar.
