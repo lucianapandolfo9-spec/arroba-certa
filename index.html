@@ -57,6 +57,7 @@
   .msg{padding:12px 14px;border-radius:12px;font-size:14px;margin:10px 0}
   .msg.err{background:var(--vermelho-bg);color:var(--vermelho)}
   .msg.ok{background:var(--verde-bg);color:var(--verde)}
+  .msg.warn{background:var(--areia);color:var(--marrom)}
   .center{text-align:center} .mut{color:var(--cinza);font-size:13px}
   .hidden{display:none}
   .tabs{display:flex;background:var(--verde-suave);border-radius:12px;padding:4px;margin-bottom:8px}
@@ -114,6 +115,8 @@
   .plano-badge{position:absolute;right:12px;top:12px;background:var(--areia);color:var(--marrom);font-size:10px;font-weight:800;padding:4px 7px;border-radius:999px}
   .ciclo-toggle{max-width:420px;margin:16px auto}
   .pagamento-resumo{background:var(--verde-suave);border-radius:14px;padding:14px;margin:14px 0}
+  .trial-banner{padding:12px 32px 0}
+  .trial-banner .msg{margin:0;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
   @media(max-width:980px){
     .wrap{padding:20px}
     .quote-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
@@ -202,6 +205,7 @@
       <button id="nav-admin" class="hidden" onclick="renderAdmin()">🛠️ Admin</button>
     </div>
   </header>
+  <div id="trial-banner" class="wrap trial-banner hidden"></div>
   <div id="modo-leitura-banner" class="wrap hidden" style="padding:12px 32px 0">
     <div class="msg err" style="margin:0;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
       <span><strong>Seu período de teste terminou.</strong> Seus dados continuam disponíveis para consulta, mas novos lançamentos e alterações estão bloqueados.</span>
@@ -216,7 +220,7 @@
   <div class="center"><div class="logo" style="font-size:24px">Acesso por convite 🔒</div>
   <p class="mut">O Certo Agro ainda está em fase fechada de testes.</p></div>
   <div class="card" style="text-align:center">
-    <p>Sua conta foi criada, mas o acesso ao sistema ainda não foi liberado pra esse e-mail.</p>
+    <p>Sua conta <strong id="sem-acesso-email"></strong> foi criada, mas o acesso ao sistema ainda não foi liberado pra esse e-mail.</p>
     <p class="mut" style="font-size:13px">Fala com a gente pra pedir liberação.</p>
     <a id="link-wa-sem-acesso" href="#" target="_blank" rel="noopener" style="text-decoration:none">
       <button class="btn" style="margin-top:12px">Falar no WhatsApp</button>
@@ -248,6 +252,23 @@
   </div>
 </div>
 
+<!-- ================= BOAS-VINDAS (TRIAL) ================= -->
+<div id="scr-boasvindas" class="wrap hidden" style="padding-top:40px">
+  <div class="center"><div class="logo" style="font-size:24px">Seu teste começou! 🐂</div></div>
+  <div class="card" style="max-width:480px;margin:0 auto">
+    <p id="bv-prazo" style="font-weight:700;font-size:16px;text-align:center;margin-bottom:4px"></p>
+    <p class="mut" style="text-align:center;margin-bottom:18px">Não pedimos cartão.</p>
+    <ul style="margin:0 0 18px;padding-left:20px;line-height:1.7">
+      <li>Use seus lotes de verdade, não dados de teste</li>
+      <li>Lance os custos que já estão no seu caderno</li>
+      <li>Em poucos dias o sistema já te mostra sua margem real</li>
+    </ul>
+    <p class="mut" style="font-size:13px;margin-bottom:18px">Quando o teste acabar, seus dados continuam salvos e visíveis. Pra seguir lançando, é só escolher um plano.</p>
+    <button class="btn" onclick="fecharBoasVindas()">Começar a usar</button>
+    <div style="text-align:center;margin-top:12px"><a href="#" onclick="verPlanosDoBoasVindas();return false;" class="mut" style="font-size:13px">Ver os planos</a></div>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
@@ -256,6 +277,8 @@
 const SUPABASE_URL = "https://tscnqvuzlfagotirgjbz.supabase.co";
 const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRzY25xdnV6bGZhZ290aXJnamJ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4Mzc2NjgsImV4cCI6MjA5ODQxMzY2OH0.9PmwjxNPVIVOy3eenYAqlLSKmhyYeQUSQXz_PvixSB0";
 const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+const DIAS_TRIAL = 7;
+const MS_DIA = 24*60*60*1000;
 
 // ---------- helpers ----------
 const $ = id => document.getElementById(id);
@@ -263,7 +286,7 @@ const brl = v => v==null?"—":new Intl.NumberFormat('pt-BR',{style:'currency',c
 const num = (v,c=2) => v==null?"—":new Intl.NumberFormat('pt-BR',{minimumFractionDigits:c,maximumFractionDigits:c}).format(v);
 const show = id => $(id).classList.remove('hidden');
 const hide = id => $(id).classList.add('hidden');
-function screen(s){['scr-login','scr-app','scr-faz','scr-nova-senha','scr-sem-acesso'].forEach(hide);show(s);}
+function screen(s){['scr-login','scr-app','scr-faz','scr-nova-senha','scr-sem-acesso','scr-boasvindas'].forEach(hide);show(s);}
 function fmtData(d){ if(!d) return '—'; const [y,m,day]=String(d).split('-'); return `${day}/${m}/${y}`; }
 function setNav(w){
   $('nav-dash').classList.toggle('on',w==='dash');
@@ -273,8 +296,11 @@ function setNav(w){
   $('nav-conta').classList.toggle('on',w==='conta');
   $('nav-admin').classList.toggle('on',w==='admin');
 }
-const ADMIN_EMAIL='lucianapandolfo9@gmail.com';
-let AUTHTAB='entrar', FAZENDA=null, COTACOES_TODAS=null, PARSED_LOTES=null, MODO_LEITURA=false;
+// Quem é admin mora na tabela admin_sistema do banco (função eh_admin).
+// Incluir/remover admin não exige mais mexer em código nem publicar.
+let EH_ADMIN=false;
+let AUTHTAB='entrar', FAZENDA=null, COTACOES_TODAS=null, PARSED_LOTES=null, MODO_LEITURA=false, ASSINATURA_ATUAL=null;
+let FAZENDA_RECEM_CRIADA=false, STATS_BLOQUEIO=null;
 
 function setAuthTab(t){AUTHTAB=t;
   $('tab-entrar').classList.toggle('on',t==='entrar');
@@ -348,14 +374,22 @@ async function boot(){
   const {data:liberado} = await db.rpc('acesso_liberado');
   if(!liberado){
     $('link-wa-sem-acesso').href = 'https://wa.me/5584994127476?text='+encodeURIComponent('Oi! Quero pedir acesso ao Certo Agro 🐂 (e-mail: '+user.email+')');
+    $('sem-acesso-email').textContent = user.email;
     screen('scr-sem-acesso'); return;
   }
   const {data:faz} = await db.from('fazenda').select('*').limit(1);
   if(!faz || !faz.length){ screen('scr-faz'); return; }
   FAZENDA = faz[0];
   await atualizarModoAcesso();
+  const {data:admin} = await db.rpc('eh_admin');
+  EH_ADMIN = admin===true;
+  $('nav-admin').classList.toggle('hidden', !EH_ADMIN);
+  if(FAZENDA_RECEM_CRIADA){
+    FAZENDA_RECEM_CRIADA=false;
+    renderBoasVindas();
+    return;
+  }
   $('faz-nome').textContent = FAZENDA.nome;
-  $('nav-admin').classList.toggle('hidden', user.email!==ADMIN_EMAIL);
   screen('scr-app');
   loadTicker();
   renderDashboard();
@@ -363,18 +397,74 @@ async function boot(){
 
 async function atualizarModoAcesso(){
   MODO_LEITURA=false;
-  const banner=$('modo-leitura-banner');
-  const {data:a}=await db.from('assinatura').select('status,data_inicio_trial').eq('fazenda_id',FAZENDA.id).limit(1);
-  const assinatura=a&&a.length?a[0]:null;
-  const inicio=assinatura?.data_inicio_trial ? new Date(assinatura.data_inicio_trial).getTime() : null;
-  const trialVencido=assinatura?.status==='trial' && inicio && Date.now() >= inicio + (7*24*60*60*1000);
-  MODO_LEITURA=Boolean(trialVencido || ['vencida','cancelada'].includes((assinatura?.status||'').toLowerCase()));
-  if(banner) banner.classList.toggle('hidden',!MODO_LEITURA);
+  const {data:a}=await db.from('assinatura').select('*').eq('fazenda_id',FAZENDA.id).limit(1);
+  ASSINATURA_ATUAL=a&&a.length?a[0]:null;
+  const estado=estadoAssinatura(ASSINATURA_ATUAL);
+  MODO_LEITURA=estado.modoLeitura;
+  if(MODO_LEITURA) await carregarStatsBloqueio();
+  renderAvisoAcesso(estado);
 }
+function estadoAssinatura(assinatura){
+  const status=(assinatura?.status||'trial').toLowerCase();
+  const inicio=assinatura?.data_inicio_trial ? new Date(assinatura.data_inicio_trial).getTime() : null;
+  const fim=inicio ? inicio + (DIAS_TRIAL*MS_DIA) : null;
+  const trialVencido=status==='trial' && fim && Date.now() >= fim;
+  const diasRestantes=fim ? Math.max(0,Math.ceil((fim-Date.now())/MS_DIA)) : null;
+  const fimTexto=fim ? new Date(fim).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}) : null;
+  return {
+    status,
+    diasRestantes,
+    fimTexto,
+    trialAtivo:status==='trial' && !trialVencido,
+    modoLeitura:Boolean(trialVencido || ['vencida','cancelada'].includes(status))
+  };
+}
+// Quantos lotes/lançamentos a fazenda já tem, pra mostrar quando o trial
+// vence — em vez de um bloqueio seco, mostra o que já foi construído.
+async function carregarStatsBloqueio(){
+  const {data:lotes}=await db.from('lote').select('id').eq('fazenda_id',FAZENDA.id);
+  const ids=(lotes||[]).map(l=>l.id);
+  let lancamentos=0;
+  if(ids.length){
+    const [{count:cp},{count:cc},{count:cs}]=await Promise.all([
+      db.from('pesagem').select('id',{count:'exact',head:true}).in('lote_id',ids),
+      db.from('custo').select('id',{count:'exact',head:true}).in('lote_id',ids),
+      db.from('sanitario').select('id',{count:'exact',head:true}).in('lote_id',ids)
+    ]);
+    lancamentos=(cp||0)+(cc||0)+(cs||0);
+  }
+  STATS_BLOQUEIO={lotes:ids.length,lancamentos};
+}
+function renderAvisoAcesso(estado){
+  const trialBanner=$('trial-banner');
+  const leituraBanner=$('modo-leitura-banner');
+  if(leituraBanner) leituraBanner.classList.toggle('hidden',!estado.modoLeitura);
+  if(!trialBanner) return;
+  if(!estado.trialAtivo || estado.modoLeitura){
+    trialBanner.classList.add('hidden');
+    trialBanner.innerHTML='';
+    return;
+  }
+  const dias=estado.diasRestantes;
+  const urgente = dias!=null && dias<=2;
+  const prazo = dias==null ? 'Você está no teste grátis de 7 dias.'
+    : urgente ? `Seu teste ${dias===0?'acaba hoje':dias===1?'acaba amanhã':'acaba em '+dias+' dias'}.`
+    : `Você tem ${dias} ${dias===1?'dia':'dias'} de teste grátis.`;
+  const corpo = urgente
+    ? 'Escolha um plano agora pra não perder o acesso a novos lançamentos.'
+    : 'Use seus dados reais para enxergar custo da @, margem e decisão de venda. Depois do teste, seus dados seguem salvos para visualização; novos lançamentos exigem assinatura.';
+  trialBanner.innerHTML=`<div class="msg ${urgente?'warn':'ok'}">
+    <span><strong>${prazo}</strong> ${corpo}</span>
+    <button class="btn mini sec" onclick="renderPagamento()">${urgente?'Escolher plano':'Ver planos'}</button>
+  </div>`;
+  trialBanner.classList.remove('hidden');
+}
+// Ao tentar salvar algo com o trial vencido, não trava com erro seco:
+// leva direto pra tela de planos mostrando o que já foi construído.
 function podeEditar(){
   if(!MODO_LEITURA) return true;
-  const banner=$('modo-leitura-banner');
-  if(banner) banner.scrollIntoView({behavior:'smooth',block:'center'});
+  renderPagamento();
+  window.scrollTo({top:0,behavior:'smooth'});
   return false;
 }
 
@@ -464,14 +554,34 @@ async function criarFazenda(){
     area_ha:parseFloat($('f-area').value)||null
   });
   if(error) return msg('faz-msg',error.message);
+  FAZENDA_RECEM_CRIADA=true;
   await boot();
+}
+function renderBoasVindas(){
+  const estado=estadoAssinatura(ASSINATURA_ATUAL);
+  $('bv-prazo').textContent = estado.fimTexto
+    ? `Você tem 7 dias grátis, até ${estado.fimTexto}.`
+    : 'Você tem 7 dias grátis.';
+  screen('scr-boasvindas');
+}
+function fecharBoasVindas(){
+  $('faz-nome').textContent = FAZENDA.nome;
+  screen('scr-app');
+  loadTicker();
+  renderDashboard();
+}
+function verPlanosDoBoasVindas(){
+  $('faz-nome').textContent = FAZENDA.nome;
+  screen('scr-app');
+  loadTicker();
+  renderPagamento();
 }
 
 // ---------- minha conta + pagamento ----------
 const PAGAMENTO_URL = 'https://n8n.luhpanda.com.br/webhook/arroba-certa-criar-assinatura';
 // Só vira true depois de a credencial oficial do Mercado Pago estar no n8n e o checkout de produção ser homologado.
 const PAGAMENTO_PRODUCAO_ATIVO = false;
-let PLANOS_PAGAMENTO = [], ASSINATURA_ATUAL = null, CICLO_PAGAMENTO = 'mensal';
+let PLANOS_PAGAMENTO = [], CICLO_PAGAMENTO = 'mensal';
 
 async function renderConta(){
   setNav('conta');
@@ -541,7 +651,12 @@ function renderPlanosPagamento(){
 
 function renderPagamento(){
   setNav('conta');
+  const lotesN=STATS_BLOQUEIO?.lotes ?? 0, lancN=STATS_BLOQUEIO?.lancamentos ?? 0;
+  const bloqueioHtml = MODO_LEITURA ? `<div class="msg err">
+      <strong>Seu teste terminou.</strong> Seus ${lotesN} ${lotesN===1?'lote':'lotes'} e ${lancN} ${lancN===1?'lançamento':'lançamentos'} continuam salvos e visíveis aqui. Escolha um plano pra voltar a lançar.
+    </div>` : '';
   $('app-body').innerHTML=`<div class="nome" style="font-size:20px;margin:10px 0 4px">💳 Escolha seu plano</div>
+    ${bloqueioHtml}
     <p class="mut" style="margin-bottom:14px">O Certo Agro cresce junto com o tamanho do seu rebanho. O pagamento acontece no Mercado Pago.</p>
     <div class="tabs ciclo-toggle">
       <button id="pag-ciclo-mensal" class="${CICLO_PAGAMENTO==='mensal'?'on':''}" onclick="alternarCicloPagamento('mensal')">Mensal</button>
@@ -591,16 +706,17 @@ async function salvarConta(){
   msg('conta-msg','Salvo! ✅','ok');
 }
 
-// ---------- admin (uso interno — só ADMIN_EMAIL) ----------
+// ---------- admin (uso interno — quem está na tabela admin_sistema) ----------
 const ADMIN_STATUS_OPCOES=['trial','cortesia','ativa','vencida','cancelada'];
 let ADMIN_PLANOS=null;
 
 async function renderAdmin(){
   setNav('admin');
   const body=$('app-body'); body.innerHTML='<p class="mut center" style="padding:30px">Carregando…</p>';
-  const [{data:clientes,error},{data:planos}]=await Promise.all([
+  const [{data:clientes,error},{data:planos},{data:pendentes}]=await Promise.all([
     db.rpc('admin_dashboard_clientes'),
-    db.from('plano_faixa').select('*').order('ordem')
+    db.from('plano_faixa').select('*').order('ordem'),
+    db.rpc('admin_contas_pendentes')
   ]);
   if(error){ body.innerHTML=`<div class="msg err">${error.message}</div>`; return; }
   ADMIN_PLANOS=planos||[];
@@ -620,6 +736,7 @@ async function renderAdmin(){
       <div class="dashboard-kpi"><div class="lbl">Em risco (&gt;21 dias)</div><div class="val neg">${risco}</div></div>
       <div class="dashboard-kpi"><div class="lbl">MRR (assinaturas ativas)</div><div class="val">${brl(mrr)}</div></div>
     </div>
+    ${renderFilaEspera(pendentes)}
     <div class="section-title">Fazendas</div>`;
 
   if(!total){
@@ -674,6 +791,43 @@ async function renderAdmin(){
     }
   }
   body.innerHTML=html;
+}
+
+// Fila de quem criou conta e ainda não foi liberado. Sem isso, essas pessoas
+// ficam invisíveis no painel: sem liberação não criam fazenda, e o dashboard
+// de clientes é montado por fazenda.
+function renderFilaEspera(pendentes){
+  const fila=(pendentes||[]).filter(p=>!p.tem_fazenda);
+  if(!fila.length) return '';
+  const linhas=fila.map(p=>{
+    const dias=Number(p.dias_esperando||0);
+    const cor = dias>=14 ? 'neg' : dias>=7 ? '' : 'pos';
+    const email=String(p.email||'');
+    const emailAttr=email.replace(/'/g,"\\'");
+    return `<div class="card" style="padding:12px 14px">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+        <div>
+          <div class="nome" style="font-size:15px">${email}</div>
+          <div class="mut" style="font-size:13px">
+            Esperando há <strong class="${cor}">${dias} ${dias===1?'dia':'dias'}</strong>
+            · ${p.email_confirmado?'e-mail confirmado ✅':'e-mail ainda não confirmado ⚠️'}
+          </div>
+        </div>
+        <button class="btn mini" onclick="adminLiberarDaFila('${emailAttr}',this)">Liberar acesso</button>
+      </div>
+    </div>`;
+  }).join('');
+  return `<div class="section-title">⏳ Esperando liberação (${fila.length})</div>
+    <p class="mut" style="margin:-6px 0 10px">Criaram conta e pararam na tela de convite. Enquanto você não liberar, elas não conseguem usar o sistema.</p>
+    ${linhas}`;
+}
+
+async function adminLiberarDaFila(email,btn){
+  if(!email) return;
+  btn.disabled=true; btn.innerHTML='<span class="spin"></span>';
+  const {error}=await db.rpc('admin_set_acesso_beta',{p_email:email,p_ativo:true});
+  if(error){ btn.disabled=false; btn.textContent='Liberar acesso'; alert(error.message); return; }
+  renderAdmin();
 }
 
 async function adminToggleAcesso(email,novoValor,btn){
