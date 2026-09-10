@@ -58,6 +58,19 @@
   .msg.err{background:var(--vermelho-bg);color:var(--vermelho)}
   .msg.ok{background:var(--verde-bg);color:var(--verde)}
   .msg.warn{background:var(--areia);color:var(--marrom)}
+  /* Cancelamento: visível e sem fricção — não escondemos a saída. */
+  .cancel-box{margin-top:16px;padding-top:14px;border-top:1px solid var(--linha)}
+  .link-cancelar{background:none;color:var(--cinza);font-size:13px;font-weight:600;
+    text-decoration:underline;padding:4px 0;text-align:left;width:auto}
+  .link-cancelar:hover{color:var(--vermelho)}
+  .cancel-lista{margin:8px 0 0 18px;font-size:13px;line-height:1.6}
+  .cancel-lista li{margin-bottom:3px}
+  .cancel-acoes{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+  .cancel-acoes .btn{width:auto}
+  .uso-plano{margin-top:12px}
+  .uso-topo{display:flex;justify-content:space-between;font-size:13px;font-weight:700;margin-bottom:5px}
+  .uso-trilho{height:8px;border-radius:999px;background:var(--verde-suave);overflow:hidden}
+  .uso-barra{height:100%;border-radius:999px;transition:width .3s ease}
   .center{text-align:center} .mut{color:var(--cinza);font-size:13px}
   .hidden{display:none}
   .tabs{display:flex;background:var(--verde-suave);border-radius:12px;padding:4px;margin-bottom:8px}
@@ -206,6 +219,7 @@
     </div>
   </header>
   <div id="trial-banner" class="wrap trial-banner hidden"></div>
+  <div id="limite-banner" class="wrap trial-banner hidden"></div>
   <div id="modo-leitura-banner" class="wrap hidden" style="padding:12px 32px 0">
     <div class="msg err" style="margin:0;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
       <span><strong>Seu período de teste terminou.</strong> Seus dados continuam disponíveis para consulta, mas novos lançamentos e alterações estão bloqueados.</span>
@@ -301,6 +315,10 @@ function setNav(w){
 let EH_ADMIN=false;
 let AUTHTAB='entrar', FAZENDA=null, COTACOES_TODAS=null, PARSED_LOTES=null, MODO_LEITURA=false, ASSINATURA_ATUAL=null;
 let FAZENDA_RECEM_CRIADA=false, STATS_BLOQUEIO=null;
+// Uso do plano (cabeças ativas x teto contratado). Vem da RPC limite_uso_fazenda,
+// que é a MESMA fonte que o trigger do banco usa pra bloquear — front e banco
+// nunca divergem sobre quem está no limite.
+let LIMITE_USO=null;
 
 function setAuthTab(t){AUTHTAB=t;
   $('tab-entrar').classList.toggle('on',t==='entrar');
@@ -397,12 +415,17 @@ async function boot(){
 
 async function atualizarModoAcesso(){
   MODO_LEITURA=false;
-  const {data:a}=await db.from('assinatura').select('*').eq('fazenda_id',FAZENDA.id).limit(1);
+  const [{data:a},{data:limite}]=await Promise.all([
+    db.from('assinatura').select('*').eq('fazenda_id',FAZENDA.id).limit(1),
+    db.rpc('limite_uso_fazenda',{p_fazenda_id:FAZENDA.id})
+  ]);
   ASSINATURA_ATUAL=a&&a.length?a[0]:null;
+  LIMITE_USO=limite||null;
   const estado=estadoAssinatura(ASSINATURA_ATUAL);
   MODO_LEITURA=estado.modoLeitura;
   if(MODO_LEITURA) await carregarStatsBloqueio();
   renderAvisoAcesso(estado);
+  renderAvisoLimite();
 }
 function estadoAssinatura(assinatura){
   const status=(assinatura?.status||'trial').toLowerCase();
@@ -411,12 +434,20 @@ function estadoAssinatura(assinatura){
   const trialVencido=status==='trial' && fim && Date.now() >= fim;
   const diasRestantes=fim ? Math.max(0,Math.ceil((fim-Date.now())/MS_DIA)) : null;
   const fimTexto=fim ? new Date(fim).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}) : null;
+  // Cancelou mas ainda tem período pago: continua usando normal até acesso_ate.
+  // Mesma regra da função assinatura_em_modo_leitura no banco — front e banco
+  // precisam concordar, senão a tela libera o que o banco barra (ou o contrário).
+  const hojeISO=new Date().toISOString().slice(0,10);
+  const acessoAte=assinatura?.acesso_ate || null;
+  const canceladoNoPrazo = status==='cancelada' && acessoAte && hojeISO <= acessoAte;
   return {
     status,
     diasRestantes,
     fimTexto,
+    acessoAte,
+    canceladoNoPrazo,
     trialAtivo:status==='trial' && !trialVencido,
-    modoLeitura:Boolean(trialVencido || ['vencida','cancelada'].includes(status))
+    modoLeitura:Boolean(trialVencido || status==='vencida' || (status==='cancelada' && !canceladoNoPrazo))
   };
 }
 // Quantos lotes/lançamentos a fazenda já tem, pra mostrar quando o trial
@@ -459,6 +490,63 @@ function renderAvisoAcesso(estado){
   </div>`;
   trialBanner.classList.remove('hidden');
 }
+// ---------- limite do plano (cabeças contratadas) ----------
+// O banco bloqueia acima de 20% do teto (tolerância). Entre o teto e a
+// tolerância o produtor segue lançando, mas precisa saber que está por um fio —
+// ninguém pode ser pego de surpresa por um bloqueio no meio do manejo.
+function limiteInfo(){
+  const l=LIMITE_USO;
+  if(!l || l.cabecas_max==null) return null;
+  return {
+    plano:l.plano, ativas:l.cabecas_ativas??0, max:l.cabecas_max,
+    tolerancia:l.tolerancia, pct:l.percentual_uso??0,
+    aviso:l.aviso===true, bloqueado:l.bloqueado===true,
+    proximoNome:l.proxima_faixa_nome, proximoPreco:l.proxima_faixa_preco
+  };
+}
+function renderAvisoLimite(){
+  const el=$('limite-banner');
+  if(!el) return;
+  const i=limiteInfo();
+  // Em modo leitura o banner vermelho de trial/assinatura já manda o recado.
+  if(!i || MODO_LEITURA || (!i.aviso && !i.bloqueado)){
+    el.classList.add('hidden'); el.innerHTML=''; return;
+  }
+  const upgrade=i.proximoNome
+    ? `O plano <strong>${i.proximoNome}</strong>${i.proximoPreco!=null?` (${brl(i.proximoPreco)}/mês)`:''} cobre esse rebanho.`
+    : 'Veja os planos que cobrem esse rebanho.';
+  const texto = i.bloqueado
+    ? `<span><strong>Seu plano ${i.plano} está no limite.</strong> Você tem ${i.ativas} cabeças ativas e o plano cobre até ${i.max} (com folga até ${i.tolerancia}). Novos lançamentos estão bloqueados. ${upgrade}</span>`
+    : `<span><strong>Você passou do seu plano ${i.plano}.</strong> São ${i.ativas} cabeças ativas de ${i.max} contratadas. Você ainda pode lançar até ${i.tolerancia}, depois o sistema trava. ${upgrade}</span>`;
+  el.innerHTML=`<div class="msg ${i.bloqueado?'err':'warn'}">
+    ${texto}
+    <button class="btn mini ${i.bloqueado?'':'sec'}" onclick="renderPagamento()">Fazer upgrade</button>
+  </div>`;
+  el.classList.remove('hidden');
+}
+// Barra "X de Y cabeças" reusada em Minha Conta e no Dashboard.
+function barraUsoPlano(){
+  const i=limiteInfo();
+  if(!i) return '';
+  const largura=Math.min(100,Math.round((i.ativas/i.max)*100));
+  const cor=i.bloqueado?'var(--vermelho)':i.aviso?'var(--dourado)':'var(--verde)';
+  return `<div class="uso-plano">
+    <div class="uso-topo"><span>${i.ativas} de ${i.max} cabeças</span><span class="mut">${num(i.pct,0)}%</span></div>
+    <div class="uso-trilho"><div class="uso-barra" style="width:${largura}%;background:${cor}"></div></div>
+    ${i.aviso&&!i.bloqueado?`<div class="mut" style="font-size:12px;margin-top:5px">Acima de ${i.tolerancia} cabeças o sistema trava novos lançamentos.</div>`:''}
+  </div>`;
+}
+// Erros de plano vêm do banco com código próprio (P1001 teto, P1002 assinatura
+// inativa). Em vez de jogar o erro cru na tela, leva pra decisão: fazer upgrade.
+function tratarErroPlano(error,msgEl){
+  if(!error) return false;
+  if(error.code!=='P1001' && error.code!=='P1002') return false;
+  const limpo=String(error.message||'').replace(/^.*?:\s*/,'');
+  msg(msgEl,`${limpo} <button class="btn mini" style="margin-top:8px" onclick="renderPagamento()">Ver planos</button>`);
+  atualizarModoAcesso();
+  return true;
+}
+
 // Ao tentar salvar algo com o trial vencido, não trava com erro seco:
 // leva direto pra tela de planos mostrando o que já foi construído.
 function podeEditar(){
@@ -579,6 +667,9 @@ function verPlanosDoBoasVindas(){
 
 // ---------- minha conta + pagamento ----------
 const PAGAMENTO_URL = 'https://n8n.luhpanda.com.br/webhook/arroba-certa-criar-assinatura';
+// Cancela a cobrança recorrente no Mercado Pago. Só é chamado quando a
+// assinatura tem gateway_preapproval_id (ou seja, existe cobrança de verdade).
+const CANCELAMENTO_URL = 'https://n8n.luhpanda.com.br/webhook/arroba-certa-cancelar-assinatura';
 // Só vira true depois de a credencial oficial do Mercado Pago estar no n8n e o checkout de produção ser homologado.
 const PAGAMENTO_PRODUCAO_ATIVO = false;
 let PLANOS_PAGAMENTO = [], CICLO_PAGAMENTO = 'mensal';
@@ -587,12 +678,14 @@ async function renderConta(){
   setNav('conta');
   const f = FAZENDA;
   $('app-body').innerHTML = '<p class="mut center" style="padding:30px">Carregando conta…</p>';
-  const [{data:planos},{data:assinaturas}] = await Promise.all([
+  const [{data:planos},{data:assinaturas},{data:limite}] = await Promise.all([
     db.from('plano_faixa').select('*').eq('ativo',true).order('ordem'),
-    db.from('assinatura').select('*').eq('fazenda_id',f.id).limit(1)
+    db.from('assinatura').select('*').eq('fazenda_id',f.id).limit(1),
+    db.rpc('limite_uso_fazenda',{p_fazenda_id:f.id})
   ]);
   PLANOS_PAGAMENTO = planos || [];
   ASSINATURA_ATUAL = assinaturas && assinaturas.length ? assinaturas[0] : null;
+  LIMITE_USO = limite || null;
   const pracas = ['SP','MS','GO','MG','MT','RJ'];
   $('app-body').innerHTML = `
     <div class="nome" style="font-size:20px;margin:10px 0 4px">👤 Minha conta</div>
@@ -610,7 +703,93 @@ async function renderConta(){
       <h3>Meu plano</h3>
       ${renderResumoPlano()}
       <button class="btn" style="margin-top:14px" onclick="renderPagamento()">${ASSINATURA_ATUAL?'Ver planos e alterar':'Escolher meu plano'}</button>
+      ${renderCancelamento()}
     </div>`;
+}
+
+// ---------- cancelamento ----------
+// Regra da casa: cancelar tem que ser tão fácil quanto assinar. Sem labirinto,
+// sem "fale com o suporte", sem esconder o botão. Dois cliques: pede e confirma.
+function renderCancelamento(){
+  const a=ASSINATURA_ATUAL;
+  if(!a) return '';
+  const status=(a.status||'').toLowerCase();
+  if(status==='cortesia') return '';
+
+  // Já cancelou e ainda tem período pago: mostra até quando e como voltar.
+  if(status==='cancelada'){
+    const est=estadoAssinatura(a);
+    return `<div class="cancel-box">
+      ${est.canceladoNoPrazo
+        ? `<p class="mut">Assinatura cancelada. Você continua com acesso completo até <strong>${fmtData(est.acessoAte)}</strong> — é o período que você já pagou. Depois disso seus dados seguem salvos para consulta.</p>`
+        : `<p class="mut">Assinatura cancelada. Seus dados seguem salvos para consulta. Para voltar a lançar, é só escolher um plano.</p>`}
+      <button class="btn sec" style="margin-top:10px" onclick="renderPagamento()">Reativar assinatura</button>
+    </div>`;
+  }
+
+  if(!['ativa','trial'].includes(status)) return '';
+  return `<div class="cancel-box">
+    <button class="link-cancelar" onclick="abrirCancelamento()">Cancelar assinatura</button>
+    <div id="cancel-painel"></div>
+  </div>`;
+}
+
+function abrirCancelamento(){
+  const a=ASSINATURA_ATUAL;
+  const status=(a?.status||'').toLowerCase();
+  const prox=a?.data_proxima_cobranca ? fmtData(String(a.data_proxima_cobranca).slice(0,10)) : null;
+  const ateQuando = status==='trial'
+    ? 'Seu teste grátis termina e o acesso a novos lançamentos é encerrado.'
+    : prox
+      ? `Você continua usando tudo normalmente até <strong>${prox}</strong> — o período que já pagou. Nada é cobrado depois disso.`
+      : 'Você continua usando até o fim do período já pago. Nada é cobrado depois disso.';
+  $('cancel-painel').innerHTML=`<div class="msg warn" style="margin-top:12px;display:block">
+    <strong>O que acontece se você cancelar:</strong>
+    <ul class="cancel-lista">
+      <li>${ateQuando}</li>
+      <li>Nenhuma cobrança nova é feita.</li>
+      <li><strong>Seus dados não são apagados.</strong> Lotes, pesagens, custos e histórico continuam aqui para consulta.</li>
+      <li>Você pode voltar quando quiser, e encontra tudo como deixou.</li>
+    </ul>
+    <div id="cancel-msg"></div>
+    <div class="cancel-acoes">
+      <button class="btn mini" id="btn-cancel-confirma" onclick="confirmarCancelamento()">Sim, cancelar assinatura</button>
+      <button class="btn mini sec" onclick="$('cancel-painel').innerHTML=''">Voltar</button>
+    </div>
+  </div>`;
+}
+
+async function confirmarCancelamento(){
+  const btn=$('btn-cancel-confirma');
+  if(btn){ btn.disabled=true; btn.textContent='Cancelando…'; }
+
+  // Se existe assinatura no gateway, o cancelamento TEM que passar pelo
+  // Mercado Pago primeiro. Cancelar só no nosso banco tiraria o acesso da
+  // pessoa enquanto o cartão dela continuaria sendo cobrado — inaceitável.
+  // Só depois que o gateway confirma é que marcamos como cancelada aqui.
+  if(ASSINATURA_ATUAL?.gateway_preapproval_id){
+    try{
+      const res=await fetch(CANCELAMENTO_URL,{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({fazenda_id:FAZENDA.id})});
+      const r=await res.json().catch(()=>null);
+      if(!res.ok || r?.ok===false) throw new Error(r?.message||`Erro ${res.status}`);
+    }catch(e){
+      if(btn){ btn.disabled=false; btn.textContent='Sim, cancelar assinatura'; }
+      return msg('cancel-msg',`Não consegui cancelar a cobrança no Mercado Pago agora (${e.message}). Sua assinatura NÃO foi alterada. Tenta de novo em alguns minutos — se persistir, fala com a gente pela aba Ajuda que a gente cancela na mão.`);
+    }
+  }
+
+  const {data,error}=await db.rpc('cancelar_minha_assinatura',{p_fazenda_id:FAZENDA.id});
+  if(error){
+    if(btn){ btn.disabled=false; btn.textContent='Sim, cancelar assinatura'; }
+    return msg('cancel-msg',error.message||'Não consegui cancelar agora. Tenta de novo em instantes.');
+  }
+  const ate=data?.acesso_ate;
+  msg('cancel-msg', ate
+    ? `Assinatura cancelada. Você segue com acesso completo até ${fmtData(ate)}.`
+    : 'Assinatura cancelada. Seus dados continuam salvos para consulta.','ok');
+  await atualizarModoAcesso();
+  setTimeout(renderConta,1800);
 }
 
 function renderResumoPlano(){
@@ -620,7 +799,7 @@ function renderResumoPlano(){
   const status=(a.status||'').toLowerCase();
   const classe=status==='ativa'?'':'warn';
   const valor=a.valor!=null?brl(a.valor):(p?(a.ciclo==='anual'?brl(p.preco_anual):brl(p.preco_mensal)):'—');
-  return `<div style="display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap"><strong>${nome}</strong><span class="pill ${classe}">${a.status||'—'}</span></div><p class="mut" style="margin-top:6px">${a.ciclo==='anual'?'Cobrança anual':'Cobrança mensal'} · ${valor}</p>`;
+  return `<div style="display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap"><strong>${nome}</strong><span class="pill ${classe}">${a.status||'—'}</span></div><p class="mut" style="margin-top:6px">${a.ciclo==='anual'?'Cobrança anual':'Cobrança mensal'} · ${valor}</p>${barraUsoPlano()}`;
 }
 
 function alternarCicloPagamento(ciclo){
@@ -892,6 +1071,12 @@ async function renderDashboard(){
     <div class="dashboard-kpi"><div class="lbl">Peso médio</div><div class="val">${num(pesoMedio,0)} kg</div></div>
     <div class="dashboard-kpi"><div class="lbl">Lucro médio/cabeça</div><div class="val ${lucroMedio<0?'neg':'pos'}">${brl(lucroMedio)}</div></div>
   </div>`;
+
+  // Uso do plano — só aparece pra quem tem plano com teto (assinante pagante).
+  // Trial e cortesia não têm limite, então não poluem a tela com isso.
+  if(limiteInfo()){
+    html+=`<div class="card"><h3>Seu plano</h3>${barraUsoPlano()}</div>`;
+  }
 
   if(!ativos.length){
     html+=`<div class="card center"><p class="mut">Nenhum lote ainda.</p><button class="btn" style="margin-top:12px" onclick="novoLote()">+ Criar meu primeiro lote</button></div>`;
@@ -1190,6 +1375,7 @@ async function salvarFechamento(id,dataEntrada){
     preco_arroba_venda:preco, comprador:comprador||null
   }).eq('id',id);
   if(error) return msg('fv-msg',error.message);
+  await atualizarModoAcesso();
   renderLote(id);
 }
 async function reabrirLote(id,btn){
@@ -1199,7 +1385,9 @@ async function reabrirLote(id,btn){
     data_saida:null, peso_venda_kg:null, rendimento_venda:null,
     preco_arroba_venda:null, comprador:null
   }).eq('id',id);
-  if(error) return msg('fech-msg',error.message);
+  // Reabrir devolve as cabeças pra contagem ativa — pode esbarrar no teto do plano.
+  if(error){ if(tratarErroPlano(error,'fech-msg')) return; return msg('fech-msg',error.message); }
+  await atualizarModoAcesso();
   renderLote(id);
 }
 
@@ -1459,7 +1647,8 @@ async function salvarEdicao(id){
     custo_compra_total:parseFloat($('el-compra').value)||null,
     rendimento_carcaca:(parseFloat($('el-rend').value)||53)/100
   }).eq('id',id);
-  if(error) return msg('el-msg',error.message);
+  if(error){ if(tratarErroPlano(error,'el-msg')) return; return msg('el-msg',error.message); }
+  await atualizarModoAcesso();
   renderLote(id);
 }
 let _confirmaExcluir=null;
@@ -1476,6 +1665,7 @@ async function excluirLote(id){
   await db.from('custo').delete().eq('lote_id',id);
   const {error}=await db.from('lote').delete().eq('id',id);
   if(error) return msg('el-msg',error.message);
+  await atualizarModoAcesso();
   renderLotes();
 }
 
@@ -1514,7 +1704,8 @@ async function salvarLote(){
     custo_compra_total:parseFloat($('nl-compra').value)||null,
     rendimento_carcaca:(parseFloat($('nl-rend').value)||53)/100
   });
-  if(error) return msg('nl-msg',error.message);
+  if(error){ if(tratarErroPlano(error,'nl-msg')) return; return msg('nl-msg',error.message); }
+  await atualizarModoAcesso();
   renderLotes();
 }
 
@@ -1620,8 +1811,9 @@ async function confirmarImportacao(){
     .map(l=>({...l, fazenda_id:FAZENDA.id}));
   if(!validas.length) return;
   const {error}=await db.from('lote').insert(validas);
-  if(error) return msg('imp-msg',error.message);
+  if(error){ if(tratarErroPlano(error,'imp-msg')) return; return msg('imp-msg',error.message); }
   PARSED_LOTES=null;
+  await atualizarModoAcesso();
   renderLotes();
 }
 
