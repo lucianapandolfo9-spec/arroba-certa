@@ -676,7 +676,7 @@ const PAGAMENTO_URL = 'https://n8n.luhpanda.com.br/webhook/arroba-certa-criar-as
 // assinatura tem gateway_preapproval_id (ou seja, existe cobrança de verdade).
 const CANCELAMENTO_URL = 'https://n8n.luhpanda.com.br/webhook/arroba-certa-cancelar-assinatura';
 // Só vira true depois de a credencial oficial do Mercado Pago estar no n8n e o checkout de produção ser homologado.
-const PAGAMENTO_PRODUCAO_ATIVO = false;
+const PAGAMENTO_PRODUCAO_ATIVO = true;
 let PLANOS_PAGAMENTO = [], CICLO_PAGAMENTO = 'mensal';
 
 async function renderConta(){
