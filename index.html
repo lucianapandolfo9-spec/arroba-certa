@@ -403,6 +403,7 @@ async function boot(){
   const {data:faz} = await db.from('fazenda').select('*').limit(1);
   if(!faz || !faz.length){ screen('scr-faz'); return; }
   FAZENDA = faz[0];
+  const voltouDoPagamento = await processarRetornoPagamento();
   await atualizarModoAcesso();
   const {data:admin} = await db.rpc('eh_admin');
   EH_ADMIN = admin===true;
@@ -415,7 +416,9 @@ async function boot(){
   $('faz-nome').textContent = FAZENDA.nome;
   screen('scr-app');
   loadTicker();
-  renderDashboard();
+  // Quem volta do Mercado Pago cai em "Minha conta", olhando o plano — não no
+  // Dashboard, senão paga e não vê confirmação nenhuma.
+  if(voltouDoPagamento) renderConta(); else renderDashboard();
 }
 
 async function atualizarModoAcesso(){
@@ -677,7 +680,54 @@ const PAGAMENTO_URL = 'https://n8n.luhpanda.com.br/webhook/arroba-certa-criar-as
 const CANCELAMENTO_URL = 'https://n8n.luhpanda.com.br/webhook/arroba-certa-cancelar-assinatura';
 // Só vira true depois de a credencial oficial do Mercado Pago estar no n8n e o checkout de produção ser homologado.
 const PAGAMENTO_PRODUCAO_ATIVO = true;
-let PLANOS_PAGAMENTO = [], CICLO_PAGAMENTO = 'mensal';
+// Amarra a assinatura recém-criada no Mercado Pago à fazenda certa.
+// Por que isso existe: o checkout da mensal é o do PLANO (um plano por faixa,
+// compartilhado por todos os clientes daquela faixa), e a assinatura que nasce
+// dele NÃO carrega external_reference. Ou seja, a notificação do MP chega sem
+// dizer de quem é. O único momento em que os dois lados se encontram é quando o
+// cliente volta pro site com ?preapproval_id=... — quem está logado aqui é o
+// dono da fazenda, então é o app que faz a ligação e grava no banco.
+const VINCULO_URL = 'https://n8n.luhpanda.com.br/webhook/arroba-certa-vincular-assinatura';
+let PLANOS_PAGAMENTO = [], CICLO_PAGAMENTO = 'mensal', RETORNO_PAGAMENTO = null;
+
+async function processarRetornoPagamento(){
+  const q = new URLSearchParams(location.search);
+  const preapproval = q.get('preapproval_id');
+  const pagamento = q.get('payment_id') || q.get('collection_id');
+  if(!preapproval && !pagamento) return false;
+  // Limpa a URL ANTES de qualquer await: se a pessoa atualizar a página no meio
+  // do processo, não dispara o vínculo duas vezes.
+  history.replaceState({}, '', location.pathname);
+  if(!preapproval){
+    // Caminho anual (Checkout Pro): a preferência leva external_reference, então
+    // a notificação do MP acha a fazenda sozinha. Aqui é só retorno visual.
+    const aprovado = (q.get('status') || q.get('collection_status')) === 'approved';
+    RETORNO_PAGAMENTO = aprovado
+      ? {tipo:'ok', texto:'Pagamento confirmado! Pode levar um minutinho pro plano aparecer como ativo aqui.'}
+      : {tipo:'err', texto:'O pagamento não foi concluído. Dá pra tentar de novo pela tela de planos.'};
+    return true;
+  }
+  try{
+    const res = await fetch(VINCULO_URL,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({fazenda_id:FAZENDA.id, preapproval_id:preapproval})});
+    const data = await res.json().catch(()=>null);
+    // Quando o workflow falha (ex.: o MP recusa o id), o n8n responde 200 com
+    // corpo VAZIO — então checar só o res.ok daria falso positivo. O que vale é
+    // o "ok" ter voltado de verdade.
+    if(!res.ok || !data?.ok) throw new Error(data?.erro || 'não consegui confirmar');
+    RETORNO_PAGAMENTO = data?.status === 'ativa'
+      ? {tipo:'ok', texto:'Assinatura ativa! 🐂 Seu acesso está liberado.'}
+      : {tipo:'ok', texto:'Recebemos sua assinatura. Assim que o Mercado Pago confirmar o pagamento, o plano fica ativo aqui.'};
+  }catch(e){
+    RETORNO_PAGAMENTO = {tipo:'err', texto:'Sua assinatura foi criada no Mercado Pago, mas não consegui confirmar aqui agora. Se o plano não aparecer ativo em alguns minutos, fala com a gente.'};
+  }
+  return true;
+}
+function retornoPagamentoHTML(){
+  if(!RETORNO_PAGAMENTO) return '';
+  const r = RETORNO_PAGAMENTO; RETORNO_PAGAMENTO = null;
+  return `<div class="msg ${r.tipo}" style="margin:10px 0">${r.texto}</div>`;
+}
 
 async function renderConta(){
   setNav('conta');
@@ -693,6 +743,7 @@ async function renderConta(){
   LIMITE_USO = limite || null;
   const pracas = ['SP','MS','GO','MG','MT','RJ'];
   $('app-body').innerHTML = `
+    ${retornoPagamentoHTML()}
     <div class="nome" style="font-size:20px;margin:10px 0 4px">👤 Minha conta</div>
     <p class="mut" style="margin-bottom:14px">Dados-base da fazenda usados nas cotações, análises e cálculos do sistema. Preencheu errado? Corrige aqui.</p>
     <div class="card" style="max-width:560px">
