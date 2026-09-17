@@ -255,7 +255,7 @@
   <div class="card">
     <label>Nome da fazenda</label><input id="f-nome" placeholder="Ex: Fazenda Boa Esperança" />
     <label>Estado (UF)</label><input id="f-uf" placeholder="MS" maxlength="2" style="text-transform:uppercase" />
-    <label>Praça de referência da @ (CEPEA)</label>
+    <label>Praça de referência da @</label>
     <select id="f-praca">
       <option value="SP">SP</option>
       <option value="MS">MS</option>
@@ -264,7 +264,7 @@
       <option value="MT">MT</option>
       <option value="RJ">RJ</option>
     </select>
-    <div class="mut" style="font-size:12px;margin-top:2px">CEPEA só publica essas praças. Fora delas, escolha a mais próxima — é só a referência, o preço real da sua fazenda quem manda é você.</div>
+    <div class="mut" style="font-size:12px;margin-top:2px">Nossa fonte (Scot Consultoria) publica só essas praças. Fora delas, escolha a mais próxima — mas atenção: aí o número é referência de OUTRO estado, e a @ varia bastante entre eles. Quem manda no seu cálculo é o preço real que você negocia, que dá pra informar em cada lote.</div>
     <label>Área (hectares)</label><input id="f-area" type="number" placeholder="500" />
     <div id="faz-msg"></div>
     <button class="btn" style="margin-top:16px" onclick="criarFazenda()">Criar fazenda</button>
@@ -574,16 +574,51 @@ function podeEditar(){
 }
 
 // ---------- ticker & cotações ----------
+// Preço da @ é informação perecível: a fonte (Scot) publica só em dia útil e
+// com atraso de 1 dia, então "ontem" é o normal. O que não pode é a tela seguir
+// mostrando preço velho com cara de atual — já aconteceu de a automação ficar
+// 3 dias parada (06→09/07/2026) sem ninguém notar, porque o número continuava lá.
+// Contamos em DIAS ÚTEIS pra não dar alarme falso todo fim de semana.
+// 2 e não 3: a pane de julho durou exatamente 3 dias úteis, e com limiar 3 ela
+// passaria batida. O custo de avisar à toa é uma linha pedindo pra conferir o
+// preço com o frigorífico — conselho que nunca é ruim. O custo de não avisar é
+// uma venda decidida em cima de preço velho.
+const DIAS_UTEIS_COTACAO_VELHA = 2;
+function diasUteisDesde(dataISO){
+  if(!dataISO) return null;
+  const d=new Date(dataISO+'T00:00:00'), hoje=new Date(); hoje.setHours(0,0,0,0);
+  if(isNaN(d)) return null;
+  let n=0;
+  for(const cur=new Date(d); cur<hoje; cur.setDate(cur.getDate()+1)){
+    const dia=cur.getDay();
+    if(dia!==0 && dia!==6) n++;
+  }
+  return n;
+}
+function cotacaoVelha(dataISO){
+  const n=diasUteisDesde(dataISO);
+  return n!=null && n>DIAS_UTEIS_COTACAO_VELHA;
+}
+
 async function loadTicker(){
   const track=$('ticker-track');
-  const {data,error}=await db.from('cotacao_arroba').select('*').order('data',{ascending:false});
+  // Só os últimos ~4 meses. Antes trazia a tabela inteira a cada abertura do app
+  // — e ela cresce ~1.500 linhas/ano, num público que abre isso no meio do pasto.
+  const desde=new Date(Date.now()-120*MS_DIA).toISOString().slice(0,10);
+  const {data,error}=await db.from('cotacao_arroba').select('*')
+    .gte('data',desde).order('data',{ascending:false});
   if(error||!data||!data.length){ track.textContent='Cotação da @ indisponível no momento.'; track.classList.remove('anim'); return; }
   COTACOES_TODAS=data;
   const porPraca={};
   for(const c of data){ if(!porPraca[c.praca]) porPraca[c.praca]=c; }
   const atuais=Object.values(porPraca).sort((a,b)=>a.praca.localeCompare(b.praca));
-  const itemHtml=atuais.map(c=>`<span class="ticker-item"><span class="uf">${c.praca}</span> ${brl(c.valor_rs)}/@</span>`).join('');
-  track.innerHTML=itemHtml+itemHtml;
+  const maisNova=atuais.reduce((m,c)=>(!m||c.data>m)?c.data:m,null);
+  const velha=cotacaoVelha(maisNova);
+  // A data anda junto do preço, sempre. Um número de @ sem data não permite
+  // decidir venda — e decidir venda é pra isso que o produtor abre o app.
+  const itemHtml=atuais.map(c=>`<span class="ticker-item"><span class="uf">${c.praca}</span> ${brl(c.valor_rs)}/@ <span class="mut" style="font-size:11px">${fmtData(c.data).slice(0,5)}</span></span>`).join('');
+  const aviso=velha?`<span class="ticker-item" style="color:#a33;font-weight:700">⚠ cotação parada desde ${fmtData(maisNova)} — confira o preço com seu frigorífico</span>`:'';
+  track.innerHTML=(aviso+itemHtml)+(aviso+itemHtml);
   track.classList.add('anim');
   track.style.animationDuration=Math.max(14,atuais.length*5)+'s';
 }
@@ -758,7 +793,7 @@ async function renderConta(){
     <div class="card" style="max-width:560px">
       <label>Nome da fazenda</label><input id="c-nome" value="${esc(f.nome)}" />
       <label>Estado (UF)</label><input id="c-uf" value="${f.estado||''}" maxlength="2" style="text-transform:uppercase" />
-      <label>Praça de referência da @ (CEPEA)</label>
+      <label>Praça de referência da @</label>
       <select id="c-praca">${pracas.map(p=>`<option value="${p}" ${f.praca_referencia===p?'selected':''}>${p}</option>`).join('')}</select>
       <label>Área (hectares)</label><input id="c-area" type="number" value="${f.area_ha??''}" />
       <div id="conta-msg"></div>
@@ -1329,7 +1364,16 @@ async function renderLote(id){
   ]);
   const v=vs; const lucro=Number(v.lucro_cab);
   const fechado = !v.ativo;
-  const origem = v.preco_arroba_praticado!=null ? 'seu preço' : (v.preco_arroba_referencia!=null?'referência CEPEA':'sem preço definido');
+  const origem = v.preco_arroba_praticado!=null ? 'seu preço' : (v.preco_arroba_referencia!=null?'referência de mercado':'sem preço definido');
+  // Quando o número vem da referência, ele tem validade — e o produtor precisa
+  // ver de quando é ANTES de decidir vender. Preço que o próprio usuário digitou
+  // não envelhece sozinho: quem manda nele é ele.
+  const usandoReferencia = v.preco_arroba_praticado==null && v.preco_arroba_referencia!=null;
+  const dataRef = v.preco_arroba_referencia_data;
+  const refData = usandoReferencia && dataRef ? ` <span class="mut" style="font-size:12px">de ${fmtData(dataRef)}</span>` : '';
+  const avisoCotacao = (usandoReferencia && cotacaoVelha(dataRef))
+    ? `<div class="msg err" style="margin:8px 0">A cotação de referência não é atualizada desde <strong>${fmtData(dataRef)}</strong>. Os números abaixo estão calculados em cima desse preço — confirme a @ com seu frigorífico antes de decidir a venda.</div>`
+    : '';
 
   let html=`<button class="back" onclick="renderLotes()">← Voltar</button>
     <div style="display:flex;justify-content:space-between;align-items:center;margin:6px 0;gap:10px">
@@ -1370,14 +1414,15 @@ async function renderLote(id){
   html+=`
     <div class="card">
       <h3>💰 Venda & Lucro ${fechado?'<span class="pill" style="margin-left:6px">estimativa antes da venda</span>':''}</h3>
-      <div class="row"><span class="k">Preço da @ usado <span class="pill" style="margin-left:6px">${origem}</span></span><span class="v">${brl(v.preco_arroba_usado)}</span></div>
+      <div class="row"><span class="k">Preço da @ usado <span class="pill" style="margin-left:6px">${origem}</span>${refData}</span><span class="v">${brl(v.preco_arroba_usado)}</span></div>
+      ${avisoCotacao}
       <div class="row"><span class="k">Vende por (cabeça)</span><span class="v">${brl(v.receita_cab)}</span></div>
       <div class="row"><span class="k">Custo total (cabeça)</span><span class="v">${brl(v.custo_cab_total)}</span></div>
       <div class="row"><span class="k">Lucro por cabeça</span><span class="v ${lucro<0?'neg':'pos'}">${brl(v.lucro_cab)}</span></div>
       <div class="row"><span class="k">Breakeven <small class="mut">(abaixo disso, prejuízo)</small></span><span class="v">${brl(v.preco_breakeven)}</span></div>
       ${fechado?'':`<label>Preço da @ que vou receber (R$)</label>
       <div style="display:flex;gap:8px">
-        <input id="pl-preco" type="number" step="0.01" placeholder="vazio = usa referência CEPEA (${brl(v.preco_arroba_referencia)})" value="${v.preco_arroba_praticado??''}" />
+        <input id="pl-preco" type="number" step="0.01" placeholder="vazio = usa a referência de mercado (${brl(v.preco_arroba_referencia)})" value="${v.preco_arroba_praticado??''}" />
         <button class="btn mini" onclick="salvarPreco('${id}')">Salvar</button>
       </div>
       <div id="preco-msg"></div>`}
