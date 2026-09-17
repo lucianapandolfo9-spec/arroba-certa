@@ -874,20 +874,53 @@ function alternarCicloPagamento(ciclo){
   const grid=$('planos-grid'); if(grid) grid.innerHTML=renderPlanosPagamento();
 }
 
+// Quantas cabeças a fazenda tem hoje. Vem do mesmo motor que o banco usa pra
+// bloquear (limite_uso_fazenda), então tela e trava falam o mesmo número.
+function cabecasHoje(){
+  const n = Number(LIMITE_USO?.cabecas_ativas);
+  return Number.isFinite(n) ? n : null;
+}
+// A faixa que corresponde ao rebanho atual — mesma regra da faixa_do_pico no
+// banco. Sem rebanho lançado ainda, não há o que recomendar.
+function faixaRecomendada(){
+  const cab=cabecasHoje();
+  if(cab==null || cab<=0) return null;
+  return PLANOS_PAGAMENTO.find(p =>
+    cab >= (p.cabecas_min ?? 0) && (p.cabecas_max==null || cab <= p.cabecas_max)
+  ) || null;
+}
+// O banco bloqueia lançamento acima de 120% do teto do plano. Ou seja: dá pra
+// assinar um plano menor que o rebanho, pagar, e continuar travado — e a
+// política é sem estorno. Então a tela precisa avisar ANTES do checkout.
+// Devolve 'bloqueia' (passou da tolerância), 'aperta' (passou do teto mas ainda
+// cabe) ou null.
+function riscoDoPlano(plano){
+  const cab=cabecasHoje();
+  if(cab==null || !plano || plano.cabecas_max==null) return null;
+  if(cab > Math.floor(plano.cabecas_max*1.2)) return 'bloqueia';
+  if(cab > plano.cabecas_max) return 'aperta';
+  return null;
+}
+
 function renderPlanosPagamento(){
   if(!PLANOS_PAGAMENTO.length) return '<div class="card"><p class="mut">Nenhum plano disponível no momento. Fala com a gente.</p></div>';
   const atual=ASSINATURA_ATUAL?.plano_faixa_id;
-  return PLANOS_PAGAMENTO.map((p,i)=>{
+  const rec=faixaRecomendada();
+  // Sem rebanho lançado, cai no comportamento antigo: destaca o segundo card.
+  const idDestaque = rec ? rec.id : (PLANOS_PAGAMENTO[1]?.id);
+  return PLANOS_PAGAMENTO.map(p=>{
     const anual=CICLO_PAGAMENTO==='anual';
     const preco=anual?p.preco_anual:p.preco_mensal;
     const faixa=p.cabecas_max?`Até ${p.cabecas_max} cabeças`:`A partir de ${p.cabecas_min||701} cabeças`;
     const atualCls=String(atual)===String(p.id)?' atual':'';
-    const destaque=i===1?' recomendado':'';
-    return `<div class="plano-card${atualCls}${destaque}">
-      ${i===1?'<span class="plano-badge">MAIS ESCOLHIDO</span>':''}
-      <h3>${p.nome}</h3><div class="plano-faixa">${faixa}</div>
+    const ehDestaque=String(idDestaque)===String(p.id);
+    const risco=riscoDoPlano(p);
+    return `<div class="plano-card${atualCls}${ehDestaque?' recomendado':''}">
+      ${ehDestaque?`<span class="plano-badge">${rec?'IDEAL PRO SEU REBANHO':'MAIS ESCOLHIDO'}</span>`:''}
+      <h3>${esc(p.nome)}</h3><div class="plano-faixa">${faixa}</div>
       <div class="plano-preco">${brl(preco)} <small>/${anual?'ano':'mês'}</small></div>
       ${anual?'<div class="mut" style="color:var(--verde);font-weight:700;margin-bottom:14px">Paga 10, leva 12</div>':'<div class="mut" style="margin-bottom:14px">Cancele quando quiser</div>'}
+      ${risco==='bloqueia'?'<div class="mut" style="color:var(--vermelho,#a33);font-weight:700;margin:-8px 0 12px;font-size:12px">Pequeno demais pro seu rebanho</div>':''}
       <button class="btn mini" onclick="iniciarPagamento(${Number(p.id)})" ${PAGAMENTO_PRODUCAO_ATIVO?'':'disabled'}>${PAGAMENTO_PRODUCAO_ATIVO?(String(atual)===String(p.id)?'Continuar com este plano':'Escolher plano'):'Pagamento em ativação'}</button>
     </div>`;
   }).join('');
@@ -904,6 +937,10 @@ async function garantirPlanosCarregados(){
 async function renderPagamento(){
   setNav('conta');
   await garantirPlanosCarregados();
+  // O checkout do Mercado Pago é amarrado ao e-mail do pagador. Quem não estiver
+  // logado no MP com esta conta trava na hora de pagar, sem entender por quê.
+  const {data:{user}}=await db.auth.getUser();
+  const emailPagador=user?.email||'';
   const lotesN=STATS_BLOQUEIO?.lotes ?? 0, lancN=STATS_BLOQUEIO?.lancamentos ?? 0;
   const bloqueioHtml = MODO_LEITURA ? `<div class="msg err">
       <strong>Seu teste terminou.</strong> Seus ${lotesN} ${lotesN===1?'lote':'lotes'} e ${lancN} ${lancN===1?'lançamento':'lançamentos'} continuam salvos e visíveis aqui. Escolha um plano pra voltar a lançar.
@@ -916,17 +953,39 @@ async function renderPagamento(){
       <button id="pag-ciclo-anual" class="${CICLO_PAGAMENTO==='anual'?'on':''}" onclick="alternarCicloPagamento('anual')">Anual · 2 meses grátis</button>
     </div>
     <div id="planos-grid" class="planos-grid">${renderPlanosPagamento()}</div>
-    <div class="pagamento-resumo"><strong>${PAGAMENTO_PRODUCAO_ATIVO?'Como funciona':'Pagamento em ativação'}</strong><div class="mut" style="margin-top:5px">${PAGAMENTO_PRODUCAO_ATIVO?'Você escolhe o plano, confirma os dados no Mercado Pago e volta com a assinatura registrada. Os valores são definidos pelo banco do sistema.':'Os planos já estão definidos. O checkout será liberado assim que a credencial oficial do Mercado Pago for conectada e homologada.'}</div></div>
+    <div class="pagamento-resumo"><strong>${PAGAMENTO_PRODUCAO_ATIVO?'Como funciona':'Pagamento em ativação'}</strong><div class="mut" style="margin-top:5px">${PAGAMENTO_PRODUCAO_ATIVO?`Você escolhe o plano, confirma os dados no Mercado Pago e volta com a assinatura registrada.${emailPagador?` <strong>A cobrança abre no Mercado Pago vinculada ao e-mail ${esc(emailPagador)}</strong> — é com essa conta que você precisa estar logado lá.`:''}`:'Os planos já estão definidos. O checkout será liberado assim que a credencial oficial do Mercado Pago for conectada e homologada.'}</div></div>
     <p class="mut" style="font-size:12px;margin:10px 0">Ao assinar, você concorda com os <a href="termos.html" target="_blank" rel="noopener" style="color:var(--cinza)">Termos de Uso</a> e a <a href="cancelamento.html" target="_blank" rel="noopener" style="color:var(--cinza)">Política de Cancelamento</a> — cancelamento fácil, direto na sua conta.</p>
     <button class="btn ghost" style="width:auto" onclick="renderConta()">← Voltar para minha conta</button>
     <div id="pagamento-msg"></div>`;
 }
 
-async function iniciarPagamento(planoId){
+// Trava de bom senso antes do checkout: ninguém paga um plano que não comporta
+// o rebanho que já está lançado. Sem isso a pessoa paga, o banco bloqueia os
+// lançamentos, e a política é sem estorno — briga garantida no primeiro cliente.
+// Não proíbe: mostra o tamanho do problema e deixa ela decidir.
+function confirmarPlanoApertado(plano){
+  const cab=cabecasHoje(), rec=faixaRecomendada();
+  const alvo = rec && rec.id!==plano.id
+    ? `<button class="btn mini" onclick="iniciarPagamento(${Number(rec.id)})">Assinar o ${esc(rec.nome)} (${brl(CICLO_PAGAMENTO==='anual'?rec.preco_anual:rec.preco_mensal)})</button>`
+    : '';
+  $('pagamento-msg').innerHTML=`<div class="msg err" style="display:block">
+    <strong>Esse plano não comporta seu rebanho.</strong><br>
+    Você tem <strong>${cab} cabeças</strong> lançadas e o ${esc(plano.nome)} vai até ${plano.cabecas_max}.
+    Se assinar assim, você consegue pagar — mas o sistema vai continuar bloqueando novos
+    lançamentos, e a gente não faz estorno.
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+      ${alvo}
+      <button class="btn mini sec" onclick="iniciarPagamento(${Number(plano.id)},true)">Assinar o ${esc(plano.nome)} mesmo assim</button>
+    </div>
+  </div>`;
+}
+
+async function iniciarPagamento(planoId, jaAvisado){
   const msgEl='pagamento-msg';
   if(!PAGAMENTO_PRODUCAO_ATIVO) return msg(msgEl,'O pagamento ainda está em ativação. Nenhuma cobrança foi criada.');
   const plano=PLANOS_PAGAMENTO.find(p=>Number(p.id)===Number(planoId));
   if(!plano) return msg(msgEl,'Esse plano não está disponível no momento.');
+  if(!jaAvisado && riscoDoPlano(plano)==='bloqueia') return confirmarPlanoApertado(plano);
   const {data:{user}}=await db.auth.getUser();
   if(!user?.email || !FAZENDA?.id) return msg(msgEl,'Não consegui identificar sua conta. Sai e entra novamente.');
   const botoes=document.querySelectorAll('#planos-grid button'); botoes.forEach(b=>b.disabled=true);
