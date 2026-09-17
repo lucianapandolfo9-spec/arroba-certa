@@ -303,6 +303,15 @@ const MS_DIA = 24*60*60*1000;
 const $ = id => document.getElementById(id);
 const brl = v => v==null?"—":new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(v);
 const num = (v,c=2) => v==null?"—":new Intl.NumberFormat('pt-BR',{minimumFractionDigits:c,maximumFractionDigits:c}).format(v);
+// Escapa texto que veio do usuário antes de entrar em innerHTML. Mora aqui em
+// cima, junto dos outros helpers, porque TODA tela precisa dele — inclusive o
+// painel Admin, que mostra dado digitado por cliente dentro da tela da Luh.
+// Escapa aspas também: sem isso não dá pra usar dentro de value="..." .
+// Atenção: isso serve pra TEXTO e pra VALOR DE ATRIBUTO. Nunca use pra montar
+// JavaScript dentro de onclick="..." — ali o HTML decodifica a entidade antes
+// do JS ler, e a escapada não vale nada. Nesse caso, use data-* + listener.
+const esc = s => String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;')
+  .replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 const show = id => $(id).classList.remove('hidden');
 const hide = id => $(id).classList.add('hidden');
 function screen(s){['scr-login','scr-app','scr-faz','scr-nova-senha','scr-sem-acesso','scr-boasvindas'].forEach(hide);show(s);}
@@ -747,7 +756,7 @@ async function renderConta(){
     <div class="nome" style="font-size:20px;margin:10px 0 4px">👤 Minha conta</div>
     <p class="mut" style="margin-bottom:14px">Dados-base da fazenda usados nas cotações, análises e cálculos do sistema. Preencheu errado? Corrige aqui.</p>
     <div class="card" style="max-width:560px">
-      <label>Nome da fazenda</label><input id="c-nome" value="${(f.nome||'').replace(/"/g,'&quot;')}" />
+      <label>Nome da fazenda</label><input id="c-nome" value="${esc(f.nome)}" />
       <label>Estado (UF)</label><input id="c-uf" value="${f.estado||''}" maxlength="2" style="text-transform:uppercase" />
       <label>Praça de referência da @ (CEPEA)</label>
       <select id="c-praca">${pracas.map(p=>`<option value="${p}" ${f.praca_referencia===p?'selected':''}>${p}</option>`).join('')}</select>
@@ -989,13 +998,13 @@ async function renderAdmin(){
   } else {
     for(const c of clientes){
       const fid=c.fazenda_id;
-      const planoOpts=ADMIN_PLANOS.map(p=>`<option value="${p.id}" ${c.plano_faixa_id===p.id?'selected':''}>${p.nome} (${brl(p.preco_mensal)}/mês)</option>`).join('');
+      const planoOpts=ADMIN_PLANOS.map(p=>`<option value="${p.id}" ${c.plano_faixa_id===p.id?'selected':''}>${esc(p.nome)} (${brl(p.preco_mensal)}/mês)</option>`).join('');
       const statusOpts=ADMIN_STATUS_OPCOES.map(s=>`<option value="${s}" ${c.assinatura_status===s?'selected':''}>${s}</option>`).join('');
       html+=`<div class="card">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px">
           <div>
-            <div class="nome" style="font-size:17px">${c.nome||'—'} ${c.estado?`<span class="mut" style="font-size:13px;font-weight:600">· ${c.estado}</span>`:''}</div>
-            <div class="mut" style="font-size:13px">${c.owner_email||'sem e-mail vinculado'}</div>
+            <div class="nome" style="font-size:17px">${esc(c.nome)||'—'} ${c.estado?`<span class="mut" style="font-size:13px;font-weight:600">· ${esc(c.estado)}</span>`:''}</div>
+            <div class="mut" style="font-size:13px">${esc(c.owner_email)||'sem e-mail vinculado'}</div>
           </div>
           ${badgeEng(c.status_engajamento)}
         </div>
@@ -1011,7 +1020,7 @@ async function renderAdmin(){
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
           <span class="pill ${c.acesso_beta_ativo?'':'warn'}">${c.acesso_beta_ativo?'liberado':'bloqueado'}</span>
           <button class="btn mini ${c.acesso_beta_ativo?'sec':''}" ${c.owner_email?'':'disabled'}
-            onclick="adminToggleAcesso('${(c.owner_email||'').replace(/'/g,"\\'")}',${!c.acesso_beta_ativo},this)">
+            data-acao="toggle-acesso" data-email="${esc(c.owner_email)}" data-valor="${!c.acesso_beta_ativo}">
             ${c.acesso_beta_ativo?'Revogar acesso':'Liberar acesso'}
           </button>
         </div>
@@ -1031,11 +1040,29 @@ async function renderAdmin(){
         <label>Status</label>
         <select id="adm-status-${fid}">${statusOpts}</select>
         <div id="adm-msg-${fid}"></div>
-        <button class="btn mini" style="margin-top:10px" onclick="adminSalvarAssinatura('${fid}')">Salvar assinatura</button>
+        <button class="btn mini" style="margin-top:10px" data-acao="salvar-assinatura" data-fazenda="${esc(fid)}">Salvar assinatura</button>
       </div>`;
     }
   }
   body.innerHTML=html;
+  ligarAcoesAdmin(body);
+}
+
+// Os botões do Admin carregam dado digitado por CLIENTE (nome de fazenda,
+// e-mail). Montar onclick="funcao('${dado}')" é furo de segurança: o HTML
+// decodifica a entidade antes do JS ler, então nenhuma escapada segura o
+// conteúdo dentro de um atributo de evento. Por isso a ação vai em data-* e
+// o clique é ligado aqui, onde o valor chega como string pura.
+// Não acumula listener: o innerHTML acima troca os botões a cada render.
+function ligarAcoesAdmin(raiz){
+  raiz.querySelectorAll('[data-acao]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const d=btn.dataset;
+      if(d.acao==='toggle-acesso')      adminToggleAcesso(d.email, d.valor==='true', btn);
+      else if(d.acao==='liberar-fila')  adminLiberarDaFila(d.email, btn);
+      else if(d.acao==='salvar-assinatura') adminSalvarAssinatura(d.fazenda);
+    });
+  });
 }
 
 // Fila de quem criou conta e ainda não foi liberado. Sem isso, essas pessoas
@@ -1048,22 +1075,24 @@ function renderFilaEspera(pendentes){
     const dias=Number(p.dias_esperando||0);
     const cor = dias>=14 ? 'neg' : dias>=7 ? '' : 'pos';
     const email=String(p.email||'');
-    const emailAttr=email.replace(/'/g,"\\'");
     return `<div class="card" style="padding:12px 14px">
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
         <div>
-          <div class="nome" style="font-size:15px">${email}</div>
+          <div class="nome" style="font-size:15px">${esc(email)}</div>
           <div class="mut" style="font-size:13px">
             Esperando há <strong class="${cor}">${dias} ${dias===1?'dia':'dias'}</strong>
             · ${p.email_confirmado?'e-mail confirmado ✅':'e-mail ainda não confirmado ⚠️'}
           </div>
         </div>
-        <button class="btn mini" onclick="adminLiberarDaFila('${emailAttr}',this)">Liberar acesso</button>
+        <button class="btn mini" data-acao="liberar-fila" data-email="${esc(email)}">Liberar acesso</button>
       </div>
     </div>`;
   }).join('');
-  return `<div class="section-title">⏳ Esperando liberação (${fila.length})</div>
-    <p class="mut" style="margin:-6px 0 10px">Criaram conta e pararam na tela de convite. Enquanto você não liberar, elas não conseguem usar o sistema.</p>
+  // O cadastro foi aberto em 14/09 (acesso_liberado() virou "select true"), então
+  // ninguém para mais na tela de convite. Quem cai aqui hoje criou conta e parou
+  // ANTES de montar a fazenda — é lead frio, não gente esperando liberação.
+  return `<div class="section-title">⏳ Criaram conta e não terminaram (${fila.length})</div>
+    <p class="mut" style="margin:-6px 0 10px">Se cadastraram mas não chegaram a criar a fazenda — então ainda não usaram nada. Vale um contato. O botão abaixo garante o acesso caso o cadastro volte a ser por convite.</p>
     ${linhas}`;
 }
 
@@ -1140,11 +1169,11 @@ async function renderDashboard(){
   }else{
     html+=`<div class="dashboard-columns">
       <div class="card"><h3>Desempenho dos lotes</h3>
-        ${ranking.map(l=>`<div class="row"><span class="k"><b>${l.nome}</b><br><small>${l.qtd_animais||0} cab · ${num(l.peso_atual_kg,0)} kg</small></span><span class="v ${Number(l.lucro_cab)<0?'neg':'pos'}">${brl(l.lucro_cab)}/cab</span></div>`).join('')}
+        ${ranking.map(l=>`<div class="row"><span class="k"><b>${esc(l.nome)}</b><br><small>${l.qtd_animais||0} cab · ${num(l.peso_atual_kg,0)} kg</small></span><span class="v ${Number(l.lucro_cab)<0?'neg':'pos'}">${brl(l.lucro_cab)}/cab</span></div>`).join('')}
         <button class="btn sec" style="margin-top:14px" onclick="renderLotes()">Ver todos os lotes</button>
       </div>
       <div class="card"><h3>Alertas e mercado</h3>
-        ${alertas.length?alertas.map(l=>`<div class="msg err"><b>${l.nome}</b><br>${Number(l.gmd)>3?'GMD fora da faixa esperada. Confira pesos e datas.':'Lote com prejuízo estimado.'}</div>`).join(''):''}
+        ${alertas.length?alertas.map(l=>`<div class="msg err"><b>${esc(l.nome)}</b><br>${Number(l.gmd)>3?'GMD fora da faixa esperada. Confira pesos e datas.':'Lote com prejuízo estimado.'}</div>`).join(''):''}
         ${(vacinasProx||[]).map(s=>`<div class="msg err"><b>${s.lote?.nome||'Lote'}</b><br>${labelEvento(s.evento)}${s.produto?' — '+esc(s.produto):''} vence ${fmtData(s.proxima_data)}</div>`).join('')}
         ${(!alertas.length && !(vacinasProx||[]).length)?'<div class="msg ok">Nenhum alerta crítico nos lotes ativos.</div>':''}
         <div class="row"><span class="k">Melhor resultado/cabeça</span><span class="v pos">${brl(ranking[0]?.lucro_cab)}</span></div>
@@ -1188,7 +1217,7 @@ async function renderLotes(){
       html+=`
       <div class="card lote-card" onclick="renderLote('${l.lote_id}')">
         <div style="display:flex;justify-content:space-between;align-items:start">
-          <div><div class="nome">${l.nome}</div>
+          <div><div class="nome">${esc(l.nome)}</div>
             <span class="pill">${l.fase||''}</span> <span class="mut">${l.qtd_animais||0} cab · ${num(l.peso_atual_kg,0)} kg</span></div>
           <div class="pill ${lucro<0?'warn':''}">${lucro>=0?'lucro':'prejuízo'}</div>
         </div>
@@ -1218,7 +1247,7 @@ async function renderLotes(){
     for(const l of fechados){
       const lr=Number(l.lucro_realizado_total);
       html+=`<div class="row" style="cursor:pointer" onclick="renderLote('${l.lote_id}')">
-        <span class="k"><b>${l.nome}</b><br><small>${l.qtd_animais||0} cab · vendido em ${fmtData(l.data_saida)}</small></span>
+        <span class="k"><b>${esc(l.nome)}</b><br><small>${l.qtd_animais||0} cab · vendido em ${fmtData(l.data_saida)}</small></span>
         <span class="v ${lr<0?'neg':'pos'}">${isNaN(lr)?'—':brl(lr)}</span>
       </div>`;
     }
@@ -1245,8 +1274,8 @@ async function renderLote(id){
 
   let html=`<button class="back" onclick="renderLotes()">← Voltar</button>
     <div style="display:flex;justify-content:space-between;align-items:center;margin:6px 0;gap:10px">
-      <div><div class="nome" style="font-size:22px">${v.nome}</div>
-        <span class="pill">${v.fase||''}</span> ${fechado?'<span class="pill" style="background:var(--terra);color:#fff">vendido</span>':''} <span class="mut">${v.sistema||''} · ${v.qtd_animais} cab</span></div>
+      <div><div class="nome" style="font-size:22px">${esc(v.nome)}</div>
+        <span class="pill">${esc(v.fase)}</span> ${fechado?'<span class="pill" style="background:var(--terra);color:#fff">vendido</span>':''} <span class="mut">${esc(v.sistema)} · ${v.qtd_animais} cab</span></div>
       <button class="btn sec mini" style="flex-shrink:0" onclick="editarLote('${id}')">✏️ Editar</button>
     </div>`;
 
@@ -1266,7 +1295,7 @@ async function renderLote(id){
       <div class="row"><span class="k">Preço da @ recebido</span><span class="v">${brl(lote.preco_arroba_venda)}</span></div>
       <div class="row"><span class="k">Receita do lote</span><span class="v">${brl(v.receita_venda_total)}</span></div>
       <div class="row"><span class="k">Custo total do lote</span><span class="v">${brl(v.custo_lote_total ?? (Number(v.custo_cab_total)*Number(v.qtd_animais)))}</span></div>
-      ${lote.comprador?`<div class="row"><span class="k">Comprador</span><span class="v">${lote.comprador}</span></div>`:''}
+      ${lote.comprador?`<div class="row"><span class="k">Comprador</span><span class="v">${esc(lote.comprador)}</span></div>`:''}
       <button class="btn ghost" style="width:100%;color:var(--vermelho);margin-top:10px" id="btn-reabrir" onclick="reabrirLote('${id}',this)">↩️ Reabrir lote (desfazer venda)</button>
       <div id="fech-msg"></div>
     </div>`;
@@ -1333,7 +1362,7 @@ async function renderLote(id){
     <div class="card">
       <h3>💵 Custos do período</h3>
       <p class="mut">Registre tudo que você gasta com esse lote — é o que define se ele está dando lucro de verdade.</p>
-      ${(cus||[]).map(c=>`<div class="list-item"><span>${fmtData(c.data)} · ${c.categoria}</span>
+      ${(cus||[]).map(c=>`<div class="list-item"><span>${fmtData(c.data)} · ${esc(c.categoria)}</span>
         <span><b>${brl(c.valor)}</b>
           <button class="btn ghost mini" title="Editar" onclick="editCusto('${id}','${c.id}','${c.data}','${c.categoria}',${c.valor})">✏️</button>
           <button class="btn ghost mini" title="Excluir" onclick="delCusto('${id}','${c.id}',this)">🗑️</button>
@@ -1671,7 +1700,7 @@ async function editarLote(id){
   const rendPct = l.rendimento_carcaca!=null ? Math.round(l.rendimento_carcaca*100) : 53;
   body.innerHTML=`<button class="back" onclick="renderLote('${id}')">← Voltar</button>
     <div class="card"><h3>Editar lote</h3>
-      <label>Nome</label><input id="el-nome" value="${l.nome??''}" />
+      <label>Nome</label><input id="el-nome" value="${esc(l.nome)}" />
       <label>Fase</label><select id="el-fase">
         ${['engorda','recria','cria'].map(o=>`<option value="${o}" ${l.fase===o?'selected':''}>${o[0].toUpperCase()+o.slice(1)}</option>`).join('')}
       </select>
@@ -1848,7 +1877,7 @@ function renderPreviewImportacao(){
   const validas=linhas.filter(l=>l.nome && l.qtd_animais);
   const rows=linhas.map(l=>{
     const ok = l.nome && l.qtd_animais;
-    return `<tr class="${ok?'':'bad'}"><td>${l.nome||'— sem nome —'}</td><td>${l.fase}</td><td>${l.sistema}</td>
+    return `<tr class="${ok?'':'bad'}"><td>${esc(l.nome)||'— sem nome —'}</td><td>${esc(l.fase)}</td><td>${esc(l.sistema)}</td>
       <td>${l.qtd_animais??'— falta —'}</td><td>${fmtData(l.data_entrada)}</td><td>${num(l.peso_entrada_medio_kg,0)}</td>
       <td>${brl(l.custo_compra_total)}</td><td>${Math.round((l.rendimento_carcaca||0)*100)}%</td></tr>`;
   }).join('');
@@ -1879,8 +1908,6 @@ async function confirmarImportacao(){
 const WHATSAPP_SUPORTE = '5584994127476';
 const SUPORTE_URL = 'https://n8n.luhpanda.com.br/webhook/arroba-certa-suporte';
 let CHAT_MSGS = [];
-
-const esc = s => String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 
 function renderAjuda(){
   setNav('ajuda');
