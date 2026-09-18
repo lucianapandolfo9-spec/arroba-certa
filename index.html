@@ -7,6 +7,9 @@
 <link rel="icon" type="image/png" href="assets/favicon.png" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!-- Handshake adiantado com o gateway de pagamento: corta ~0,5s do clique no plano -->
+<link rel="preconnect" href="https://n8n.luhpanda.com.br">
+<link rel="preconnect" href="https://www.mercadopago.com.br">
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
   :root{
@@ -1053,12 +1056,18 @@ function confirmarPlanoApertado(plano){
 
 async function iniciarPagamento(planoId, jaAvisado){
   const msgEl='pagamento-msg';
-  if(!PAGAMENTO_PRODUCAO_ATIVO) return msg(msgEl,'O pagamento ainda está em ativação. Nenhuma cobrança foi criada.');
+  // Feedback NO PRÓPRIO botão clicado, antes de qualquer await — a chamada ao
+  // gateway leva 1-2s e sem isso o clique parecia morto (reclamação real).
+  const btnClicado = window.event?.target?.closest?.('button');
+  const htmlOriginal = btnClicado?.innerHTML;
+  if(btnClicado){ btnClicado.innerHTML='⏳ Abrindo o Mercado Pago…'; }
+  const restaurarBotao=()=>{ if(btnClicado && htmlOriginal!=null) btnClicado.innerHTML=htmlOriginal; };
+  if(!PAGAMENTO_PRODUCAO_ATIVO){ restaurarBotao(); return msg(msgEl,'O pagamento ainda está em ativação. Nenhuma cobrança foi criada.'); }
   const plano=PLANOS_PAGAMENTO.find(p=>Number(p.id)===Number(planoId));
-  if(!plano) return msg(msgEl,'Esse plano não está disponível no momento.');
-  if(!jaAvisado && riscoDoPlano(plano)==='bloqueia') return confirmarPlanoApertado(plano);
+  if(!plano){ restaurarBotao(); return msg(msgEl,'Esse plano não está disponível no momento.'); }
+  if(!jaAvisado && riscoDoPlano(plano)==='bloqueia'){ restaurarBotao(); return confirmarPlanoApertado(plano); }
   const {data:{user}}=await db.auth.getUser();
-  if(!user?.email || !FAZENDA?.id) return msg(msgEl,'Não consegui identificar sua conta. Sai e entra novamente.');
+  if(!user?.email || !FAZENDA?.id){ restaurarBotao(); return msg(msgEl,'Não consegui identificar sua conta. Sai e entra novamente.'); }
   const botoes=document.querySelectorAll('#planos-grid button'); botoes.forEach(b=>b.disabled=true);
   msg(msgEl,'Gerando seu checkout seguro…','ok');
   try{
@@ -1072,6 +1081,7 @@ async function iniciarPagamento(planoId, jaAvisado){
   }catch(e){
     msg(msgEl,e.message||'Não foi possível gerar o pagamento. Tenta novamente.');
     botoes.forEach(b=>b.disabled=false);
+    restaurarBotao();
   }
 }
 
