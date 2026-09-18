@@ -355,7 +355,10 @@ async function doAuth(){
     if(res.error) throw res.error;
     if(AUTHTAB==='criar' && !res.data.session){
       msg('login-msg','Conta criada! Te enviamos um e-mail de confirmação — clica no link lá e depois volta aqui pra entrar. 📧','ok');
-    } else { await boot(); }
+    }
+    // Não chama boot() aqui: signInWithPassword/signUp já dispara 'SIGNED_IN'
+    // sozinho, e o listener acima cuida de bootar. Chamar dos dois lados era
+    // o que fazia a cadeia de boot rodar 2x ao mesmo tempo no login.
   }catch(e){ msg('login-msg', traduzErro(e.message)); }
   finally{ btn.innerHTML=AUTHTAB==='entrar'?'Entrar':'Criar conta'; btn.disabled=false; }
 }
@@ -366,7 +369,7 @@ function traduzErro(m){
   if(/rate limit|security purposes/i.test(m)) return 'Muitas tentativas seguidas. Espera um minutinho e tenta de novo.';
   return m;
 }
-async function logout(){ await db.auth.signOut(); screen('scr-login'); }
+async function logout(){ BOOT_ULTIMO_USER_ID=null; await db.auth.signOut(); screen('scr-login'); }
 async function entrarComGoogle(){
   await db.auth.signInWithOAuth({provider:'google', options:{redirectTo: window.location.origin + window.location.pathname}});
 }
@@ -390,6 +393,10 @@ async function salvarNovaSenha(){
   if(error) return msg('ns-msg',traduzErro(error.message));
   MODO_RECUPERACAO=false;
   history.replaceState(null,'',window.location.pathname);
+  // Força reboot de verdade: sem isso, a trava de "mesmo usuário, já
+  // bootado" faria esse boot() ser ignorado, e a tela nunca sairia da
+  // recuperação de senha.
+  BOOT_ULTIMO_USER_ID=null;
   await boot();
 }
 
@@ -399,10 +406,36 @@ db.auth.onAuthStateChange((event)=>{
 });
 
 // ---------- boot ----------
+// O Supabase revalida a sessão e dispara 'SIGNED_IN' de novo toda vez que a
+// aba volta a ficar em foco — não só em login de verdade. Sem essa trava,
+// isso fazia o app rodar a cadeia INTEIRA de 6+ chamadas em série (getUser,
+// acesso_liberado, fazenda, atualizarModoAcesso, eh_admin...) toda vez que
+// você voltava pra aba, e é exatamente isso que parecia "abrir devagar".
+// Também tinha boot() disparando 2x ao mesmo tempo no login: uma vez aqui
+// no listener, outra explícita dentro de doAuth() — as duas rodavam juntas.
+//
+// A trava: guarda qual usuário já foi bootado + a promise em andamento.
+// - Mesmo usuário, boot já feito → devolve na hora, sem tocar rede de novo.
+// - Duas chamadas simultâneas (listener + doAuth) → a segunda espera a
+//   mesma promise da primeira, em vez de duplicar as 6 chamadas.
+let BOOT_ULTIMO_USER_ID = null;
+let BOOT_EM_ANDAMENTO = null;
 async function boot(){
+  if(BOOT_EM_ANDAMENTO) return BOOT_EM_ANDAMENTO;
+  BOOT_EM_ANDAMENTO = bootReal();
+  try{ return await BOOT_EM_ANDAMENTO; }
+  finally{ BOOT_EM_ANDAMENTO=null; }
+}
+async function bootReal(){
   if(MODO_RECUPERACAO){ screen('scr-nova-senha'); return; }
   const {data:{user}} = await db.auth.getUser();
-  if(!user){ screen('scr-login'); return; }
+  if(!user){ BOOT_ULTIMO_USER_ID=null; screen('scr-login'); return; }
+  if(user.id===BOOT_ULTIMO_USER_ID){
+    // Mesmo usuário já bootado — isso aqui é só a aba voltando ao foco e o
+    // Supabase revalidando o token. A tela já está certa; não refaz tudo.
+    return;
+  }
+  BOOT_ULTIMO_USER_ID = user.id;
   const {data:liberado} = await db.rpc('acesso_liberado');
   if(!liberado){
     $('link-wa-sem-acesso').href = 'https://wa.me/5584994127476?text='+encodeURIComponent('Oi! Quero pedir acesso ao Certo Agro 🐂 (e-mail: '+user.email+')');
@@ -695,6 +728,9 @@ async function criarFazenda(){
   });
   if(error) return msg('faz-msg',error.message);
   FAZENDA_RECEM_CRIADA=true;
+  // Força reboot de verdade: acabou de nascer a fazenda, precisa buscar ela
+  // de novo. Sem isso a trava de "mesmo usuário" pularia essa busca.
+  BOOT_ULTIMO_USER_ID=null;
   await boot();
 }
 function renderBoasVindas(){
