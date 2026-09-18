@@ -445,7 +445,7 @@ async function bootReal(){
     $('sem-acesso-email').textContent = user.email;
     screen('scr-sem-acesso'); return;
   }
-  const {data:faz} = await db.from('fazenda').select('*').limit(1);
+  const {data:faz} = await db.from('fazenda').select('*').order('criado_em',{ascending:true}).limit(1);
   if(!faz || !faz.length){ screen('scr-faz'); return; }
   FAZENDA = faz[0];
   const voltouDoPagamento = await processarRetornoPagamento();
