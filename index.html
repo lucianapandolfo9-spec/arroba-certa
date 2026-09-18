@@ -1272,8 +1272,8 @@ async function renderDashboard(){
   setNav('dash');
   const body=$('app-body'); body.innerHTML='<p class="mut center" style="padding:30px">Carregando…</p>';
   const [{data:lotes,error},{data:vacinasProx}]=await Promise.all([
-    db.from('vw_lote_analise').select('*').order('nome'),
-    db.from('sanitario').select('*, lote:lote_id(nome)').not('proxima_data','is',null).lte('proxima_data',addDias(hoje(),14)).order('proxima_data'),
+    db.from('vw_lote_analise').select('*').eq('fazenda_id',FAZENDA.id).order('nome'),
+    db.from('sanitario').select('*, lote:lote_id!inner(nome, fazenda_id)').eq('lote.fazenda_id',FAZENDA.id).not('proxima_data','is',null).lte('proxima_data',addDias(hoje(),14)).order('proxima_data'),
   ]);
   if(error){ body.innerHTML=`<div class="msg err">${error.message}</div>`; return; }
   const ativos=(lotes||[]).filter(l=>l.ativo);
@@ -1328,7 +1328,7 @@ async function renderDashboard(){
 async function renderLotes(){
   setNav('lotes');
   const body=$('app-body'); body.innerHTML='<p class="mut center" style="padding:30px">Carregando…</p>';
-  const {data:lotes,error}=await db.from('vw_lote_analise').select('*').order('nome');
+  const {data:lotes,error}=await db.from('vw_lote_analise').select('*').eq('fazenda_id',FAZENDA.id).order('nome');
   if(error){ body.innerHTML=`<div class="msg err">${error.message}</div>`; return; }
   const ativos=(lotes||[]).filter(l=>l.ativo);
   const totalAnimais=ativos.reduce((s,l)=>s+(l.qtd_animais||0),0);
