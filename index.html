@@ -1011,10 +1011,14 @@ async function garantirPlanosCarregados(){
 async function renderPagamento(){
   setNav('conta');
   await garantirPlanosCarregados();
-  // O checkout do Mercado Pago é amarrado ao e-mail do pagador. Quem não estiver
-  // logado no MP com esta conta trava na hora de pagar, sem entender por quê.
-  const {data:{user}}=await db.auth.getUser();
-  const emailPagador=user?.email||'';
+  // ATENÇÃO — isto aqui já esteve errado e custou caro. O checkout do plano mensal
+  // NÃO é amarrado ao e-mail do pagador: qualquer pessoa pode pagar, com o cartão
+  // dela. O que ainda prende é o RETORNO — hoje a assinatura só entra na conta se
+  // a pessoa voltar logada no mesmo navegador; sem sessão, o preapproval_id é
+  // descartado em silêncio e o cliente fica pagando sem acesso.
+  // Enquanto o plano-por-fazenda não for construído (ver Hub Dev), o aviso abaixo
+  // pede pra concluir no mesmo aparelho. NÃO prometer "outra pessoa pode pagar"
+  // antes disso — hoje é mentira.
   const lotesN=STATS_BLOQUEIO?.lotes ?? 0, lancN=STATS_BLOQUEIO?.lancamentos ?? 0;
   const bloqueioHtml = MODO_LEITURA ? `<div class="msg err">
       <strong>Seu teste terminou.</strong> Seus ${lotesN} ${lotesN===1?'lote':'lotes'} e ${lancN} ${lancN===1?'lançamento':'lançamentos'} continuam salvos e visíveis aqui. Escolha um plano pra voltar a lançar.
@@ -1027,7 +1031,7 @@ async function renderPagamento(){
       <button id="pag-ciclo-anual" class="${CICLO_PAGAMENTO==='anual'?'on':''}" onclick="alternarCicloPagamento('anual')">Anual · 2 meses grátis</button>
     </div>
     <div id="planos-grid" class="planos-grid">${renderPlanosPagamento()}</div>
-    <div class="pagamento-resumo"><strong>${PAGAMENTO_PRODUCAO_ATIVO?'Como funciona':'Pagamento em ativação'}</strong><div class="mut" style="margin-top:5px">${PAGAMENTO_PRODUCAO_ATIVO?`Você escolhe o plano, confirma os dados no Mercado Pago e volta com a assinatura registrada.${emailPagador?` <strong>A cobrança abre no Mercado Pago vinculada ao e-mail ${esc(emailPagador)}</strong> — é com essa conta que você precisa estar logado lá.`:''}`:'Os planos já estão definidos. O checkout será liberado assim que a credencial oficial do Mercado Pago for conectada e homologada.'}</div></div>
+    <div class="pagamento-resumo"><strong>${PAGAMENTO_PRODUCAO_ATIVO?'Como funciona':'Pagamento em ativação'}</strong><div class="mut" style="margin-top:5px">${PAGAMENTO_PRODUCAO_ATIVO?'Você escolhe o plano, confirma os dados no Mercado Pago e volta com a assinatura registrada. <strong>Conclua o pagamento neste mesmo aparelho</strong> — é assim que a assinatura entra na sua conta.':'Os planos já estão definidos. O checkout será liberado assim que a credencial oficial do Mercado Pago for conectada e homologada.'}</div></div>
     <p class="mut" style="font-size:12px;margin:10px 0">Ao assinar, você concorda com os <a href="termos.html" target="_blank" rel="noopener" style="color:var(--cinza)">Termos de Uso</a> e a <a href="cancelamento.html" target="_blank" rel="noopener" style="color:var(--cinza)">Política de Cancelamento</a> — cancelamento fácil, direto na sua conta.</p>
     <button class="btn ghost" style="width:auto" onclick="renderConta()">← Voltar para minha conta</button>
     <div id="pagamento-msg"></div>`;
