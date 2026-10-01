@@ -13,3 +13,10 @@ SmartWeight_AI_Especificacao.md
 *.key
 *.pem
 secrets/
+
+# Schema do banco: funções, triggers e policies de RLS.
+# Não é segredo, mas não há motivo pra publicar o desenho de segurança.
+migrations/
+
+# Artefatos locais do CLI do Supabase.
+supabase/
