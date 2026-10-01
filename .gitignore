@@ -4,3 +4,12 @@
 ARROBA CERTA - Investimento/
 Manual de Marca/
 SmartWeight_AI_Especificacao.md
+
+# Nunca versionar: valores crus de segredo (acrescentado 01/10/2026, baseline de segurança).
+# A anon key no index.html NÃO é segredo — é pública por design e respeita RLS.
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+secrets/
