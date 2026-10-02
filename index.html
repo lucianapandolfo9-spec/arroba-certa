@@ -5,6 +5,18 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
 <title>Certo Agro — Gestão inteligente. Resultados no campo.</title>
 <link rel="icon" type="image/png" href="assets/favicon.png" />
+
+<!-- PWA — instalável sem loja, tela cheia. Ícones derivados do símbolo
+     homologado (assets/logo-simbolo.png), não redesenhados. -->
+<link rel="manifest" href="/manifest.json" />
+<meta name="theme-color" content="#112A1E" />
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png" />
+<!-- iOS não lê o manifest pra virar "app de tela cheia" — precisa destas
+     duas, mesmo com o manifest presente. -->
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Certo Agro" />
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <!-- Handshake adiantado com o gateway de pagamento: corta ~0,5s do clique no plano -->
@@ -2400,6 +2412,19 @@ async function enviarPergunta(){
   $('chat-send').disabled=false;
   desenharChat();
   const inp2=$('chat-in'); if(inp2) inp2.focus();
+}
+
+// ---------- pwa: registro do service worker ----------
+// Defensivo de propósito: PWA é MELHORIA, nunca pré-requisito. Se o browser
+// não suportar (navigator.serviceWorker ausente) ou o registro falhar por
+// qualquer motivo, o app segue funcionando normal — só sem instalação/cache
+// de casco. Nunca deixar isso travar nem atrasar o boot() de verdade.
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch((err) => {
+      console.warn('Service worker não registrou (app continua normal):', err);
+    });
+  });
 }
 
 // ---------- start ----------
