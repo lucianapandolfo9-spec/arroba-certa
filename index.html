@@ -269,6 +269,8 @@
     </select>
     <div class="mut" style="font-size:12px;margin-top:2px">Nossa fonte (Scot Consultoria) publica só essas praças. Fora delas, escolha a mais próxima — mas atenção: aí o número é referência de OUTRO estado, e a @ varia bastante entre eles. Quem manda no seu cálculo é o preço real que você negocia, que dá pra informar em cada lote.</div>
     <label>Área (hectares)</label><input id="f-area" type="number" placeholder="500" />
+    <label>WhatsApp</label><input id="f-tel" type="tel" inputmode="tel" placeholder="(81) 99192-3030" />
+    <div class="mut" style="font-size:12px;margin-top:2px">É por aqui que a gente fala com você. Com o DDD, do jeito que você escreve.</div>
     <div id="faz-msg"></div>
     <button class="btn" style="margin-top:16px" onclick="criarFazenda()">Criar fazenda</button>
   </div>
@@ -300,6 +302,12 @@ const SUPABASE_URL = "https://zctczffncbtgpmnyxfup.supabase.co";
 const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpjdGN6ZmZuY2J0Z3Btbnl4ZnVwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA3MjcwMzgsImV4cCI6MjEwNjMwMzAzOH0.83Cg-lkjP3o7uPpcazf9M1BfzkyqOu7pUVAZOyRsO6Y";
 const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 const DIAS_TRIAL = 7;
+// Chip COMERCIAL do Certo Agro (celular dedicado da empresa). Subiu pro bloco
+// de config em 02/10/2026 porque DUAS telas usam: "Minha conta → falar com a
+// gente" e a tela "sem acesso". Antes a tela sem-acesso tinha o número
+// chumbado fora da constante, e uma troca pegava só metade do app.
+// ⚠️ Número único — trocar aqui troca em todo lugar. Não chumbar de novo.
+const WHATSAPP_SUPORTE = '5581991923030';
 const MS_DIA = 24*60*60*1000;
 
 // ---------- helpers ----------
@@ -315,6 +323,16 @@ const num = (v,c=2) => v==null?"—":new Intl.NumberFormat('pt-BR',{minimumFract
 // do JS ler, e a escapada não vale nada. Nesse caso, use data-* + listener.
 const esc = s => String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;')
   .replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+// Valida só o ESSENCIAL do WhatsApp: DDD + número, 10 ou 11 dígitos (com ou
+// sem o 55 na frente). Não rejeita por formatação e não força máscara — 53%
+// do nosso público passa dos 55 anos e digita no celular; máscara ali é onde
+// o cadastro sangra. Quem normaliza pro canônico de 13 dígitos é o banco,
+// em crm.normaliza_telefone().
+function telefoneValido(v){
+  const d = String(v??'').replace(/[^0-9]/g,'');
+  const semPais = d.startsWith('55') && d.length>11 ? d.slice(2) : d;
+  return semPais.length===10 || semPais.length===11;
+}
 const show = id => $(id).classList.remove('hidden');
 const hide = id => $(id).classList.add('hidden');
 function screen(s){['scr-login','scr-app','scr-faz','scr-nova-senha','scr-sem-acesso','scr-boasvindas'].forEach(hide);show(s);}
@@ -441,7 +459,7 @@ async function bootReal(){
   BOOT_ULTIMO_USER_ID = user.id;
   const {data:liberado} = await db.rpc('acesso_liberado');
   if(!liberado){
-    $('link-wa-sem-acesso').href = 'https://wa.me/5584994127476?text='+encodeURIComponent('Oi! Quero pedir acesso ao Certo Agro 🐂 (e-mail: '+user.email+')');
+    $('link-wa-sem-acesso').href = 'https://wa.me/'+WHATSAPP_SUPORTE+'?text='+encodeURIComponent('Oi! Quero pedir acesso ao Certo Agro 🐂 (e-mail: '+user.email+')');
     $('sem-acesso-email').textContent = user.email;
     screen('scr-sem-acesso'); return;
   }
@@ -724,10 +742,15 @@ function renderCotacoes(){
 async function criarFazenda(){
   const nome=$('f-nome').value.trim();
   if(!nome) return msg('faz-msg','Dê um nome pra fazenda.');
+  const tel=$('f-tel').value.trim();
+  if(!telefoneValido(tel)) return msg('faz-msg','Coloca seu WhatsApp com o DDD — é por ali que a gente fala com você.');
   const {error}=await db.from('fazenda').insert({
     nome, estado:$('f-uf').value.trim().toUpperCase()||null,
     praca_referencia:$('f-praca').value.trim().toUpperCase()||null,
-    area_ha:parseFloat($('f-area').value)||null
+    area_ha:parseFloat($('f-area').value)||null,
+    // Vai como a pessoa digitou: quem normaliza é o banco
+    // (crm.normaliza_telefone). Máscara no JS atrapalha quem digita no celular.
+    telefone:tel
   });
   if(error) return msg('faz-msg',error.message);
   FAZENDA_RECEM_CRIADA=true;
@@ -835,6 +858,8 @@ async function renderConta(){
       <label>Praça de referência da @</label>
       <select id="c-praca">${pracas.map(p=>`<option value="${p}" ${f.praca_referencia===p?'selected':''}>${p}</option>`).join('')}</select>
       <label>Área (hectares)</label><input id="c-area" type="number" value="${f.area_ha??''}" />
+      <label>WhatsApp</label><input id="c-tel" type="tel" inputmode="tel" placeholder="(81) 99192-3030" value="${esc(f.telefone||'')}" />
+      <div class="mut" style="font-size:12px;margin-top:2px">É por aqui que a gente fala com você. Com o DDD, do jeito que você escreve.</div>
       <div id="conta-msg"></div>
       <button class="btn" style="margin-top:16px" onclick="salvarConta()" ${MODO_LEITURA?'disabled':''}>Salvar alterações</button>
     </div>
@@ -1093,10 +1118,13 @@ async function salvarConta(){
   if(!podeEditar()) return;
   const nome=$('c-nome').value.trim();
   if(!nome) return msg('conta-msg','Dê um nome pra fazenda.');
+  const tel=$('c-tel').value.trim();
+  if(!telefoneValido(tel)) return msg('conta-msg','Coloca seu WhatsApp com o DDD — é por ali que a gente fala com você.');
   const {error}=await db.from('fazenda').update({
     nome, estado:$('c-uf').value.trim().toUpperCase()||null,
     praca_referencia:$('c-praca').value.trim().toUpperCase()||null,
-    area_ha:parseFloat($('c-area').value)||null
+    area_ha:parseFloat($('c-area').value)||null,
+    telefone:tel
   }).eq('id',FAZENDA.id);
   if(error) return msg('conta-msg',error.message);
   const {data:faz}=await db.from('fazenda').select('*').eq('id',FAZENDA.id).limit(1);
@@ -2058,8 +2086,8 @@ async function confirmarImportacao(){
 }
 
 // ---------- ajuda / suporte (chat IA) ----------
-// WhatsApp humano (Luh) pro botão "Falar com a gente" — escalação de último caso.
-const WHATSAPP_SUPORTE = '5584994127476';
+// WhatsApp humano pro botão "Falar com a gente" — escalação de último caso.
+// A constante WHATSAPP_SUPORTE agora mora no bloco de config, no topo.
 const SUPORTE_URL = 'https://n8n.luhpanda.com.br/webhook/arroba-certa-suporte';
 let CHAT_MSGS = [];
 
