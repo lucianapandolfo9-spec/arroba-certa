@@ -337,6 +337,7 @@ const show = id => $(id).classList.remove('hidden');
 const hide = id => $(id).classList.add('hidden');
 function screen(s){['scr-login','scr-app','scr-faz','scr-nova-senha','scr-sem-acesso','scr-boasvindas'].forEach(hide);show(s);}
 function fmtData(d){ if(!d) return '—'; const [y,m,day]=String(d).split('-'); return `${day}/${m}/${y}`; }
+function fmtDataHora(ts){ if(!ts) return '—'; const d=new Date(ts); return d.toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}); }
 function setNav(w){
   $('nav-dash').classList.toggle('on',w==='dash');
   $('nav-lotes').classList.toggle('on',w==='lotes');
@@ -1136,15 +1137,44 @@ async function salvarConta(){
 const ADMIN_STATUS_OPCOES=['trial','cortesia','ativa','vencida','cancelada'];
 let ADMIN_PLANOS=null;
 
+// ---------- admin: sub-abas (Clientes / Leads) ----------
+// Aba nova dentro do Admin que já existe — não ferramenta separada: auth já
+// resolvida (eh_admin), cliente Supabase já carregado aqui. Decisão de 02/10.
+let ADMIN_SUBTAB='clientes'; // 'clientes' | 'leads'
+function adminTabsHtml(){
+  return `<div class="tabs" style="max-width:320px;margin-bottom:14px">
+    <button class="${ADMIN_SUBTAB==='clientes'?'on':''}" onclick="setAdminSubtab('clientes')">Clientes</button>
+    <button class="${ADMIN_SUBTAB==='leads'?'on':''}" onclick="setAdminSubtab('leads')">Leads</button>
+  </div>`;
+}
+function setAdminSubtab(t){ ADMIN_SUBTAB=t; renderAdmin(); }
+
+// estagio_real que a vista pode devolver. Os 5 primeiros são o que o LEAD
+// controla (crm.lead.estagio); os 4 últimos são DERIVADOS de public.assinatura
+// e nunca editáveis aqui — editar um deles não faz sentido nenhum: a
+// assinatura manda, o painel de Admin de clientes (aba "Clientes") é quem
+// mexe nela.
+const LEAD_ESTAGIO_LABEL={
+  novo:'novo', em_atendimento:'em atendimento', triado:'triado',
+  perdido:'perdido', descartado:'descartado',
+  testando:'testando (trial)', assinante:'assinante',
+  ex_assinante:'ex-assinante', cortesia:'cortesia'
+};
+const LEAD_ESTAGIO_EDITAVEL=['novo','em_atendimento','triado','perdido','descartado'];
+
+let ADMIN_LEADS_FILTROS={estagio:'',rota:'',busca:'',aguardando:false};
+let ADMIN_LEADS_CACHE=[];
+
 async function renderAdmin(){
   setNav('admin');
-  const body=$('app-body'); body.innerHTML='<p class="mut center" style="padding:30px">Carregando…</p>';
+  if(ADMIN_SUBTAB==='leads') return renderAdminLeads();
+  const body=$('app-body'); body.innerHTML=adminTabsHtml()+'<p class="mut center" style="padding:30px">Carregando…</p>';
   const [{data:clientes,error},{data:planos},{data:pendentes}]=await Promise.all([
     db.rpc('admin_dashboard_clientes'),
     db.from('plano_faixa').select('*').order('ordem'),
     db.rpc('admin_contas_pendentes')
   ]);
-  if(error){ body.innerHTML=`<div class="msg err">${error.message}</div>`; return; }
+  if(error){ body.innerHTML=adminTabsHtml()+`<div class="msg err">${error.message}</div>`; return; }
   ADMIN_PLANOS=planos||[];
   const total=clientes.length;
   const ativos=clientes.filter(c=>c.status_engajamento==='ativo').length;
@@ -1154,7 +1184,7 @@ async function renderAdmin(){
     : s==='atencao' ? '<span class="pill" style="background:var(--areia);color:var(--marrom)">atenção</span>'
     : '<span class="pill warn">risco</span>';
 
-  let html=`<div class="nome" style="font-size:20px;margin:10px 0 4px">🛠️ Admin — clientes</div>
+  let html=adminTabsHtml()+`<div class="nome" style="font-size:20px;margin:10px 0 4px">🛠️ Admin — clientes</div>
     <p class="mut" style="margin-bottom:14px">Uso, engajamento e gestão de acesso/plano de cada fazenda. Essa tela só aparece pra você.</p>
     <div class="dashboard-grid">
       <div class="dashboard-kpi"><div class="lbl">Clientes</div><div class="val">${total}</div></div>
@@ -1297,6 +1327,230 @@ async function adminSalvarAssinatura(fazendaId){
   if(error) return msg('adm-msg-'+fazendaId,error.message);
   msg('adm-msg-'+fazendaId,'Salvo! ✅','ok');
   setTimeout(renderAdmin,600);
+}
+
+// ---------- admin: leads (CRM do funil de WhatsApp) ----------
+// Consome as 4 RPCs do schema crm — todas SECURITY DEFINER com portão
+// eh_admin() (→ 42501 pra não-admin). O front não reimplementa regra
+// nenhuma: só chama e renderiza o que a vista/RPC já decidiu.
+
+function pillLeadEstagio(estagioReal){
+  const txt=esc(LEAD_ESTAGIO_LABEL[estagioReal]||estagioReal||'—');
+  if(estagioReal==='assinante') return `<span class="pill">${txt}</span>`;
+  if(estagioReal==='testando')  return `<span class="pill" style="background:var(--areia);color:var(--marrom)">${txt}</span>`;
+  if(estagioReal==='perdido'||estagioReal==='descartado'||estagioReal==='ex_assinante')
+    return `<span class="pill warn">${txt}</span>`;
+  // novo / em_atendimento / triado / cortesia: neutro, mesma dupla de cor do botão .sec
+  return `<span class="pill" style="background:var(--verde-suave);color:var(--verde-claro)">${txt}</span>`;
+}
+
+// Busca os dois RPCs e atualiza SÓ o cache (sem tocar a tela). Existe
+// separado de renderAdminLeads() por um motivo específico: depois de
+// Assumir/Liberar/Salvar triagem, renderAdminLeadDetalhe(id) relia num
+// ADMIN_LEADS_CACHE requentado (só renderAdminLeads() o atualizava) — a RPC
+// gravava certo, mas a tela reabria com o dado de ANTES da edição. Achado
+// com Playwright em 02/10. Ações de edição chamam só isto, sem piscar a
+// lista na tela.
+async function buscarLeads(){
+  const f=ADMIN_LEADS_FILTROS;
+  const [{data:oferta,error:errOferta},{data:leads,error:errLeads}]=await Promise.all([
+    db.rpc('crm_oferta_consultoria'),
+    db.rpc('crm_listar_funil',{
+      p_estagio:    f.estagio||null,
+      p_rota:       f.rota||null,
+      p_busca:      f.busca||null,
+      p_aguardando: f.aguardando?true:null,
+      p_limite:     300
+    })
+  ]);
+  const erro=errOferta||errLeads;
+  if(!erro) ADMIN_LEADS_CACHE=leads||[];
+  return {erro, oferta:(oferta&&oferta[0])||{usados:0,total:20,restantes:20}};
+}
+
+async function renderAdminLeads(){
+  setNav('admin');
+  const body=$('app-body');
+  body.innerHTML=adminTabsHtml()+'<p class="mut center" style="padding:30px">Carregando…</p>';
+  const {erro,oferta}=await buscarLeads();
+  if(erro){ body.innerHTML=adminTabsHtml()+`<div class="msg err">${esc(erro.message)}</div>`; return; }
+
+  body.innerHTML = adminTabsHtml()
+    + htmlContadorOferta(oferta)
+    + htmlFiltrosLeads(ADMIN_LEADS_FILTROS)
+    + htmlListaLeads(ADMIN_LEADS_CACHE);
+  ligarAcoesLeads(body);
+}
+
+function htmlContadorOferta(of){
+  const estourou = Number(of.usados) > Number(of.total);
+  return `<div class="msg ${estourou?'warn':'ok'}" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+    <span>🎁 Consultoria grátis: <strong>${of.usados} de ${of.total}</strong> usados · ${of.restantes} restantes</span>
+    ${estourou?'<strong class="neg">⚠️ passou do limite — confira quem entrou depois dos 20</strong>':''}
+  </div>`;
+}
+
+function htmlFiltrosLeads(f){
+  const estagioOpts=['', ...Object.keys(LEAD_ESTAGIO_LABEL)]
+    .map(v=>`<option value="${v}" ${f.estagio===v?'selected':''}>${v?esc(LEAD_ESTAGIO_LABEL[v]):'Todos os estágios'}</option>`).join('');
+  const rotaOpts=[['','Todas as rotas'],['auto_servico','Auto-serviço'],['humano','Atendimento humano']]
+    .map(([v,lbl])=>`<option value="${v}" ${f.rota===v?'selected':''}>${lbl}</option>`).join('');
+  return `<div class="card" style="padding:14px 16px">
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+      <button class="btn mini ${f.aguardando?'':'sec'}" onclick="toggleFiltroAguardando()">
+        ${f.aguardando?'✓ ':''}⏳ Só aguardando resposta
+      </button>
+      <button class="btn mini ghost" onclick="renderAdminLeads()" title="Recarregar a lista">🔄 Atualizar</button>
+    </div>
+    <div class="grid2">
+      <div><label>Estágio</label><select onchange="mudarFiltroLeads('estagio',this.value)">${estagioOpts}</select></div>
+      <div><label>Rota</label><select onchange="mudarFiltroLeads('rota',this.value)">${rotaOpts}</select></div>
+    </div>
+    <label>Buscar (telefone, LID ou nome)</label>
+    <input value="${esc(f.busca||'')}" placeholder="Ex: 99401-5780, ou nome do produtor"
+      onkeydown="if(event.key==='Enter') mudarFiltroLeads('busca',this.value)" />
+  </div>`;
+}
+function toggleFiltroAguardando(){ ADMIN_LEADS_FILTROS.aguardando=!ADMIN_LEADS_FILTROS.aguardando; renderAdminLeads(); }
+function mudarFiltroLeads(campo,valor){ ADMIN_LEADS_FILTROS[campo]=String(valor).trim(); renderAdminLeads(); }
+
+function htmlListaLeads(leads){
+  if(!leads.length) return '<div class="card center"><p class="mut">Nenhum lead encontrado com esse filtro.</p></div>';
+  return leads.map(c=>{
+    const telefoneTxt = c.telefone ? esc(c.telefone)
+      : (c.wa_lid ? `LID ${esc(c.wa_lid)}` : '<span class="mut">—</span>');
+    const rotaTxt = c.rota==='auto_servico' ? 'Auto-serviço'
+      : c.rota==='humano' ? 'Atendimento humano'
+      : '<span class="mut">ainda não triado</span>';
+    const anuncio = c.anuncio_titulo || c.anuncio_origem;
+    const horasCor = Number(c.horas_esperando)>=6 ? 'neg' : Number(c.horas_esperando)>=2 ? '' : 'pos';
+    return `<div class="card lote-card" data-lead-id="${c.id}">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap">
+        <div>
+          <div class="nome" style="font-size:16px">${c.nome_whatsapp?esc(c.nome_whatsapp):'<span class="mut">sem nome</span>'}</div>
+          <div class="mut" style="font-size:13px">${telefoneTxt}${c.sem_telefone?' <span class="mut">(sem telefone ainda)</span>':''}</div>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">
+          ${pillLeadEstagio(c.estagio_real)}
+          ${c.sem_conta?'<span class="pill warn">conversou, não achei a conta</span>':''}
+        </div>
+      </div>
+      ${c.aguardando_resposta?`<div class="msg warn" style="margin-top:10px"><strong class="${horasCor}">⏳ aguardando há ${c.horas_esperando}h</strong></div>`:''}
+      <div class="grid2" style="margin-top:12px">
+        <div class="kpi"><div class="lbl">Rota</div><div class="val" style="font-size:14px">${rotaTxt}</div></div>
+        <div class="kpi"><div class="lbl">Cabeças</div><div class="val" style="font-size:14px">${c.cabecas??'<span class="mut">—</span>'}</div></div>
+        <div class="kpi"><div class="lbl">Responsável</div><div class="val" style="font-size:14px">${c.responsavel?esc(c.responsavel):'<span class="pill warn">ninguém</span>'}</div></div>
+        <div class="kpi"><div class="lbl">Mensagens</div><div class="val" style="font-size:14px">${c.qtd_mensagens}</div></div>
+      </div>
+      ${anuncio?`<div class="mut" style="margin-top:8px;font-size:12px">📣 ${esc(anuncio)}</div>`:''}
+    </div>`;
+  }).join('');
+}
+
+// Igual ao padrão de ligarAcoesAdmin: ação vai em data-*, nunca em onclick com
+// dado de cliente — nome do produtor e telefone são texto digitado por ele.
+function ligarAcoesLeads(raiz){
+  raiz.querySelectorAll('[data-lead-id]').forEach(card=>{
+    card.addEventListener('click',()=>renderAdminLeadDetalhe(card.dataset.leadId));
+  });
+}
+
+async function renderAdminLeadDetalhe(id){
+  const body=$('app-body');
+  const voltar='<button class="back" onclick="renderAdminLeads()">← Voltar aos leads</button>';
+  body.innerHTML=voltar+'<p class="mut center" style="padding:30px">Carregando…</p>';
+
+  const lead=ADMIN_LEADS_CACHE.find(l=>l.id===id);
+  const {data:conversa,error}=await db.rpc('crm_ler_conversa',{p_lead_id:id,p_limite:500});
+  if(error){ body.innerHTML=voltar+`<div class="msg err">${esc(error.message)}</div>`; return; }
+  if(!lead){ body.innerHTML=voltar+'<div class="msg err">Lead não encontrado — talvez o filtro tenha mudado. Volte e abra de novo.</div>'; return; }
+
+  const bolhas = (conversa&&conversa.length)
+    ? conversa.map(m=>`<div class="chat-msg ${m.de_mim?'eu':'bot'}">${m.texto?esc(m.texto):`<span style="opacity:.75">[${esc(m.tipo)}]</span>`}<span style="display:block;opacity:.6;font-size:11px;margin-top:3px">${fmtDataHora(m.enviada_em)}</span></div>`).join('')
+    : '<p class="mut center" style="padding:14px">Sem mensagens registradas ainda.</p>';
+
+  body.innerHTML = voltar + `
+    <div class="nome" style="font-size:19px;margin-top:6px">${lead.nome_whatsapp?esc(lead.nome_whatsapp):'Sem nome'}</div>
+    <div class="mut" style="font-size:13px;margin-bottom:10px">
+      ${lead.telefone?esc(lead.telefone):(lead.wa_lid?('LID '+esc(lead.wa_lid)+' <span class="mut">(sem telefone ainda)</span>'):'—')}
+      ${lead.assinante_numero?(' · cliente nº '+lead.assinante_numero+' da consultoria grátis'):''}
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
+      ${pillLeadEstagio(lead.estagio_real)}
+      ${lead.sem_conta?'<span class="pill warn">conversou, não achei a conta</span>':''}
+    </div>
+    ${lead.aguardando_resposta?`<div class="msg warn"><strong class="${Number(lead.horas_esperando)>=6?'neg':''}">⏳ aguardando resposta há ${lead.horas_esperando}h</strong></div>`:''}
+
+    <div class="section-title">Conversa (só leitura)</div>
+    <div class="card">
+      <div class="chat-box">${bolhas}</div>
+      <p class="mut" style="margin-top:8px;font-size:12px">A Evolution só escuta nesta fase — não dá pra responder por aqui. Quem responde é pelo WhatsApp Web, no número comercial.</p>
+    </div>
+
+    <div class="section-title">Responsável</div>
+    <div class="card">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <span>${lead.responsavel?('Com: '+esc(lead.responsavel)):'<span class="pill warn">ninguém assumiu ainda</span>'}</span>
+        <button class="btn mini" onclick="assumirLead('${id}')">Assumir pra mim</button>
+        <button class="btn mini sec" ${lead.responsavel?'':'disabled'} onclick="liberarLead('${id}')">Liberar</button>
+      </div>
+      <div id="lead-resp-msg"></div>
+    </div>
+
+    <div class="section-title">Triagem</div>
+    <div class="card">
+      <label>Estágio</label>
+      <select id="lead-estagio">${LEAD_ESTAGIO_EDITAVEL.map(v=>`<option value="${v}" ${lead.estagio===v?'selected':''}>${esc(LEAD_ESTAGIO_LABEL[v])}</option>`).join('')}</select>
+      <div class="grid2">
+        <div><label>Cabeças</label><input id="lead-cabecas" type="number" value="${lead.cabecas??''}" placeholder="Ex: 180" /></div>
+        <div><label>Estado (UF)</label><input id="lead-estado" maxlength="2" style="text-transform:uppercase" value="${esc(lead.estado||'')}" /></div>
+      </div>
+      <label>Como controla hoje</label>
+      <input id="lead-controla" value="${esc(lead.controla_hoje||'')}" placeholder="Ex: planilha, papel, nada" />
+      <label>Observações</label>
+      <textarea id="lead-obs" rows="4" style="width:100%;font-family:inherit;font-size:15px;padding:13px 14px;border:1.5px solid var(--linha);border-radius:12px;background:#fff;color:var(--texto)">${esc(lead.obs||'')}</textarea>
+      <div id="lead-triagem-msg"></div>
+      <button class="btn" style="margin-top:12px" onclick="salvarLeadTriagem('${id}')">Salvar</button>
+    </div>`;
+}
+
+// Assumir manda SÓ p_responsavel; Liberar manda SÓ p_liberar. Nunca os dois —
+// a função rejeita com 22023 de propósito, e são dois botões/caminhos
+// diferentes, então a UI nunca chega a tentar mandar os dois juntos.
+async function assumirLead(id){
+  const {data:{user}}=await db.auth.getUser();
+  if(!user?.email) return msg('lead-resp-msg','Não consegui identificar sua conta. Sai e entra novamente.');
+  const {error}=await db.rpc('crm_atualizar_lead',{p_lead_id:id,p_responsavel:user.email});
+  if(error) return msg('lead-resp-msg',error.message);
+  await buscarLeads();
+  renderAdminLeadDetalhe(id);
+}
+async function liberarLead(id){
+  const {error}=await db.rpc('crm_atualizar_lead',{p_lead_id:id,p_liberar:true});
+  if(error) return msg('lead-resp-msg',error.message);
+  await buscarLeads();
+  renderAdminLeadDetalhe(id);
+}
+
+async function salvarLeadTriagem(id){
+  const cabecasRaw=$('lead-cabecas').value;
+  // ⚠️ estado/controla_hoje/obs vão SEMPRE como texto (mesmo ''), nunca como
+  // null: a RPC usa coalesce(p_x, campo_atual) — null significa "não mexe",
+  // e '' é um valor normal que LIMPA o campo. Só cabeças usa null pra "não
+  // mexe", porque não existe affordance de "número vazio" aqui.
+  const payload={
+    p_lead_id: id,
+    p_estagio: $('lead-estagio').value,
+    p_cabecas: cabecasRaw===''?null:parseInt(cabecasRaw,10),
+    p_estado: $('lead-estado').value.trim().toUpperCase(),
+    p_controla_hoje: $('lead-controla').value.trim(),
+    p_obs: $('lead-obs').value.trim()
+  };
+  const {error}=await db.rpc('crm_atualizar_lead',payload);
+  if(error) return msg('lead-triagem-msg',error.message);
+  msg('lead-triagem-msg','Salvo! ✅','ok');
+  await buscarLeads();
+  setTimeout(()=>renderAdminLeadDetalhe(id),600);
 }
 
 // ---------- dashboard ----------
