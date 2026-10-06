@@ -38,7 +38,7 @@
 // Versiona o cache. Subir uma versão nova aqui (v2, v3...) é o gatilho pra
 // `activate` limpar o cache velho — sem isso, depois de um push no GitHub
 // Pages o casco antigo convive com o novo e ela depura um fantasma.
-const CACHE_VERSION = 'certo-agro-v2';
+const CACHE_VERSION = 'certo-agro-v3'; // v3: PWA (maskable, instalacao) sobre o v2 do hardening
 
 // O casco: só isto entra no cache. Nada daqui fala com Supabase/n8n.
 const CASCO = [
@@ -51,6 +51,8 @@ const CASCO = [
   '/assets/favicon.png',
   '/assets/icon-192.png',
   '/assets/icon-512.png',
+  '/assets/icon-maskable-192.png',
+  '/assets/icon-maskable-512.png',
   '/assets/apple-touch-icon.png',
   '/assets/logo-simbolo.png',
   '/assets/logo-horizontal.png',
