@@ -38,7 +38,7 @@
 // Versiona o cache. Subir uma versão nova aqui (v2, v3...) é o gatilho pra
 // `activate` limpar o cache velho — sem isso, depois de um push no GitHub
 // Pages o casco antigo convive com o novo e ela depura um fantasma.
-const CACHE_VERSION = 'certo-agro-v1';
+const CACHE_VERSION = 'certo-agro-v2';
 
 // O casco: só isto entra no cache. Nada daqui fala com Supabase/n8n.
 const CASCO = [
@@ -48,7 +48,6 @@ const CASCO = [
   '/privacidade.html',
   '/termos.html',
   '/cancelamento.html',
-  '/convite.html',
   '/assets/favicon.png',
   '/assets/icon-192.png',
   '/assets/icon-512.png',
