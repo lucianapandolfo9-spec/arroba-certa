@@ -1,0 +1,6 @@
+# certoagro.com.br — o app inteiro vive em "/" (SPA com login), então não há
+# rota de tela de app separada pra bloquear. Libera tudo e aponta o sitemap.
+User-agent: *
+Allow: /
+
+Sitemap: https://certoagro.com.br/sitemap.xml
