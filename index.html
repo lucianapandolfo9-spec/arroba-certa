@@ -867,7 +867,7 @@ async function renderConta(){
     <p class="mut" style="margin-bottom:14px">Dados-base da fazenda usados nas cotações, análises e cálculos do sistema. Preencheu errado? Corrige aqui.</p>
     <div class="card" style="max-width:560px">
       <label>Nome da fazenda</label><input id="c-nome" value="${esc(f.nome)}" />
-      <label>Estado (UF)</label><input id="c-uf" value="${f.estado||''}" maxlength="2" style="text-transform:uppercase" />
+      <label>Estado (UF)</label><input id="c-uf" value="${esc(f.estado||'')}" maxlength="2" style="text-transform:uppercase" />
       <label>Praça de referência da @</label>
       <select id="c-praca">${pracas.map(p=>`<option value="${p}" ${f.praca_referencia===p?'selected':''}>${p}</option>`).join('')}</select>
       <label>Área (hectares)</label><input id="c-area" type="number" value="${f.area_ha??''}" />
@@ -976,7 +976,7 @@ function renderResumoPlano(){
   const status=(a.status||'').toLowerCase();
   const classe=status==='ativa'?'':'warn';
   const valor=a.valor!=null?brl(a.valor):(p?(a.ciclo==='anual'?brl(p.preco_anual):brl(p.preco_mensal)):'—');
-  return `<div style="display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap"><strong>${nome}</strong><span class="pill ${classe}">${a.status||'—'}</span></div><p class="mut" style="margin-top:6px">${a.ciclo==='anual'?'Cobrança anual':'Cobrança mensal'} · ${valor}</p>${barraUsoPlano()}`;
+  return `<div style="display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap"><strong>${esc(nome)}</strong><span class="pill ${classe}">${esc(a.status||'—')}</span></div><p class="mut" style="margin-top:6px">${a.ciclo==='anual'?'Cobrança anual':'Cobrança mensal'} · ${valor}</p>${barraUsoPlano()}`;
 }
 
 function alternarCicloPagamento(ciclo){
@@ -1186,7 +1186,7 @@ async function renderAdmin(){
     db.from('plano_faixa').select('*').order('ordem'),
     db.rpc('admin_contas_pendentes')
   ]);
-  if(error){ body.innerHTML=adminTabsHtml()+`<div class="msg err">${error.message}</div>`; return; }
+  if(error){ body.innerHTML=adminTabsHtml()+`<div class="msg err">${esc(error.message)}</div>`; return; }
   ADMIN_PLANOS=planos||[];
   const total=clientes.length;
   const ativos=clientes.filter(c=>c.status_engajamento==='ativo').length;
@@ -1573,7 +1573,7 @@ async function renderDashboard(){
     db.from('vw_lote_analise').select('*').eq('fazenda_id',FAZENDA.id).order('nome'),
     db.from('sanitario').select('*, lote:lote_id!inner(nome, fazenda_id)').eq('lote.fazenda_id',FAZENDA.id).not('proxima_data','is',null).lte('proxima_data',addDias(hoje(),14)).order('proxima_data'),
   ]);
-  if(error){ body.innerHTML=`<div class="msg err">${error.message}</div>`; return; }
+  if(error){ body.innerHTML=`<div class="msg err">${esc(error.message)}</div>`; return; }
   const ativos=(lotes||[]).filter(l=>l.ativo);
   const totalAnimais=ativos.reduce((s,l)=>s+(l.qtd_animais||0),0);
   const lucroRebanho=ativos.reduce((s,l)=>s+(Number(l.lucro_lote_total)||0),0);
@@ -1612,7 +1612,7 @@ async function renderDashboard(){
       </div>
       <div class="card"><h3>Alertas e mercado</h3>
         ${alertas.length?alertas.map(l=>`<div class="msg err"><b>${esc(l.nome)}</b><br>${Number(l.gmd)>3?'GMD fora da faixa esperada. Confira pesos e datas.':'Lote com prejuízo estimado.'}</div>`).join(''):''}
-        ${(vacinasProx||[]).map(s=>`<div class="msg err"><b>${s.lote?.nome||'Lote'}</b><br>${labelEvento(s.evento)}${s.produto?' — '+esc(s.produto):''} vence ${fmtData(s.proxima_data)}</div>`).join('')}
+        ${(vacinasProx||[]).map(s=>`<div class="msg err"><b>${esc(s.lote?.nome||'Lote')}</b><br>${labelEvento(s.evento)}${s.produto?' — '+esc(s.produto):''} vence ${fmtData(s.proxima_data)}</div>`).join('')}
         ${(!alertas.length && !(vacinasProx||[]).length)?'<div class="msg ok">Nenhum alerta crítico nos lotes ativos.</div>':''}
         <div class="row"><span class="k">Melhor resultado/cabeça</span><span class="v pos">${brl(ranking[0]?.lucro_cab)}</span></div>
         <div class="row"><span class="k">Preço médio da @ usada</span><span class="v">${brl(precoMedio)}</span></div>
@@ -1627,7 +1627,7 @@ async function renderLotes(){
   setNav('lotes');
   const body=$('app-body'); body.innerHTML='<p class="mut center" style="padding:30px">Carregando…</p>';
   const {data:lotes,error}=await db.from('vw_lote_analise').select('*').eq('fazenda_id',FAZENDA.id).order('nome');
-  if(error){ body.innerHTML=`<div class="msg err">${error.message}</div>`; return; }
+  if(error){ body.innerHTML=`<div class="msg err">${esc(error.message)}</div>`; return; }
   const ativos=(lotes||[]).filter(l=>l.ativo);
   const totalAnimais=ativos.reduce((s,l)=>s+(l.qtd_animais||0),0);
   const lucroRebanho=ativos.reduce((s,l)=>s+(Number(l.lucro_lote_total)||0),0);
@@ -1656,7 +1656,7 @@ async function renderLotes(){
       <div class="card lote-card" onclick="renderLote('${l.lote_id}')">
         <div style="display:flex;justify-content:space-between;align-items:start">
           <div><div class="nome">${esc(l.nome)}</div>
-            <span class="pill">${l.fase||''}</span> <span class="mut">${l.qtd_animais||0} cab · ${num(l.peso_atual_kg,0)} kg</span></div>
+            <span class="pill">${esc(l.fase||'')}</span> <span class="mut">${l.qtd_animais||0} cab · ${num(l.peso_atual_kg,0)} kg</span></div>
           <div class="pill ${lucro<0?'warn':''}">${lucro>=0?'lucro':'prejuízo'}</div>
         </div>
         <div class="grid2" style="margin-top:12px">
@@ -1812,7 +1812,7 @@ async function renderLote(id){
       <p class="mut">Registre tudo que você gasta com esse lote — é o que define se ele está dando lucro de verdade.</p>
       ${(cus||[]).map(c=>`<div class="list-item"><span>${fmtData(c.data)} · ${esc(c.categoria)}</span>
         <span><b>${brl(c.valor)}</b>
-          <button class="btn ghost mini" title="Editar" onclick="editCusto('${id}','${c.id}','${c.data}','${c.categoria}',${c.valor})">✏️</button>
+          <button class="btn ghost mini" title="Editar" onclick="editCusto('${id}','${c.id}','${c.data}',${esc(JSON.stringify(String(c.categoria??'')))},${Number(c.valor)})">✏️</button>
           <button class="btn ghost mini" title="Excluir" onclick="delCusto('${id}','${c.id}',this)">🗑️</button>
         </span></div>`).join('')||'<p class="mut">Sem custos.</p>'}
       <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
@@ -1872,10 +1872,10 @@ const hoje = () => new Date().toISOString().slice(0,10);
 async function renderFecharLote(id){
   const body=$('app-body'); body.innerHTML='<p class="mut center" style="padding:30px">Carregando…</p>';
   const {data:v,error}=await db.from('vw_lote_analise').select('*').eq('lote_id',id).single();
-  if(error){ body.innerHTML=`<div class="msg err">${error.message}</div>`; return; }
+  if(error){ body.innerHTML=`<div class="msg err">${esc(error.message)}</div>`; return; }
   const rendPct = v.rendimento_carcaca!=null ? Math.round(Number(v.rendimento_carcaca)*100) : 53;
   body.innerHTML=`<button class="back" onclick="renderLote('${id}')">← Voltar ao lote</button>
-    <div class="nome" style="font-size:22px;margin:6px 0">✅ Registrar venda — ${v.nome}</div>
+    <div class="nome" style="font-size:22px;margin:6px 0">✅ Registrar venda — ${esc(v.nome)}</div>
     <p class="mut">Preenche com os números REAIS da venda (nota do frigorífico). É isso que fecha o ciclo e mostra teu lucro de verdade.</p>
     <div class="card">
       <label>Data da venda</label>
@@ -1979,7 +1979,7 @@ async function delCusto(loteId,cusId,btn){
 
 // ---------- sanitário (vacinas/vermífugo/exames) ----------
 let EDIT_SAN=null;
-function labelEvento(e){ return {vacina:'💉 Vacina',vermifugo:'🪱 Vermífugo',exame:'🔬 Exame',tratamento:'🩺 Tratamento'}[e]||e; }
+function labelEvento(e){ return {vacina:'💉 Vacina',vermifugo:'🪱 Vermífugo',exame:'🔬 Exame',tratamento:'🩺 Tratamento'}[e]||esc(e); }
 
 // Guia de vacinação por fase do gado (conteúdo educativo — Brasil).
 // ob:true = obrigatória por lei/exportação. Aftosa segue o calendário do estado
@@ -2074,14 +2074,14 @@ let SIM_V=null;
 async function simularLote(id){
   const body=$('app-body'); body.innerHTML='<p class="mut center" style="padding:30px">Carregando…</p>';
   const {data:v,error}=await db.from('vw_lote_analise').select('*').eq('lote_id',id).single();
-  if(error){ body.innerHTML=`<div class="msg err">${error.message}</div>`; return; }
+  if(error){ body.innerHTML=`<div class="msg err">${esc(error.message)}</div>`; return; }
   SIM_V=v;
   const gmd = v.gmd!=null ? Number(v.gmd) : 1.0;
   const custoDia = (v.custo_periodo_cab && v.dias_periodo>0) ? (Number(v.custo_periodo_cab)/Number(v.dias_periodo)) : 8;
   const precoHoje = v.preco_arroba_usado!=null ? Number(v.preco_arroba_usado) : 335;
   body.innerHTML=`<button class="back" onclick="renderLote('${id}')">← Voltar ao lote</button>
     <div class="nome" style="font-size:22px;margin:6px 0">🔮 Vender hoje ou segurar?</div>
-    <p class="mut">Simulação pra <b>${v.nome}</b> — ${v.qtd_animais} cabeças. Ajuste os valores e veja o que rende mais.</p>
+    <p class="mut">Simulação pra <b>${esc(v.nome)}</b> — ${v.qtd_animais} cabeças. Ajuste os valores e veja o que rende mais.</p>
     <div class="card">
       <h3>Seus números (ajuste se quiser)</h3>
       <label>Segurar por quantos dias?</label>
@@ -2144,7 +2144,7 @@ async function rodarSimulacao(id){
 async function editarLote(id){
   const body=$('app-body');
   const {data:l,error}=await db.from('lote').select('*').eq('id',id).single();
-  if(error){ body.innerHTML=`<div class="msg err">${error.message}</div>`; return; }
+  if(error){ body.innerHTML=`<div class="msg err">${esc(error.message)}</div>`; return; }
   const rendPct = l.rendimento_carcaca!=null ? Math.round(l.rendimento_carcaca*100) : 53;
   body.innerHTML=`<button class="back" onclick="renderLote('${id}')">← Voltar</button>
     <div class="card"><h3>Editar lote</h3>
