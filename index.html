@@ -924,7 +924,7 @@ function abrirCancelamento(){
     <strong>O que acontece se você cancelar:</strong>
     <ul class="cancel-lista">
       <li>${ateQuando}</li>
-      <li>Nenhuma cobrança nova é feita.</li>
+      <li>Nenhuma cobrança nova é feita. Cancelar não gera estorno do período já pago — exceto arrependimento em até 7 dias do primeiro pagamento (art. 49 do CDC) e cobrança indevida. <a href="cancelamento.html" target="_blank" rel="noopener">Ver a política</a>.</li>
       <li><strong>Seus dados não são apagados.</strong> Lotes, pesagens, custos e histórico continuam aqui para consulta.</li>
       <li>Você pode voltar quando quiser, e encontra tudo como deixou.</li>
     </ul>
@@ -1003,7 +1003,7 @@ function faixaRecomendada(){
 }
 // O banco bloqueia lançamento acima de 120% do teto do plano. Ou seja: dá pra
 // assinar um plano menor que o rebanho, pagar, e continuar travado — e a
-// política é sem estorno. Então a tela precisa avisar ANTES do checkout.
+// política é sem estorno por cancelamento. Então a tela precisa avisar ANTES do checkout.
 // Devolve 'bloqueia' (passou da tolerância), 'aperta' (passou do teto mas ainda
 // cabe) ou null.
 function riscoDoPlano(plano){
@@ -1077,7 +1077,7 @@ async function renderPagamento(){
 
 // Trava de bom senso antes do checkout: ninguém paga um plano que não comporta
 // o rebanho que já está lançado. Sem isso a pessoa paga, o banco bloqueia os
-// lançamentos, e a política é sem estorno — briga garantida no primeiro cliente.
+// lançamentos, e a política é sem estorno por cancelamento — briga garantida no primeiro cliente.
 // Não proíbe: mostra o tamanho do problema e deixa ela decidir.
 function confirmarPlanoApertado(plano){
   const cab=cabecasHoje(), rec=faixaRecomendada();
@@ -1088,7 +1088,8 @@ function confirmarPlanoApertado(plano){
     <strong>Esse plano não comporta seu rebanho.</strong><br>
     Você tem <strong>${cab} cabeças</strong> lançadas e o ${esc(plano.nome)} vai até ${plano.cabecas_max}.
     Se assinar assim, você consegue pagar — mas o sistema vai continuar bloqueando novos
-    lançamentos, e a gente não faz estorno.
+    lançamentos. Cancelar não gera estorno (só arrependimento em até 7 dias do primeiro
+    pagamento, art. 49 do CDC, e cobrança indevida).
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
       ${alvo}
       <button class="btn mini sec" onclick="iniciarPagamento(${Number(plano.id)},true)">Assinar o ${esc(plano.nome)} mesmo assim</button>
