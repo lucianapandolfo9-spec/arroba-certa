@@ -38,7 +38,7 @@
 // Versiona o cache. Subir uma versão nova aqui (v2, v3...) é o gatilho pra
 // `activate` limpar o cache velho — sem isso, depois de um push no GitHub
 // Pages o casco antigo convive com o novo e ela depura um fantasma.
-const CACHE_VERSION = 'certo-agro-v2';
+const CACHE_VERSION = 'certo-agro-v3'; // v3: PWA (maskable, instalacao) sobre o v2 do hardening
 
 // O casco: só isto entra no cache. Nada daqui fala com Supabase/n8n.
 const CASCO = [
@@ -51,6 +51,8 @@ const CASCO = [
   '/assets/favicon.png',
   '/assets/icon-192.png',
   '/assets/icon-512.png',
+  '/assets/icon-maskable-192.png',
+  '/assets/icon-maskable-512.png',
   '/assets/apple-touch-icon.png',
   '/assets/logo-simbolo.png',
   '/assets/logo-horizontal.png',
@@ -122,8 +124,15 @@ self.addEventListener('fetch', (event) => {
   // o oposto de "cache-first" de propósito — cache-first deixaria a Luciana
   // presa numa versão velha do HTML depois de um push no GitHub Pages,
   // porque o service worker nunca iria checar a rede de novo sozinho.
+  //
+  // HTML (navegação) vai com cache:'no-cache': o GitHub Pages manda
+  // max-age=600, e sem isso o cache HTTP do navegador serviria um HTML de até
+  // 10 min atrás mesmo com "network-first". 'no-cache' = sempre revalida
+  // (If-None-Match, resposta 304 barata quando não mudou).
+  const ehHTML = req.mode === 'navigate' ||
+    (req.headers.get('accept') || '').includes('text/html');
   event.respondWith(
-    fetch(req)
+    fetch(ehHTML ? req.url : req, ehHTML ? { cache: 'no-cache', credentials: 'same-origin' } : undefined)
       .then((resposta) => {
         // Só guarda resposta válida (200), e só guarda uma CÓPIA — o
         // original precisa voltar intacto pro browser consumir.
@@ -133,6 +142,13 @@ self.addEventListener('fetch', (event) => {
         }
         return resposta;
       })
-      .catch(() => caches.match(req))
+      .catch(async () => {
+        const guardado = await caches.match(req);
+        if (guardado) return guardado;
+        // Sem rede e a URL tem query (?utm_...) ou é a raiz: serve o casco.
+        if (ehHTML) return (await caches.match(req, { ignoreSearch: true })) ||
+          (await caches.match('/index.html'));
+        return Response.error();
+      })
   );
 });

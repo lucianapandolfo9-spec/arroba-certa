@@ -2,7 +2,9 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<!-- viewport-fit=cover: no iPhone instalado (status bar black-translucent) o
+     app desenha até a borda; as margens seguras ficam com env(safe-area-*) no CSS. -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <title>Certo Agro — Gestão de pecuária de corte: custo da @ e lucro por lote</title>
 <meta name="description" content="Sistema de gestão para pecuária de corte: custo da arroba produzida, lucro por lote, simulador de vender ou segurar e cotação da @ por praça. Teste grátis por 7 dias." />
 <meta name="robots" content="index,follow" />
@@ -216,6 +218,39 @@
     .planos-grid{grid-template-columns:1fr}
     .nav button{font-size:12px;padding:11px 3px}
   }
+
+  /* ---------- iPhone instalado: margens seguras (06/10/2026) ----------
+     Com viewport-fit=cover + status bar black-translucent, o app desenha por
+     baixo do relógio/notch. A faixa do topo ganha o verde da marca (o texto da
+     status bar é branco — em cima do creme sumiria) e o conteúdo desce o
+     tamanho exato da área insegura. Fora do iPhone instalado, env() vale 0. */
+  body{padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px);
+    padding-bottom:env(safe-area-inset-bottom,0px)}
+  body::before{content:"";position:fixed;top:0;left:0;right:0;height:env(safe-area-inset-top,0px);
+    background:var(--verde);z-index:100;pointer-events:none}
+  header.top{padding-top:env(safe-area-inset-top,0px)}
+  #scr-login,#scr-faz,#scr-boasvindas,#scr-nova-senha,#scr-sem-acesso{margin-top:env(safe-area-inset-top,0px)}
+  .fab{bottom:calc(20px + env(safe-area-inset-bottom,0px))}
+
+  /* ---------- convite pra instalar no celular (06/10/2026) ---------- */
+  .instalar-card h4{font-size:16px;font-weight:800;color:var(--verde);margin-bottom:4px}
+  .instalar-passos{list-style:none;margin:12px 0 0;padding:0}
+  .instalar-passos li{display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-bottom:1px solid var(--linha);font-size:14px;line-height:1.5}
+  .instalar-passos li:last-child{border-bottom:none}
+  .instalar-passos .n{flex:0 0 24px;height:24px;border-radius:50%;background:var(--verde);color:#fff;
+    font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center}
+  .ico-ios{display:inline-block;vertical-align:-4px;color:#0a84ff}
+  .instalar-qr{display:flex;gap:18px;align-items:center;flex-wrap:wrap;margin-top:12px}
+  .instalar-qr .qr{background:#fff;padding:9px;border:1px solid var(--linha);border-radius:12px;
+    width:186px;height:186px;display:flex;align-items:center;justify-content:center}
+  .instalar-qr .qr img,.instalar-qr .qr canvas{display:block}
+  .instalar-qr .txt{flex:1;min-width:200px;font-size:14px}
+  .instalar-link{font-weight:700;color:var(--verde);white-space:nowrap}
+  .instalar-acoes{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+  .instalar-acoes .btn{width:auto}
+  .instalar-faixa .msg{margin:0;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+  .instalar-faixa .card{margin:10px 0 0}
+  #instalar-login{margin:0 0 14px}
 </style>
 </head>
 <body>
@@ -230,6 +265,8 @@
     </div>
     <p class="mut" style="margin-top:10px">Sua @ custa X. O mercado paga Y. Decida.</p>
   </div>
+  <!-- Aviso de instalar (PC/Android/iPhone) já na 1ª abertura — preenchido por atualizarFaixaInstalarLogin() -->
+  <div id="instalar-login" class="instalar-faixa hidden"></div>
   <div class="card">
     <button class="btn sec" onclick="entrarComGoogle()" style="display:flex;align-items:center;justify-content:center;gap:10px">
       <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84c-.21 1.13-.84 2.09-1.8 2.73v2.27h2.9c1.7-1.57 2.7-3.87 2.7-6.64z"/><path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.9-2.27c-.8.54-1.84.86-3.06.86-2.35 0-4.34-1.59-5.05-3.72H.98v2.34C2.47 15.98 5.48 18 9 18z"/><path fill="#FBBC05" d="M3.95 10.69c-.18-.54-.28-1.1-.28-1.69s.1-1.15.28-1.69V4.97H.98A8.99 8.99 0 0 0 0 9c0 1.45.35 2.83.98 4.03l2.97-2.34z"/><path fill="#EA4335" d="M9 3.58c1.32 0 2.51.45 3.44 1.35l2.58-2.58C13.46.89 11.43 0 9 0 5.48 0 2.47 2.02.98 4.97l2.97 2.34C4.66 5.17 6.65 3.58 9 3.58z"/></svg>
@@ -299,6 +336,7 @@
   </header>
   <div id="trial-banner" class="wrap trial-banner hidden"></div>
   <div id="limite-banner" class="wrap trial-banner hidden"></div>
+  <div id="instalar-banner" class="wrap trial-banner instalar-faixa hidden"></div>
   <div id="modo-leitura-banner" class="wrap hidden" style="padding:12px 32px 0">
     <div class="msg err" style="margin:0;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
       <span><strong>Seu período de teste terminou.</strong> Seus dados continuam disponíveis para consulta, mas novos lançamentos e alterações estão bloqueados.</span>
@@ -362,6 +400,8 @@
     <button class="btn" onclick="fecharBoasVindas()">Começar a usar</button>
     <div style="text-align:center;margin-top:12px"><a href="#" onclick="verPlanosDoBoasVindas();return false;" class="mut" style="font-size:13px">Ver os planos</a></div>
   </div>
+  <!-- Convite pra instalar no celular — preenchido por renderInstalarBoasVindas() -->
+  <div id="bv-instalar" style="max-width:480px;margin:0 auto"></div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3" integrity="sha384-dl/4LkSyQ4uEucc48NM6VDZLAjLLq9yMzZ5JLXumBq7Ld33XBof73hseOqPhO89+" crossorigin="anonymous"></script>
@@ -406,7 +446,10 @@ function telefoneValido(v){
 }
 const show = id => $(id).classList.remove('hidden');
 const hide = id => $(id).classList.add('hidden');
-function screen(s){['scr-login','scr-app','scr-faz','scr-nova-senha','scr-sem-acesso','scr-boasvindas'].forEach(hide);show(s);}
+function screen(s){['scr-login','scr-app','scr-faz','scr-nova-senha','scr-sem-acesso','scr-boasvindas'].forEach(hide);show(s);
+  // Primeira visita: o aviso de instalar já aparece na tela de login.
+  atualizarFaixaInstalarLogin(s==='scr-login');
+}
 function fmtData(d){ if(!d) return '—'; const [y,m,day]=String(d).split('-'); return `${day}/${m}/${y}`; }
 function fmtDataHora(ts){ if(!ts) return '—'; const d=new Date(ts); return d.toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}); }
 function setNav(w){
@@ -416,6 +459,8 @@ function setNav(w){
   $('nav-ajuda').classList.toggle('on',w==='ajuda');
   $('nav-conta').classList.toggle('on',w==='conta');
   $('nav-admin').classList.toggle('on',w==='admin');
+  // Faixa "instale no celular" mora só no Dashboard, até instalar.
+  atualizarFaixaInstalar(w==='dash');
 }
 // Quem é admin mora na tabela admin_sistema do banco (função eh_admin).
 // Incluir/remover admin não exige mais mexer em código nem publicar.
@@ -836,6 +881,7 @@ function renderBoasVindas(){
   $('bv-prazo').textContent = estado.fimTexto
     ? `Você tem 7 dias grátis, até ${estado.fimTexto}.`
     : 'Você tem 7 dias grátis.';
+  renderInstalarBoasVindas();
   screen('scr-boasvindas');
 }
 function fecharBoasVindas(){
@@ -2486,6 +2532,234 @@ if ('serviceWorker' in navigator) {
     });
   });
 }
+
+// ---------- pwa: convite pra instalar no celular (06/10/2026) ----------
+// Decisões do grill com a Luciana (registradas no Hub Dev, bloco PWA do
+// Certo Agro): aviso SÓ dentro do app — cartão na tela "Seu teste começou!"
+// + faixa no Dashboard até instalar. "Agora não" esconde a faixa por 3 dias.
+// Estado só em localStorage (com try/catch: aba anônima/Safari privado
+// lança erro ao gravar). Nada vai pro banco, nada é medido nesta fase.
+// Quem já abre pelo ícone (display-mode standalone / navigator.standalone)
+// não vê nada disso.
+const INSTALAR_URL_APP = 'https://certoagro.com.br/';
+const INSTALAR_ADIAR_DIAS = 3;
+const INSTALAR_KEY_ADIADO = 'ca_instalar_adiado_ate';
+const INSTALAR_KEY_INSTALOU = 'ca_instalou_app';
+// qrcodejs 1.0.0 do cdnjs, com SRI: o QR é desenhado no próprio navegador,
+// nenhum serviço de QR de terceiro recebe a URL. Só carrega no computador.
+const QR_LIB_URL = 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
+const QR_LIB_SRI = 'sha512-CNgIRecGo7nphbeZ04Sc13ka07paqdeTu0WR1IM4kNcpmBAUSHSQX0FslNhTDadL4O5SAGapGt4FodqL8My0mA==';
+let INSTALAR_PROMPT = null;       // evento beforeinstallprompt guardado (Android/Chrome)
+let INSTALAR_FAIXA_ABERTA = false;
+let INSTALAR_NO_DASH = false;
+let QR_LIB_PROMISE = null;
+
+function lsGet(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
+function lsSet(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
+
+// Onde a pessoa está. A ordem importa: navegador interno do Instagram/
+// Facebook/WhatsApp vem antes de iOS/Android porque nele não dá pra instalar
+// em sistema nenhum.
+function ambienteInstalar(){
+  const ua = navigator.userAgent || '';
+  let standalone = navigator.standalone === true;
+  try{ standalone = standalone || window.matchMedia('(display-mode: standalone)').matches || window.matchMedia('(display-mode: minimal-ui)').matches || window.matchMedia('(display-mode: window-controls-overlay)').matches; }catch(e){}
+  const ios = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+  const android = /Android/i.test(ua);
+  const interno = /FBAN|FBAV|FB_IAB|FBIOS|Instagram|WhatsApp/i.test(ua);
+  if(standalone) return 'instalado';
+  if(interno) return 'interno';
+  if(ios) return /CriOS|FxiOS|EdgiOS|OPiOS|GSA\//.test(ua) ? 'ios-outro' : 'ios';
+  if(android) return 'android';
+  return 'desktop';
+}
+function instalarJaFeito(tipo){
+  if(tipo === 'instalado') return true;
+  // appinstalled só dispara no aparelho onde instalou. Vale pra esconder o
+  // convite quando, no mesmo celular Android, ela abre pelo navegador.
+  return (tipo === 'android' || tipo === 'desktop') && !INSTALAR_PROMPT && lsGet(INSTALAR_KEY_INSTALOU) === '1';
+}
+function instalarAdiado(){
+  const ate = Number(lsGet(INSTALAR_KEY_ADIADO) || 0);
+  return ate > Date.now();
+}
+
+const ICO_COMPARTILHAR = `<svg class="ico-ios" width="20" height="20" viewBox="0 0 24 24" aria-label="botão Compartilhar"><path d="M12 3v12M8 7l4-4 4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M7 10H5.5A1.5 1.5 0 0 0 4 11.5v8A1.5 1.5 0 0 0 5.5 21h13a1.5 1.5 0 0 0 1.5-1.5v-8a1.5 1.5 0 0 0-1.5-1.5H17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`;
+const ICO_ADICIONAR = `<svg class="ico-ios" width="20" height="20" viewBox="0 0 24 24" aria-label="ícone Adicionar"><rect x="4" y="4" width="16" height="16" rx="4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 8.5v7M8.5 12h7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`;
+
+function passosHTML(itens){
+  return `<ol class="instalar-passos">${itens.map((t,i)=>`<li><span class="n">${i+1}</span><span>${t}</span></li>`).join('')}</ol>`;
+}
+function passosIOS(){
+  return passosHTML([
+    `Toque no botão <strong>Compartilhar</strong> ${ICO_COMPARTILHAR} na barra do Safari. Se não aparecer, toque antes nos 3 pontinhos <strong>•••</strong>.`,
+    `Desça a lista e toque em <strong>Adicionar à Tela de Início</strong> ${ICO_ADICIONAR}.`,
+    `Toque em <strong>Adicionar</strong>. Pronto: o ícone do Certo Agro aparece junto dos seus aplicativos.`
+  ]);
+}
+function blocoCopiarLink(){
+  return `<p style="margin-top:10px;font-size:14px">Endereço: <span class="instalar-link">certoagro.com.br</span></p>
+    <div class="instalar-acoes"><button class="btn mini sec" onclick="copiarLinkApp(this)">Copiar o endereço</button></div>`;
+}
+
+// O miolo do passo a passo, igual na tela de boas-vindas e na faixa.
+function instalarCorpoHTML(tipo, idQR){
+  if(tipo === 'android'){
+    if(INSTALAR_PROMPT){
+      return `<div class="instalar-acoes"><button class="btn" onclick="instalarAgora()">📲 Instalar no celular</button></div>
+        <p class="mut" style="margin-top:8px">Um toque e confirma. Não precisa de loja nem de senha nova.</p>`;
+    }
+    return passosHTML([
+      `No Chrome, toque nos 3 pontinhos <strong>⋮</strong> lá em cima, no canto.`,
+      `Toque em <strong>Instalar app</strong> (em alguns celulares aparece <strong>Adicionar à tela inicial</strong>).`,
+      `Confirme em <strong>Instalar</strong>. O ícone do Certo Agro vai pra sua tela.`
+    ]);
+  }
+  if(tipo === 'ios') return passosIOS();
+  if(tipo === 'ios-outro'){
+    return `<p style="margin-top:10px;font-size:14px">No iPhone, o Certo Agro se instala pelo <strong>Safari</strong>. Copie o endereço, abra no Safari e siga os 3 passos:</p>
+      ${blocoCopiarLink()}${passosIOS()}`;
+  }
+  if(tipo === 'interno'){
+    return `<p style="margin-top:10px;font-size:14px">Você abriu por dentro do Instagram, Facebook ou WhatsApp, e por aqui não dá pra instalar.
+      Toque nos 3 pontinhos lá em cima e escolha <strong>Abrir no navegador</strong> (Safari no iPhone, Chrome no Android). Lá o Certo Agro mesmo te mostra o caminho.</p>
+      ${blocoCopiarLink()}`;
+  }
+  // desktop: botão nativo de instalar no computador (Chrome/Edge disparam
+  // beforeinstallprompt) + QR pro celular
+  const btnPC = INSTALAR_PROMPT
+    ? `<div class="instalar-acoes" style="margin-bottom:6px"><button class="btn" onclick="instalarAgora()">💻 Instalar no computador</button></div>
+       <p class="mut" style="margin-bottom:10px">Abre numa janela própria, com ícone na sua área de trabalho.</p>` : '';
+  return btnPC + `<div class="instalar-qr">
+      <div class="qr" id="${idQR}"><span class="mut">Gerando código…</span></div>
+      <div class="txt">
+        <p><strong>Aponte a câmera do celular</strong> pra este código.</p>
+        <p class="mut" style="margin-top:6px">Vai abrir o Certo Agro no celular. Entre com o mesmo e-mail e o próprio app te mostra como deixar o ícone na tela.</p>
+        <p style="margin-top:8px;font-size:13px">Ou digite no celular: <span class="instalar-link">certoagro.com.br</span></p>
+      </div>
+    </div>`;
+}
+const INSTALAR_TITULO = '📲 Instale o Certo Agro no seu celular';
+const INSTALAR_SUB = 'Vira um ícone na tela, igual aplicativo. Abre direto no curral, sem procurar site e sem loja.';
+
+function renderInstalarBoasVindas(){
+  const el = $('bv-instalar'); if(!el) return;
+  const tipo = ambienteInstalar();
+  if(instalarJaFeito(tipo)){ el.innerHTML=''; return; }
+  el.innerHTML = `<div class="card instalar-card">
+      <h4>${INSTALAR_TITULO}</h4>
+      <p class="mut">${INSTALAR_SUB}</p>
+      ${instalarCorpoHTML(tipo,'qr-bv')}
+    </div>`;
+  if(tipo === 'desktop') desenharQR('qr-bv');
+}
+
+let INSTALAR_NA_LOGIN = false;
+// Monta a faixa "instale o app" em `el` (Dashboard ou tela de login).
+function montarFaixaInstalar(el, idQR){
+  if(!el) return;
+  const tipo = ambienteInstalar();
+  if(instalarJaFeito(tipo) || instalarAdiado()){
+    el.classList.add('hidden'); el.innerHTML=''; return;
+  }
+  // Com o botão nativo disponível (Chrome/Edge no PC, Chrome no Android),
+  // o próprio botão da faixa instala. Sem ele, "Ver como" abre o passo a passo.
+  const acaoPrincipal = INSTALAR_PROMPT
+    ? `<button class="btn mini" onclick="instalarAgora()">Instalar</button>`
+    : `<button class="btn mini sec" onclick="alternarFaixaInstalar()">${INSTALAR_FAIXA_ABERTA?'Fechar':'Ver como'}</button>`;
+  const titulo = tipo === 'desktop'
+    ? '📲 Use o Certo Agro como app no computador ou no celular.'
+    : '📲 Use o Certo Agro como app no celular.';
+  el.innerHTML = `<div class="msg ok">
+      <span><strong>${titulo}</strong> Ícone na tela, abre direto.</span>
+      <span style="display:flex;gap:6px;align-items:center">${acaoPrincipal}
+        <button class="btn ghost" style="font-size:13px" onclick="adiarInstalar()">Agora não</button></span>
+    </div>
+    ${INSTALAR_FAIXA_ABERTA ? `<div class="card instalar-card">${instalarCorpoHTML(tipo,idQR)}</div>` : ''}`;
+  el.classList.remove('hidden');
+  if(INSTALAR_FAIXA_ABERTA && tipo === 'desktop') desenharQR(idQR);
+}
+function atualizarFaixaInstalar(noDash){
+  INSTALAR_NO_DASH = !!noDash;
+  const el = $('instalar-banner'); if(!el) return;
+  if(!INSTALAR_NO_DASH){ el.classList.add('hidden'); el.innerHTML=''; return; }
+  montarFaixaInstalar(el,'qr-faixa');
+}
+// Tela de login = primeira abertura de quem ainda não tem conta/sessão.
+function atualizarFaixaInstalarLogin(naLogin){
+  INSTALAR_NA_LOGIN = !!naLogin;
+  const el = $('instalar-login'); if(!el) return;
+  if(!INSTALAR_NA_LOGIN){ el.classList.add('hidden'); el.innerHTML=''; return; }
+  montarFaixaInstalar(el,'qr-login');
+}
+function alternarFaixaInstalar(){
+  INSTALAR_FAIXA_ABERTA = !INSTALAR_FAIXA_ABERTA;
+  atualizarFaixaInstalar(INSTALAR_NO_DASH); atualizarFaixaInstalarLogin(INSTALAR_NA_LOGIN);
+}
+function adiarInstalar(){
+  lsSet(INSTALAR_KEY_ADIADO, String(Date.now() + INSTALAR_ADIAR_DIAS*24*60*60*1000));
+  INSTALAR_FAIXA_ABERTA = false;
+  atualizarFaixaInstalar(INSTALAR_NO_DASH); atualizarFaixaInstalarLogin(INSTALAR_NA_LOGIN);
+}
+function rerenderInstalar(){
+  const bv = $('scr-boasvindas');
+  if(bv && !bv.classList.contains('hidden')) renderInstalarBoasVindas();
+  atualizarFaixaInstalar(INSTALAR_NO_DASH); atualizarFaixaInstalarLogin(INSTALAR_NA_LOGIN);
+}
+async function instalarAgora(){
+  if(!INSTALAR_PROMPT) return;
+  const ev = INSTALAR_PROMPT;
+  INSTALAR_PROMPT = null;           // o evento só pode ser usado uma vez
+  try{
+    ev.prompt();
+    const escolha = await ev.userChoice;
+    if(escolha && escolha.outcome === 'accepted') lsSet(INSTALAR_KEY_INSTALOU,'1');
+  }catch(e){ console.warn('Instalação não abriu:', e); }
+  rerenderInstalar();
+}
+async function copiarLinkApp(btn){
+  let ok = false;
+  try{ await navigator.clipboard.writeText(INSTALAR_URL_APP); ok = true; }catch(e){}
+  if(btn) btn.textContent = ok ? 'Endereço copiado ✓' : 'Copie: certoagro.com.br';
+}
+function carregarLibQR(){
+  if(window.QRCode) return Promise.resolve();
+  if(QR_LIB_PROMISE) return QR_LIB_PROMISE;
+  QR_LIB_PROMISE = new Promise((ok, falha)=>{
+    const s = document.createElement('script');
+    s.src = QR_LIB_URL; s.integrity = QR_LIB_SRI;
+    s.crossOrigin = 'anonymous'; s.referrerPolicy = 'no-referrer';
+    s.onload = () => ok();
+    s.onerror = () => { QR_LIB_PROMISE = null; falha(new Error('lib do QR não carregou')); };
+    document.head.appendChild(s);
+  });
+  return QR_LIB_PROMISE;
+}
+async function desenharQR(id){
+  try{
+    await carregarLibQR();
+    const el = $(id); if(!el) return;
+    el.innerHTML = '';
+    new QRCode(el, { text: INSTALAR_URL_APP, width: 168, height: 168,
+      colorDark: '#112A1E', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.M });
+    el.removeAttribute('title');   // a lib põe a URL como tooltip; dispensável
+  }catch(e){
+    const el = $(id);
+    if(el) el.innerHTML = '<span class="mut" style="text-align:center">Abra <strong>certoagro.com.br</strong> no celular</span>';
+  }
+}
+// Android/Chrome: segura o convite nativo pra disparar no NOSSO botão, no
+// momento certo, em vez da mini-barra genérica do Chrome.
+window.addEventListener('beforeinstallprompt', (e)=>{
+  e.preventDefault();
+  INSTALAR_PROMPT = e;
+  rerenderInstalar();
+});
+window.addEventListener('appinstalled', ()=>{
+  INSTALAR_PROMPT = null;
+  lsSet(INSTALAR_KEY_INSTALOU,'1');
+  rerenderInstalar();
+});
 
 // ---------- start ----------
 setAuthTab('entrar');
