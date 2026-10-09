@@ -124,8 +124,15 @@ self.addEventListener('fetch', (event) => {
   // o oposto de "cache-first" de propósito — cache-first deixaria a Luciana
   // presa numa versão velha do HTML depois de um push no GitHub Pages,
   // porque o service worker nunca iria checar a rede de novo sozinho.
+  //
+  // HTML (navegação) vai com cache:'no-cache': o GitHub Pages manda
+  // max-age=600, e sem isso o cache HTTP do navegador serviria um HTML de até
+  // 10 min atrás mesmo com "network-first". 'no-cache' = sempre revalida
+  // (If-None-Match, resposta 304 barata quando não mudou).
+  const ehHTML = req.mode === 'navigate' ||
+    (req.headers.get('accept') || '').includes('text/html');
   event.respondWith(
-    fetch(req)
+    fetch(ehHTML ? req.url : req, ehHTML ? { cache: 'no-cache', credentials: 'same-origin' } : undefined)
       .then((resposta) => {
         // Só guarda resposta válida (200), e só guarda uma CÓPIA — o
         // original precisa voltar intacto pro browser consumir.
@@ -135,6 +142,13 @@ self.addEventListener('fetch', (event) => {
         }
         return resposta;
       })
-      .catch(() => caches.match(req))
+      .catch(async () => {
+        const guardado = await caches.match(req);
+        if (guardado) return guardado;
+        // Sem rede e a URL tem query (?utm_...) ou é a raiz: serve o casco.
+        if (ehHTML) return (await caches.match(req, { ignoreSearch: true })) ||
+          (await caches.match('/index.html'));
+        return Response.error();
+      })
   );
 });
