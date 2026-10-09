@@ -8,6 +8,7 @@
   "display": "standalone",
   "orientation": "portrait",
   "lang": "pt-BR",
+  "categories": ["business", "productivity"],
   "dir": "ltr",
   "background_color": "#FDF8F5",
   "theme_color": "#112A1E",
