@@ -2,14 +2,69 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-<title>Certo Agro — Gestão inteligente. Resultados no campo.</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Certo Agro — Gestão de pecuária de corte: custo da @ e lucro por lote</title>
+<meta name="description" content="Sistema de gestão para pecuária de corte: custo da arroba produzida, lucro por lote, simulador de vender ou segurar e cotação da @ por praça. Teste grátis por 7 dias." />
+<meta name="robots" content="index,follow" />
+<link rel="canonical" href="https://certoagro.com.br/" />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Certo Agro" />
+<meta property="og:locale" content="pt_BR" />
+<meta property="og:title" content="Certo Agro — Gestão de pecuária de corte: custo da @ e lucro por lote" />
+<meta property="og:description" content="Sistema de gestão para pecuária de corte: custo da arroba produzida, lucro por lote, simulador de vender ou segurar e cotação da @ por praça. Teste grátis por 7 dias." />
+<meta property="og:url" content="https://certoagro.com.br/" />
+<meta property="og:image" content="https://certoagro.com.br/assets/og-image.png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="Certo Agro — gestão de pecuária de corte" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Certo Agro — Gestão de pecuária de corte: custo da @ e lucro por lote" />
+<meta name="twitter:description" content="Sistema de gestão para pecuária de corte: custo da arroba produzida, lucro por lote, simulador de vender ou segurar e cotação da @ por praça. Teste grátis por 7 dias." />
+<meta name="twitter:image" content="https://certoagro.com.br/assets/og-image.png" />
+<meta name="theme-color" content="#112A1E" />
+
+<script type="application/ld+json">
+{
+ "@context": "https://schema.org",
+ "@graph": [
+  {
+   "@type": "Organization",
+   "@id": "https://certoagro.com.br/#org",
+   "name": "Certo Agro",
+   "url": "https://certoagro.com.br/",
+   "logo": "https://certoagro.com.br/assets/icon-512.png",
+   "email": "contato@certoagro.com.br"
+  },
+  {
+   "@type": "WebSite",
+   "@id": "https://certoagro.com.br/#site",
+   "url": "https://certoagro.com.br/",
+   "name": "Certo Agro",
+   "inLanguage": "pt-BR",
+   "publisher": {
+    "@id": "https://certoagro.com.br/#org"
+   }
+  },
+  {
+   "@type": "SoftwareApplication",
+   "name": "Certo Agro",
+   "url": "https://certoagro.com.br/",
+   "applicationCategory": "BusinessApplication",
+   "operatingSystem": "Web",
+   "inLanguage": "pt-BR",
+   "description": "Sistema de gestão para pecuária de corte: custo da arroba produzida, lucro por lote, simulador de vender ou segurar e cotação da @ por praça. Teste grátis por 7 dias.",
+   "publisher": {
+    "@id": "https://certoagro.com.br/#org"
+   }
+  }
+ ]
+}
+</script>
 <link rel="icon" type="image/png" href="assets/favicon.png" />
 
 <!-- PWA — instalável sem loja, tela cheia. Ícones derivados do símbolo
      homologado (assets/logo-simbolo.png), não redesenhados. -->
 <link rel="manifest" href="/manifest.json" />
-<meta name="theme-color" content="#112A1E" />
 <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png" />
 <!-- iOS não lê o manifest pra virar "app de tela cheia" — precisa destas
      duas, mesmo com o manifest presente. -->
@@ -48,6 +103,9 @@
   input,select{font-family:inherit;font-size:16px;width:100%;padding:13px 14px;
     border:1.5px solid var(--linha);border-radius:12px;background:#fff;color:var(--texto)}
   input:focus,select:focus{outline:none;border-color:var(--verde-claro)}
+  /* Foco visível pra quem navega por teclado (acessibilidade) */
+  button:focus-visible,a:focus-visible,summary:focus-visible{outline:3px solid var(--dourado);outline-offset:2px}
+  input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--verde-claro);outline-offset:1px}
   label{display:block;font-size:13px;font-weight:600;color:var(--cinza);margin:14px 0 6px}
   .card{background:var(--card);border:1px solid var(--linha);border-radius:18px;padding:18px;margin:14px 0;
     box-shadow:0 1px 2px rgba(0,0,0,.03)}
@@ -161,6 +219,7 @@
 </style>
 </head>
 <body>
+<noscript><p style="padding:24px;font-family:sans-serif">Certo Agro é um sistema de gestão para pecuária de corte: custo da arroba produzida, lucro por lote, simulador de vender ou segurar e cotação da @. Ative o JavaScript do navegador para entrar.</p></noscript>
 
 <!-- ================= LOGIN ================= -->
 <div id="scr-login" class="wrap hidden" style="padding-top:60px">
@@ -1520,7 +1579,7 @@ async function renderAdminLeadDetalhe(id){
       <label>Como controla hoje</label>
       <input id="lead-controla" value="${esc(lead.controla_hoje||'')}" placeholder="Ex: planilha, papel, nada" />
       <label>Observações</label>
-      <textarea id="lead-obs" rows="4" style="width:100%;font-family:inherit;font-size:15px;padding:13px 14px;border:1.5px solid var(--linha);border-radius:12px;background:#fff;color:var(--texto)">${esc(lead.obs||'')}</textarea>
+      <textarea id="lead-obs" rows="4" style="width:100%;font-family:inherit;font-size:16px;padding:13px 14px;border:1.5px solid var(--linha);border-radius:12px;background:#fff;color:var(--texto)">${esc(lead.obs||'')}</textarea>
       <div id="lead-triagem-msg"></div>
       <button class="btn" style="margin-top:12px" onclick="salvarLeadTriagem('${id}')">Salvar</button>
     </div>`;
@@ -1801,7 +1860,7 @@ async function renderLote(id){
       <div style="display:flex;gap:8px;margin-top:12px">
         <input id="pes-data" type="date" value="${new Date().toISOString().slice(0,10)}" />
         <input id="pes-peso" type="number" placeholder="peso médio kg" />
-        <button class="btn mini" id="pes-add" onclick="addPesagem('${id}')">+</button>
+        <button class="btn mini" id="pes-add" aria-label="Adicionar" onclick="addPesagem('${id}')">+</button>
       </div>
       <div class="mut" style="font-size:12px;margin-top:6px">Não precisa pesar cada animal — pega uma amostra ou usa a média da balança/embarque.</div>
       <div id="pes-msg"></div>
@@ -1823,7 +1882,7 @@ async function renderLote(id){
           <option value="fixo">Fixo</option><option value="outro">Outro</option>
         </select>
         <input id="cus-valor" type="number" placeholder="R$ valor" style="flex:1;min-width:110px" />
-        <button class="btn mini" id="cus-add" onclick="addCusto('${id}')">+</button>
+        <button class="btn mini" id="cus-add" aria-label="Adicionar" onclick="addCusto('${id}')">+</button>
       </div>
       <div class="mut" style="font-size:12px;margin-top:6px">Alimentação = ração/sal/pasto pago · Sanitário = vacina/remédio/veterinário · Mão de obra = quem cuida do lote · Operacional = combustível/manutenção · Fixo = custos que existem mesmo sem esse lote (rateados).</div>
       <div id="cus-msg"></div>
@@ -1847,7 +1906,7 @@ async function renderLote(id){
         <input id="san-produto" placeholder="Produto (ex: Aftosa)" style="flex:1;min-width:140px" />
         <input id="san-proxima" type="date" style="flex:1;min-width:130px" title="Próxima dose (opcional)" />
         <input id="san-custo" type="number" placeholder="R$ custo (opc.)" style="flex:1;min-width:110px" />
-        <button class="btn mini" id="san-add" onclick="addSanitario('${id}')">+</button>
+        <button class="btn mini" id="san-add" aria-label="Adicionar" onclick="addSanitario('${id}')">+</button>
       </div>
       <div class="mut" style="font-size:12px;margin-top:6px">Vermífugo = contra verme · Exame = de rotina ou pré-venda · Tratamento = remédio pra doença específica. "Próxima dose" fica vazio se o evento não se repete.</div>
       <div id="san-msg"></div>
