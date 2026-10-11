@@ -961,6 +961,22 @@ const PAGAMENTO_PRODUCAO_ATIVO = true;
 // cliente volta pro site com ?preapproval_id=... — quem está logado aqui é o
 // dono da fazenda, então é o app que faz a ligação e grava no banco.
 const VINCULO_URL = 'https://n8n.luhpanda.com.br/webhook/arroba-certa-vincular-assinatura';
+// SEC-CA-022..026 (09/10/2026): os 4 webhooks do n8n passaram a exigir a sessão do
+// Supabase. O n8n valida o token em /auth/v1/user e descobre a fazenda pelo dono —
+// o fazenda_id do corpo vira só uma dica conferida lá. Sem token = 401.
+async function headersWebhook(){
+  const {data:{session}} = await db.auth.getSession();
+  if(!session?.access_token) throw new Error('Sua sessão expirou. Sai e entra novamente.');
+  return {'Content-Type':'application/json','Authorization':'Bearer '+session.access_token};
+}
+// Só redireciona pra checkout do próprio Mercado Pago, em https.
+function checkoutSeguro(u){
+  try{
+    const x=new URL(u), h=x.hostname.toLowerCase();
+    return x.protocol==='https:' && (h==='mercadopago.com.br' || h.endsWith('.mercadopago.com.br')
+      || h==='mercadopago.com' || h.endsWith('.mercadopago.com'));
+  }catch(_){ return false; }
+}
 let PLANOS_PAGAMENTO = [], CICLO_PAGAMENTO = 'mensal', RETORNO_PAGAMENTO = null;
 
 async function processarRetornoPagamento(){
@@ -981,7 +997,7 @@ async function processarRetornoPagamento(){
     return true;
   }
   try{
-    const res = await fetch(VINCULO_URL,{method:'POST',headers:{'Content-Type':'application/json'},
+    const res = await fetch(VINCULO_URL,{method:'POST',headers:await headersWebhook(),
       body:JSON.stringify({fazenda_id:FAZENDA.id, preapproval_id:preapproval})});
     const data = await res.json().catch(()=>null);
     // Quando o workflow falha (ex.: o MP recusa o id), o n8n responde 200 com
@@ -1101,7 +1117,7 @@ async function confirmarCancelamento(){
   // Só depois que o gateway confirma é que marcamos como cancelada aqui.
   if(ASSINATURA_ATUAL?.gateway_preapproval_id){
     try{
-      const res=await fetch(CANCELAMENTO_URL,{method:'POST',headers:{'Content-Type':'application/json'},
+      const res=await fetch(CANCELAMENTO_URL,{method:'POST',headers:await headersWebhook(),
         body:JSON.stringify({fazenda_id:FAZENDA.id})});
       const r=await res.json().catch(()=>null);
       if(!res.ok || r?.ok===false) throw new Error(r?.message||`Erro ${res.status}`);
@@ -1269,12 +1285,13 @@ async function iniciarPagamento(planoId, jaAvisado){
   const botoes=document.querySelectorAll('#planos-grid button'); botoes.forEach(b=>b.disabled=true);
   msg(msgEl,'Gerando seu checkout seguro…','ok');
   try{
-    const res=await fetch(PAGAMENTO_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+    const res=await fetch(PAGAMENTO_URL,{method:'POST',headers:await headersWebhook(),body:JSON.stringify({
       fazenda_id:FAZENDA.id, plano_faixa_id:Number(planoId), ciclo:CICLO_PAGAMENTO, payer_email:user.email
     })});
     const data=await res.json().catch(()=>null);
     if(!res.ok) throw new Error(data?.message||data?.error||`Erro ${res.status} ao gerar checkout`);
     if(!data?.checkout_url) throw new Error('O Mercado Pago não devolveu um link de checkout.');
+    if(!checkoutSeguro(data.checkout_url)) throw new Error('O link de pagamento recebido não é do Mercado Pago. Nada foi cobrado — fala com a gente.');
     window.location.href=data.checkout_url;
   }catch(e){
     msg(msgEl,e.message||'Não foi possível gerar o pagamento. Tenta novamente.');
@@ -2557,7 +2574,7 @@ async function enviarPergunta(){
   const historico=CHAT_MSGS.slice(0,-2).slice(-8)
     .map(m=>(m.de==='eu'?'Produtor: ':'Assistente: ')+(m.texto||'')).join('\n')||'(sem histórico)';
   try{
-    const resp=await fetch(SUPORTE_URL,{method:'POST',headers:{'Content-Type':'application/json'},
+    const resp=await fetch(SUPORTE_URL,{method:'POST',headers:await headersWebhook(),
       body:JSON.stringify({pergunta,historico,fazenda:FAZENDA?.nome||'produtor'})});
     if(!resp.ok) throw new Error('HTTP '+resp.status);
     const j=await resp.json();
