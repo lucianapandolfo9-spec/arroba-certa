@@ -66,8 +66,8 @@
 
 <!-- PWA — instalável sem loja, tela cheia. Ícones derivados do símbolo
      homologado (assets/logo-simbolo.png), não redesenhados. -->
-<link rel="manifest" href="/manifest.json" />
-<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png" />
+<link rel="manifest" href="manifest.json" />
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png" />
 <!-- iOS não lê o manifest pra virar "app de tela cheia" — precisa destas
      duas, mesmo com o manifest presente. -->
 <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -251,9 +251,41 @@
   .instalar-faixa .msg{margin:0;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
   .instalar-faixa .card{margin:10px 0 0}
   #instalar-login{margin:0 0 14px}
+
+  /* ---------- PWA: convite, offline, atualizacao (11/10/2026) ---------- */
+  .pwa-overlay{position:fixed;inset:0;z-index:300;background:rgba(17,42,30,.78);display:flex;
+    align-items:center;justify-content:center;padding:max(16px,env(safe-area-inset-top,0px)) 16px max(16px,env(safe-area-inset-bottom,0px))}
+  .pwa-dialog{background:#fff;color:var(--texto);border-radius:20px;max-width:460px;width:100%;max-height:100%;
+    overflow:auto;padding:26px 22px 22px;box-shadow:0 12px 40px rgba(0,0,0,.35);border-top:5px solid var(--dourado)}
+  .pwa-overlay.hidden,.pwa-update.hidden,.pwa-toast.hidden{display:none}
+  .pwa-dialog:focus{outline:none}
+  .pwa-dialog h2{font-size:23px;line-height:1.25;font-weight:800;color:var(--verde);margin:0 0 10px}
+  .pwa-dialog p{font-size:17px;line-height:1.5;margin:0 0 12px}
+  .pwa-dialog .mut{color:var(--cinza)}
+  .pwa-dialog .instalar-passos li{font-size:17px}
+  .pwa-dialog .instalar-link{font-size:17px}
+  .pwa-acoes{display:flex;gap:12px;margin-top:18px}
+  .pwa-acoes button{flex:1;min-height:56px;font-size:18px;font-weight:800;border-radius:14px;padding:12px}
+  .pwa-acoes .pwa-agora-nao{background:var(--verde-suave);color:var(--verde)}
+  .pwa-acoes .pwa-ok{background:var(--verde);color:#fff}
+  @media(max-width:380px){.pwa-acoes{flex-direction:column-reverse}}
+  .pwa-offline{background:#E9E7E1;color:#17241D;border-bottom:1px solid #C9C5B8;font-size:16px;font-weight:600;
+    padding:12px 16px;text-align:center}
+  .pwa-update{position:fixed;left:12px;right:12px;bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:120;
+    max-width:560px;margin:0 auto;background:var(--verde);color:#fff;border-radius:14px;padding:14px 16px;
+    display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;font-size:16px;
+    box-shadow:0 6px 24px rgba(0,0,0,.3)}
+  .pwa-update button{background:#fff;color:var(--verde);font-weight:800;font-size:16px;min-height:48px;padding:10px 16px}
+  .pwa-update button:disabled{opacity:.6;cursor:not-allowed}
+  .pwa-toast{position:fixed;left:12px;right:12px;bottom:calc(20px + env(safe-area-inset-bottom,0px));z-index:310;
+    max-width:560px;margin:0 auto;background:#17241D;color:#fff;border-radius:14px;padding:14px 16px;font-size:16px;
+    line-height:1.45;box-shadow:0 6px 24px rgba(0,0,0,.3)}
+  .pwa-link{background:none;border:none;color:var(--verde);font-weight:700;font-size:15px;text-decoration:underline;
+    padding:10px;min-height:44px}
 </style>
 </head>
 <body>
+<div id="pwa-offline" class="pwa-offline hidden" role="status">Você está sem conexão. Dá para olhar o que já está na tela, mas salvar, lançar, assinar e cancelar só funcionam com internet.</div>
 <noscript><p style="padding:24px;font-family:sans-serif">Certo Agro é um sistema de gestão para pecuária de corte: custo da arroba produzida, lucro por lote, simulador de vender ou segurar e cotação da @. Ative o JavaScript do navegador para entrar.</p></noscript>
 
 <!-- ================= LOGIN ================= -->
@@ -290,6 +322,7 @@
     <a href="privacidade.html" style="color:var(--cinza)">Privacidade</a> ·
     <a href="cancelamento.html" style="color:var(--cinza)">Cancelamento</a>
   </p>
+  <p class="center"><button type="button" id="pwa-login-link" class="pwa-link hidden" onclick="abrirConvite(true)">Instalar aplicativo</button></p>
 </div>
 
 <!-- ================= NOVA SENHA (link do e-mail) ================= -->
@@ -404,6 +437,13 @@
   <div id="bv-instalar" style="max-width:480px;margin:0 auto"></div>
 </div>
 
+<!-- Convite pra instalar o app (modal acessivel), aviso de atualizacao e aviso curto (toast) -->
+<div id="pwa-overlay" class="pwa-overlay hidden">
+  <div id="pwa-dialog" class="pwa-dialog" role="dialog" aria-modal="true" aria-labelledby="pwa-titulo" aria-describedby="pwa-desc" tabindex="-1"></div>
+</div>
+<div id="pwa-update" class="pwa-update hidden" role="region" aria-label="Atualização disponível"></div>
+<div id="pwa-toast" class="pwa-toast hidden" role="status" aria-live="polite"></div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3" integrity="sha384-dl/4LkSyQ4uEucc48NM6VDZLAjLLq9yMzZ5JLXumBq7Ld33XBof73hseOqPhO89+" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1" integrity="sha384-jb8JQMbMoBUzgWatfe6COACi2ljcDdZQ2OxczGA3bGNeWe+6DChMTBJemed7ZnvJ" crossorigin="anonymous"></script>
@@ -420,6 +460,13 @@ const DIAS_TRIAL = 7;
 // ⚠️ Número único — trocar aqui troca em todo lugar. Não chumbar de novo.
 const WHATSAPP_SUPORTE = '5581991923030';
 const MS_DIA = 24*60*60*1000;
+// ⚠️ ONDE O APP MORA. Única constante de caminho do PWA: start_url/scope do
+// manifest.json são relativos ('./'), o service worker deriva a base do escopo
+// em que foi registrado, e as chaves de localStorage usam esta base. Se o app
+// sair da raiz (ex.: '/app/'), troque SÓ esta linha e publique index.html,
+// sw.js e manifest.json juntos na mesma pasta. A landing (/pecuaria/, /lp/)
+// fica de fora: o sw.js manda esses caminhos direto pra rede.
+const APP_BASE = '/';
 
 // ---------- helpers ----------
 const $ = id => document.getElementById(id);
@@ -449,6 +496,7 @@ const hide = id => $(id).classList.add('hidden');
 function screen(s){['scr-login','scr-app','scr-faz','scr-nova-senha','scr-sem-acesso','scr-boasvindas'].forEach(hide);show(s);
   // Primeira visita: o aviso de instalar já aparece na tela de login.
   atualizarFaixaInstalarLogin(s==='scr-login');
+  pwaTelaMudou();
 }
 function fmtData(d){ if(!d) return '—'; const [y,m,day]=String(d).split('-'); return `${day}/${m}/${y}`; }
 function fmtDataHora(ts){ if(!ts) return '—'; const d=new Date(ts); return d.toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}); }
@@ -461,6 +509,7 @@ function setNav(w){
   $('nav-admin').classList.toggle('on',w==='admin');
   // Faixa "instale no celular" mora só no Dashboard, até instalar.
   atualizarFaixaInstalar(w==='dash');
+  pwaTelaMudou();
 }
 // Quem é admin mora na tabela admin_sistema do banco (função eh_admin).
 // Incluir/remover admin não exige mais mexer em código nem publicar.
@@ -968,6 +1017,7 @@ async function renderConta(){
   const pracas = ['SP','MS','GO','MG','MT','RJ'];
   $('app-body').innerHTML = `
     ${retornoPagamentoHTML()}
+    ${pwaItemContaHTML()}
     <div class="nome" style="font-size:20px;margin:10px 0 4px">👤 Minha conta</div>
     <p class="mut" style="margin-bottom:14px">Dados-base da fazenda usados nas cotações, análises e cálculos do sistema. Preencheu errado? Corrige aqui.</p>
     <div class="card" style="max-width:560px">
@@ -2523,27 +2573,45 @@ async function enviarPergunta(){
 // ---------- pwa: registro do service worker ----------
 // Defensivo de propósito: PWA é MELHORIA, nunca pré-requisito. Se o browser
 // não suportar (navigator.serviceWorker ausente) ou o registro falhar por
-// qualquer motivo, o app segue funcionando normal — só sem instalação/cache
-// de casco. Nunca deixar isso travar nem atrasar o boot() de verdade.
+// qualquer motivo, o app segue funcionando normal. Nunca travar o boot().
+// Versão nova do sw.js NÃO assume sozinha: fica esperando e o botão
+// "Atualizar aplicativo" (momento seguro) manda SKIP_WAITING. A página só
+// recarrega se a pessoa pediu a atualização nesta aba.
+let SW_ESPERANDO = null, SW_PEDIU_ATUALIZAR = false;
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch((err) => {
+    navigator.serviceWorker.register(APP_BASE + 'sw.js', { scope: APP_BASE, updateViaCache: 'none' }).then((reg) => {
+      if (reg.waiting && navigator.serviceWorker.controller) swEsperando(reg.waiting);
+      reg.addEventListener('updatefound', () => {
+        const novo = reg.installing; if (!novo) return;
+        novo.addEventListener('statechange', () => {
+          if (novo.state === 'installed' && navigator.serviceWorker.controller) swEsperando(reg.waiting || novo);
+        });
+      });
+      document.addEventListener('visibilitychange', () => { if (!document.hidden) reg.update().catch(() => {}); });
+    }).catch((err) => {
       console.warn('Service worker não registrou (app continua normal):', err);
     });
+  });
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (SW_PEDIU_ATUALIZAR) window.location.reload();
   });
 }
 
 // ---------- pwa: convite pra instalar no celular (06/10/2026) ----------
 // Decisões do grill com a Luciana (registradas no Hub Dev, bloco PWA do
 // Certo Agro): aviso SÓ dentro do app — cartão na tela "Seu teste começou!"
-// + faixa no Dashboard até instalar. "Agora não" esconde a faixa por 3 dias.
+// + faixa no Dashboard até instalar. Desde 11/10/2026 também há o MODAL de
+// convite (abre 1,5 s depois do primeiro acesso, padrão Bolão Fácil). Uma só
+// chave de adiamento (7 dias) vale para modal e faixas.
 // Estado só em localStorage (com try/catch: aba anônima/Safari privado
 // lança erro ao gravar). Nada vai pro banco, nada é medido nesta fase.
 // Quem já abre pelo ícone (display-mode standalone / navigator.standalone)
 // não vê nada disso.
-const INSTALAR_URL_APP = 'https://certoagro.com.br/';
-const INSTALAR_ADIAR_DIAS = 3;
-const INSTALAR_KEY_ADIADO = 'ca_instalar_adiado_ate';
+const INSTALAR_URL_APP = 'https://certoagro.com.br' + APP_BASE;
+const INSTALAR_ADIAR_DIAS = 7;   // "Agora não" e "Instalar" adiam o convite por 7 dias (padrão do Bolão Fácil)
+const INSTALAR_KEY_ADIADO = `ca:pwa:v1:${APP_BASE}:dismissed-until`;
+const INSTALAR_KEY_ADIADO_ANTIGO = 'ca_instalar_adiado_ate';   // chave da v1 do convite (3 dias); ainda respeitada
 const INSTALAR_KEY_INSTALOU = 'ca_instalou_app';
 // qrcodejs 1.0.0 do cdnjs, com SRI: o QR é desenhado no próprio navegador,
 // nenhum serviço de QR de terceiro recebe a URL. Só carrega no computador.
@@ -2580,8 +2648,11 @@ function instalarJaFeito(tipo){
   return (tipo === 'android' || tipo === 'desktop') && !INSTALAR_PROMPT && lsGet(INSTALAR_KEY_INSTALOU) === '1';
 }
 function instalarAdiado(){
-  const ate = Number(lsGet(INSTALAR_KEY_ADIADO) || 0);
+  const ate = Math.max(Number(lsGet(INSTALAR_KEY_ADIADO) || 0), Number(lsGet(INSTALAR_KEY_ADIADO_ANTIGO) || 0));
   return ate > Date.now();
+}
+function adiarConvite(){
+  lsSet(INSTALAR_KEY_ADIADO, String(Date.now() + INSTALAR_ADIAR_DIAS*MS_DIA));
 }
 
 const ICO_COMPARTILHAR = `<svg class="ico-ios" width="20" height="20" viewBox="0 0 24 24" aria-label="botão Compartilhar"><path d="M12 3v12M8 7l4-4 4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M7 10H5.5A1.5 1.5 0 0 0 4 11.5v8A1.5 1.5 0 0 0 5.5 21h13a1.5 1.5 0 0 0 1.5-1.5v-8a1.5 1.5 0 0 0-1.5-1.5H17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`;
@@ -2697,7 +2768,7 @@ function alternarFaixaInstalar(){
   atualizarFaixaInstalar(INSTALAR_NO_DASH); atualizarFaixaInstalarLogin(INSTALAR_NA_LOGIN);
 }
 function adiarInstalar(){
-  lsSet(INSTALAR_KEY_ADIADO, String(Date.now() + INSTALAR_ADIAR_DIAS*24*60*60*1000));
+  adiarConvite();
   INSTALAR_FAIXA_ABERTA = false;
   atualizarFaixaInstalar(INSTALAR_NO_DASH); atualizarFaixaInstalarLogin(INSTALAR_NA_LOGIN);
 }
@@ -2711,10 +2782,18 @@ async function instalarAgora(){
   const ev = INSTALAR_PROMPT;
   INSTALAR_PROMPT = null;           // o evento só pode ser usado uma vez
   try{
-    ev.prompt();
+    ev.prompt();                    // dentro do clique da pessoa: é o que o navegador exige
     const escolha = await ev.userChoice;
-    if(escolha && escolha.outcome === 'accepted') lsSet(INSTALAR_KEY_INSTALOU,'1');
-  }catch(e){ console.warn('Instalação não abriu:', e); }
+    adiarConvite();                 // aceitou ou recusou: não insistir por 7 dias
+    if(escolha && escolha.outcome === 'accepted'){
+      lsSet(INSTALAR_KEY_INSTALOU,'1');
+      pwaToast('Instalação solicitada. Aguarde a confirmação do navegador.');
+    }
+  }catch(e){
+    console.warn('Instalação não abriu:', e);
+    pwaToast('Não foi possível abrir a instalação. Tente pelo menu do navegador.');
+  }
+  fecharConvite(false);
   rerenderInstalar();
 }
 async function copiarLinkApp(btn){
@@ -2754,12 +2833,239 @@ window.addEventListener('beforeinstallprompt', (e)=>{
   e.preventDefault();
   INSTALAR_PROMPT = e;
   rerenderInstalar();
+  if(PWA_MODAL_ABERTO) desenharConvite();   // o modal já estava aberto sem botão nativo
+  agendarConvite();
 });
 window.addEventListener('appinstalled', ()=>{
   INSTALAR_PROMPT = null;
   lsSet(INSTALAR_KEY_INSTALOU,'1');
+  fecharConvite(false);
   rerenderInstalar();
+  pwaToast('Certo Agro instalado. Você já pode abrir pelo ícone na tela inicial.');
 });
+try{
+  window.matchMedia('(display-mode: standalone)').addEventListener('change', ()=>{ fecharConvite(false); rerenderInstalar(); });
+}catch(e){}
+
+// ---------- pwa: modal de convite (11/10/2026) ----------
+// Padrão Bolão Fácil: modal acessível "Tenha o app na tela inicial", aberto
+// ~1,5 s depois do primeiro acesso, só na tela de login ou no painel inicial,
+// nunca sobre formulário, plano/pagamento, importação ou outro diálogo.
+// Instalar "sozinho" é impossível (regra do navegador): o automático é o
+// convite; a instalação exige o toque da pessoa.
+const PWA_ATRASO_MS = 1500;
+let PWA_MODAL_ABERTO = false, PWA_CONVITE_VISTO = false, PWA_TIMER = null, PWA_FOCO_ANTES = null, PWA_INERTES = [];
+let PWA_OCUPADO = 0;      // ações que escrevem em andamento (pagamento, salvar...)
+
+function telaAtualId(){
+  return ['scr-login','scr-app','scr-faz','scr-nova-senha','scr-sem-acesso','scr-boasvindas'].find(id=>$(id) && !$(id).classList.contains('hidden')) || null;
+}
+function viewAtual(){
+  return ['dash','lotes','cot','ajuda','conta','admin'].find(w=>$('nav-'+w) && $('nav-'+w).classList.contains('on')) || null;
+}
+function campoEmFoco(){
+  const a = document.activeElement;
+  return !!(a && a.matches && a.matches('input,textarea,select,[contenteditable="true"]'));
+}
+function outroDialogoAberto(){
+  return [...document.querySelectorAll('[role="dialog"],dialog[open]')].some(el=>!el.closest('#pwa-overlay') && !el.closest('.hidden'));
+}
+function loginPreenchido(){
+  const e=$('in-email'), p=$('in-senha');
+  return !!((e && e.value.trim()) || (p && p.value));
+}
+function convitePodeAbrir(){
+  if(PWA_MODAL_ABERTO || PWA_CONVITE_VISTO || !navigator.onLine) return false;
+  const tipo = ambienteInstalar();
+  if(instalarJaFeito(tipo) || instalarAdiado()) return false;
+  const tela = telaAtualId();
+  if(tela === 'scr-login'){ if(loginPreenchido()) return false; }
+  else if(tela === 'scr-app'){ if(viewAtual() !== 'dash') return false; }
+  else return false;
+  return !campoEmFoco() && !outroDialogoAberto() && PWA_OCUPADO === 0;
+}
+function agendarConvite(){
+  clearTimeout(PWA_TIMER);
+  PWA_TIMER = setTimeout(()=>{ if(convitePodeAbrir()) abrirConvite(false); }, PWA_ATRASO_MS);
+}
+function pwaTelaMudou(){
+  atualizarLinkLogin();
+  atualizarBarraUpdate();
+  agendarConvite();
+}
+
+function conviteCorpo(tipo){
+  // devolve {corpo, primario:{txt,acao}}
+  if((tipo === 'android' || tipo === 'desktop') && INSTALAR_PROMPT){
+    return {corpo:'<p>Toque em <strong>Instalar</strong> e confirme na janela do navegador. Não precisa de loja nem de senha nova.</p>',
+      primario:{txt:'Instalar', acao:'instalarAgora()'}};
+  }
+  if(tipo === 'ios') return {corpo:passosIOS(), primario:{txt:'Entendi', acao:'fecharConvite(true)'}};
+  if(tipo === 'ios-outro') return {corpo:`<p>No iPhone, o Certo Agro se instala pelo <strong>Safari</strong>. Copie o endereço, abra no Safari e siga os 3 passos:</p>${blocoCopiarLink()}${passosIOS()}`,
+    primario:{txt:'Entendi', acao:'fecharConvite(true)'}};
+  if(tipo === 'interno') return {corpo:`<p>Você abriu por dentro do WhatsApp, Instagram ou Facebook, e por aqui não dá para instalar. Toque nos 3 pontinhos lá em cima e escolha <strong>Abrir no navegador</strong> (Safari no iPhone, Chrome no Android).</p>${blocoCopiarLink()}`,
+    primario:{txt:'Entendi', acao:'fecharConvite(true)'}};
+  return {corpo:'<p>Se o seu navegador ainda não mostrou o botão de instalar, abra o menu dele (os 3 pontinhos) e procure <strong>Instalar aplicativo</strong> ou <strong>Adicionar à tela inicial</strong>.</p>',
+    primario:{txt:'Entendi', acao:'fecharConvite(true)'}};
+}
+function desenharConvite(){
+  const tipo = ambienteInstalar();
+  const c = conviteCorpo(tipo);
+  const d = $('pwa-dialog');
+  d.innerHTML = `<h2 id="pwa-titulo">Tenha o Certo Agro na tela inicial</h2>
+    <p id="pwa-desc" class="mut">Abra pelo ícone, direto no curral, sem procurar o site e sem loja.</p>
+    ${c.corpo}
+    <p class="mut" style="font-size:16px">Você também pode continuar usando pelo site. A instalação é opcional.</p>
+    <div class="pwa-acoes">
+      <button type="button" class="pwa-agora-nao" onclick="fecharConvite(true)">Agora não</button>
+      <button type="button" class="pwa-ok" onclick="${c.primario.acao}">${c.primario.txt}</button>
+    </div>`;
+}
+function abrirConvite(manual){
+  const tipo = ambienteInstalar();
+  if(tipo === 'instalado' || PWA_MODAL_ABERTO) return;
+  if(!manual && !convitePodeAbrir()) return;
+  PWA_CONVITE_VISTO = true;
+  PWA_FOCO_ANTES = document.activeElement;
+  desenharConvite();
+  $('pwa-overlay').classList.remove('hidden');
+  PWA_MODAL_ABERTO = true;
+  document.body.style.overflow = 'hidden';
+  // Fundo inerte: foco preso dentro do modal e leitor de tela ignora o resto.
+  PWA_INERTES = [...document.body.children].filter(el=>el.id!=='pwa-overlay' && el.id!=='pwa-toast' && el.tagName!=='SCRIPT' && !el.inert);
+  PWA_INERTES.forEach(el=>{ el.inert = true; });
+  $('pwa-dialog').focus();
+}
+function fecharConvite(adiar){
+  if(!PWA_MODAL_ABERTO) return;
+  if(adiar) adiarConvite();
+  PWA_MODAL_ABERTO = false;
+  $('pwa-overlay').classList.add('hidden');
+  $('pwa-dialog').innerHTML = '';
+  document.body.style.overflow = '';
+  PWA_INERTES.forEach(el=>{ el.inert = false; }); PWA_INERTES = [];
+  if(PWA_FOCO_ANTES && PWA_FOCO_ANTES.focus && document.contains(PWA_FOCO_ANTES)){ try{ PWA_FOCO_ANTES.focus(); }catch(e){} }
+  PWA_FOCO_ANTES = null;
+  rerenderInstalar();
+}
+document.addEventListener('keydown', (e)=>{
+  if(!PWA_MODAL_ABERTO) return;
+  if(e.key === 'Escape'){ e.preventDefault(); fecharConvite(true); return; }
+  if(e.key !== 'Tab') return;
+  const d = $('pwa-dialog');
+  const foc = [...d.querySelectorAll('button,[href],input,select,textarea,[tabindex]:not([tabindex="-1"])')].filter(el=>!el.disabled);
+  if(!foc.length){ e.preventDefault(); return; }
+  const primeiro = foc[0], ultimo = foc[foc.length-1];
+  if(e.shiftKey && (document.activeElement === primeiro || document.activeElement === d)){ e.preventDefault(); ultimo.focus(); }
+  else if(!e.shiftKey && document.activeElement === ultimo){ e.preventDefault(); primeiro.focus(); }
+  else if(!d.contains(document.activeElement)){ e.preventDefault(); primeiro.focus(); }
+});
+
+// Item fixo "Instalar aplicativo" (aba Conta e rodapé do login) enquanto não instalado.
+function pwaItemContaHTML(){
+  const tipo = ambienteInstalar();
+  if(instalarJaFeito(tipo)) return '';
+  return `<div class="card" style="max-width:560px"><h3>Aplicativo</h3>
+    <p class="mut" style="margin-bottom:12px;font-size:15px">Deixe o Certo Agro como ícone na tela inicial.</p>
+    <button type="button" class="btn sec" style="min-height:52px;font-size:17px" onclick="abrirConvite(true)">Instalar aplicativo</button></div>`;
+}
+function atualizarLinkLogin(){
+  const el = $('pwa-login-link'); if(!el) return;
+  el.classList.toggle('hidden', instalarJaFeito(ambienteInstalar()));
+}
+
+// ---------- pwa: aviso curto, offline e atualização ----------
+let PWA_TOAST_TIMER = null;
+function pwaToast(txt){
+  const el = $('pwa-toast'); if(!el) return;
+  el.textContent = txt; el.classList.remove('hidden');
+  clearTimeout(PWA_TOAST_TIMER);
+  PWA_TOAST_TIMER = setTimeout(()=>el.classList.add('hidden'), 9000);
+}
+function atualizarOffline(){
+  const el = $('pwa-offline'); if(!el) return;
+  el.classList.toggle('hidden', navigator.onLine);
+}
+// Regra do projeto (ver sw.js): sem rede NÃO há fila offline. Toda ação que
+// escreve (salvar, lançar, assinar, cancelar, importar, enviar) é barrada com
+// aviso claro e NADA é guardado para tentar depois. Preço da @ é ao vivo e
+// dado financeiro nunca é requentado. Os wrappers não alteram a lógica das
+// funções; só impedem a chamada quando não há conexão e contam as ações em
+// andamento (usado para não oferecer atualização no meio de um pagamento).
+const PWA_ACOES_QUE_ESCREVEM = {
+  criarFazenda:'Criar a fazenda', salvarConta:'Salvar a conta', salvarPreco:'Salvar o preço',
+  salvarFechamento:'Fechar o lote', reabrirLote:'Reabrir o lote', salvarEdicao:'Salvar o lote',
+  salvarLote:'Salvar o lote', excluirLote:'Excluir o lote', addPesagem:'Lançar a pesagem',
+  delPesagem:'Apagar a pesagem', addCusto:'Lançar o custo', delCusto:'Apagar o custo',
+  addSanitario:'Lançar o evento sanitário', delSanitario:'Apagar o evento sanitário',
+  confirmarImportacao:'Importar a planilha', iniciarPagamento:'Assinar o plano',
+  confirmarCancelamento:'Cancelar a assinatura', enviarPergunta:'Enviar a pergunta',
+  adminLiberarDaFila:'Liberar o acesso', adminToggleAcesso:'Alterar o acesso',
+  adminSalvarAssinatura:'Salvar a assinatura', assumirLead:'Assumir o contato',
+  liberarLead:'Liberar o contato', salvarLeadTriagem:'Salvar a triagem'
+};
+Object.keys(PWA_ACOES_QUE_ESCREVEM).forEach((nome)=>{
+  const orig = window[nome];
+  if(typeof orig !== 'function') return;
+  const verbo = PWA_ACOES_QUE_ESCREVEM[nome];
+  window[nome] = function(...args){
+    if(!navigator.onLine){
+      pwaToast(`Sem conexão. ${verbo} só funciona com internet. Nada foi enviado nem guardado. Conecte-se e tente de novo.`);
+      return;
+    }
+    const r = orig.apply(this, args);
+    if(r && typeof r.then === 'function'){
+      PWA_OCUPADO++;
+      const fim = ()=>{ PWA_OCUPADO = Math.max(0, PWA_OCUPADO-1); atualizarBarraUpdate(); };
+      r.then(fim, fim);
+    }
+    return r;
+  };
+});
+
+function swEsperando(w){ SW_ESPERANDO = w; atualizarBarraUpdate(); }
+// Momento seguro para trocar de versão: painel inicial, cotações ou ajuda
+// (telas só de leitura), ou login vazio; sem campo em foco, sem pagamento ou
+// gravação em andamento e sem o modal de convite aberto.
+function momentoSeguroAtualizar(){
+  if(PWA_OCUPADO > 0 || PWA_MODAL_ABERTO || campoEmFoco() || outroDialogoAberto()) return false;
+  const tela = telaAtualId();
+  if(tela === 'scr-login') return !loginPreenchido();
+  if(tela === 'scr-app') return ['dash','cot','ajuda'].includes(viewAtual());
+  return false;
+}
+function atualizarBarraUpdate(){
+  const el = $('pwa-update'); if(!el) return;
+  if(!SW_ESPERANDO){ el.classList.add('hidden'); return; }
+  const seguro = momentoSeguroAtualizar();
+  const online = navigator.onLine;
+  const noApp = telaAtualId() === 'scr-app';
+  let html;
+  if(seguro){
+    html = `<span>Há uma versão nova do Certo Agro.</span><button type="button" onclick="aplicarAtualizacao()" ${online?'':'disabled'}>Atualizar aplicativo</button>`;
+    if(!online) html = `<span>Há uma versão nova. Conecte-se à internet para atualizar.</span>` + `<button type="button" disabled>Atualizar aplicativo</button>`;
+  }else{
+    html = `<span>Há uma versão nova. Para atualizar, termine o que está fazendo e volte ao início.</span>` +
+      (noApp ? `<button type="button" onclick="irParaInicioPwa()">Ir ao início</button>` : '');
+  }
+  if(el.dataset.estado !== html){ el.innerHTML = html; el.dataset.estado = html; }
+  el.classList.remove('hidden');
+}
+function irParaInicioPwa(){
+  if(PWA_OCUPADO > 0) return;
+  if(telaAtualId() === 'scr-app') renderDashboard();
+}
+function aplicarAtualizacao(){
+  if(!SW_ESPERANDO || !navigator.onLine || !momentoSeguroAtualizar()) return;
+  SW_PEDIU_ATUALIZAR = true;
+  SW_ESPERANDO.postMessage({ type: 'SKIP_WAITING' });
+}
+window.addEventListener('online', ()=>{ atualizarOffline(); atualizarBarraUpdate(); agendarConvite(); });
+window.addEventListener('offline', ()=>{ atualizarOffline(); atualizarBarraUpdate(); });
+document.addEventListener('focusin', atualizarBarraUpdate);
+document.addEventListener('focusout', ()=>setTimeout(atualizarBarraUpdate, 0));
+atualizarOffline();
+agendarConvite();
 
 // ---------- start ----------
 setAuthTab('entrar');
