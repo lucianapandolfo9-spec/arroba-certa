@@ -1,6 +1,6 @@
 // sw.js — Service Worker do Certo Agro
 // ============================================================================
-// O QUE ISTO FAZ HOJE (02/10/2026): cacheia só o CASCO do app — o HTML, as
+// O QUE ISTO FAZ HOJE (atualizado 11/10/2026): cacheia só o CASCO do app — o HTML, as
 // páginas legais e os assets estáticos — pra abrir rápido e instalar como PWA.
 // NÃO cacheia nenhum dado que vem do banco. Isso é regra do projeto, não
 // preferência técnica: "preço da @ é ao vivo, com data e fonte — nunca de
@@ -35,55 +35,84 @@
 // funcionando. Quem continuar isso não precisa reconstruir o alicerce.
 // ============================================================================
 
-// Versiona o cache. Subir uma versão nova aqui (v2, v3...) é o gatilho pra
-// `activate` limpar o cache velho — sem isso, depois de um push no GitHub
-// Pages o casco antigo convive com o novo e ela depura um fantasma.
-const CACHE_VERSION = 'certo-agro-v3'; // v3: PWA (maskable, instalacao) sobre o v2 do hardening
+// ONDE O APP MORA. Nada de caminho fixo aqui: a base vem do escopo em que este
+// service worker foi registrado (index.html registra em APP_BASE). Hoje o app
+// está na raiz ('/'). Se a Luciana puser o app em outro caminho (ex.: '/app/'),
+// o único lugar que muda é a constante APP_BASE no index.html; este arquivo
+// precisa ser publicado junto, na mesma pasta do index.html.
+const BASE = new URL(self.registration.scope).pathname; // sempre termina com '/'
+
+// A landing NÃO é do app. O service worker nunca intercepta nem cacheia estes
+// caminhos (início do pathname): a requisição vai direto pra rede, como se este
+// arquivo não existisse. Se a landing mudar de pasta, acrescentar aqui.
+const CAMINHOS_FORA_DO_APP = ['/pecuaria/', '/lp/', '/landing/', '/pecuaria-de-lucro/'];
+
+// Versiona o cache. Subir uma versão nova aqui é o gatilho pra `activate`
+// limpar o cache velho.
+const CACHE_VERSION = 'certo-agro-v4'; // v4: convite PWA, atualização por clique, base derivada do escopo
 
 // O casco: só isto entra no cache. Nada daqui fala com Supabase/n8n.
 const CASCO = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-  '/privacidade.html',
-  '/termos.html',
-  '/cancelamento.html',
-  '/assets/favicon.png',
-  '/assets/icon-192.png',
-  '/assets/icon-512.png',
-  '/assets/icon-maskable-192.png',
-  '/assets/icon-maskable-512.png',
-  '/assets/apple-touch-icon.png',
-  '/assets/logo-simbolo.png',
-  '/assets/logo-horizontal.png',
-  '/assets/logo-horizontal-branco.png'
-];
+  '',
+  'index.html',
+  'manifest.json',
+  'privacidade.html',
+  'termos.html',
+  'cancelamento.html',
+  'assets/favicon.png',
+  'assets/icon-192.png',
+  'assets/icon-512.png',
+  'assets/icon-maskable-192.png',
+  'assets/icon-maskable-512.png',
+  'assets/apple-touch-icon.png',
+  'assets/logo-simbolo.png',
+  'assets/logo-horizontal.png',
+  'assets/logo-horizontal-branco.png'
+].map((p) => BASE + p);
 
 // 🔴 A LINHA QUE PROTEGE O PRODUTO DE MENTIR. Qualquer request pra estes
 // hosts passa DIRETO — sem cache, sem fallback, sem este service worker
-// nem encostar nela. São os três lugares de onde vem dado que muda:
-// Supabase (banco: cotação, lote, assinatura, o CRM de leads), o n8n
-// (webhook do chat de suporte) e o Evolution (WhatsApp, caso algum dia o
-// front fale direto com ele). Cachear qualquer resposta dessas é a mesma
-// classe de bug que o projeto já pagou caro: número velho parecendo atual.
+// nem encostar nela. São os lugares de onde vem dado que muda:
+// Supabase (banco, auth, cotação, lote, assinatura, CRM), o n8n (webhooks:
+// chat de suporte, pagamento, cancelamento) e o Evolution (WhatsApp).
+// Mercado Pago é outra origem e já cai na regra "fora da origem" abaixo.
+// Cachear qualquer resposta dessas é a mesma classe de bug que o projeto já
+// pagou caro: número velho parecendo atual.
 const NUNCA_INTERCEPTAR = [
   '.supabase.co',
   'mcp.luhpanda.com.br',
   'n8n.luhpanda.com.br',
-  'evo.luhpanda.com.br'
+  'evo.luhpanda.com.br',
+  'mercadopago.com',
+  'mercadopago.com.br',
+  'mercadolibre.com'
 ];
 
 function ehProibido(url) {
-  return NUNCA_INTERCEPTAR.some((host) => url.hostname.endsWith(host));
+  return NUNCA_INTERCEPTAR.some((host) => url.hostname === host.replace(/^\./, '') || url.hostname.endsWith(host));
+}
+function foraDoApp(url) {
+  if (!url.pathname.startsWith(BASE)) return true; // outra pasta do mesmo domínio
+  return CAMINHOS_FORA_DO_APP.some((c) => url.pathname.startsWith(c));
+}
+// Só recurso estático e versionado do casco é guardado. Nunca resposta com
+// query (token, ?code= do login, retorno de pagamento) nem rota desconhecida.
+function ehCasco(url) {
+  return !url.search && CASCO.includes(url.pathname);
 }
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_VERSION).then((cache) => cache.addAll(CASCO))
   );
-  // Não espera as abas antigas fecharem pra assumir — o casco é só leitura,
-  // trocar de versão no meio da sessão não arrisca dado nenhum.
-  self.skipWaiting();
+  // SEM skipWaiting automático (mudou na v4). Versão nova espera: o app mostra
+  // o botão "Atualizar aplicativo" num momento seguro (sem formulário nem
+  // pagamento) e só então manda SKIP_WAITING. Trocar de versão no meio de um
+  // pagamento ou de um lançamento seria pior que ficar uns minutos na antiga.
+});
+
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
@@ -94,9 +123,8 @@ self.addEventListener('activate', (event) => {
           .filter((nome) => nome !== CACHE_VERSION)
           .map((nome) => caches.delete(nome))
       )
-    )
+    ).then(() => self.clients.claim())
   );
-  self.clients.claim();
 });
 
 self.addEventListener('fetch', (event) => {
@@ -104,50 +132,43 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(req.url);
 
   // Só GET entra no raciocínio de cache. POST/PUT/PATCH/DELETE (toda escrita
-  // no banco, todo webhook) nunca deveria ser cacheado em hipótese nenhuma —
-  // isso vale mesmo que algum dia um desses hosts caia na lista de permitidos
-  // por engano. Segunda camada de proteção, de propósito.
+  // no banco, todo webhook) nunca é cacheado — segunda camada de proteção.
   if (req.method !== 'GET') return;
 
   // 🔴 Ver comentário de NUNCA_INTERCEPTAR acima. `return` sem chamar
-  // `respondWith()` = este service worker finge que não viu a requisição;
-  // o browser lida com ela do jeito normal, direto na rede.
+  // `respondWith()` = o browser lida com a requisição direto na rede.
   if (ehProibido(url)) return;
 
-  // Fora da origem do próprio app (fontes do Google, CDN do supabase-js,
-  // SDK do Mercado Pago)? Mesma lógica: não intercepta. O casco é só o que
-  // é NOSSO; biblioteca de terceiro gerencia o cache dela mesma.
+  // Fora da origem do próprio app (fontes, CDN do supabase-js, SDK do Mercado
+  // Pago): não intercepta. Biblioteca de terceiro gerencia o cache dela.
   if (url.origin !== self.location.origin) return;
 
+  // Landing e qualquer rota fora da base do app: direto pra rede.
+  if (foraDoApp(url)) return;
+
   // Network-first com fallback pro cache: tenta a rede sempre primeiro, e
-  // só usa o que está guardado se a rede falhar de verdade (sem sinal). É
-  // o oposto de "cache-first" de propósito — cache-first deixaria a Luciana
-  // presa numa versão velha do HTML depois de um push no GitHub Pages,
-  // porque o service worker nunca iria checar a rede de novo sozinho.
+  // só usa o que está guardado se a rede falhar de verdade (sem sinal).
   //
   // HTML (navegação) vai com cache:'no-cache': o GitHub Pages manda
   // max-age=600, e sem isso o cache HTTP do navegador serviria um HTML de até
-  // 10 min atrás mesmo com "network-first". 'no-cache' = sempre revalida
-  // (If-None-Match, resposta 304 barata quando não mudou).
+  // 10 min atrás. 'no-cache' = sempre revalida (304 barato quando não mudou).
   const ehHTML = req.mode === 'navigate' ||
     (req.headers.get('accept') || '').includes('text/html');
   event.respondWith(
     fetch(ehHTML ? req.url : req, ehHTML ? { cache: 'no-cache', credentials: 'same-origin' } : undefined)
       .then((resposta) => {
-        // Só guarda resposta válida (200), e só guarda uma CÓPIA — o
-        // original precisa voltar intacto pro browser consumir.
-        if (resposta && resposta.status === 200) {
+        // Só guarda resposta válida (200) de recurso do casco, e só uma CÓPIA.
+        if (resposta && resposta.status === 200 && ehCasco(url)) {
           const copia = resposta.clone();
-          caches.open(CACHE_VERSION).then((cache) => cache.put(req, copia));
+          caches.open(CACHE_VERSION).then((cache) => cache.put(url.pathname, copia));
         }
         return resposta;
       })
       .catch(async () => {
-        const guardado = await caches.match(req);
+        const guardado = await caches.match(url.pathname);
         if (guardado) return guardado;
         // Sem rede e a URL tem query (?utm_...) ou é a raiz: serve o casco.
-        if (ehHTML) return (await caches.match(req, { ignoreSearch: true })) ||
-          (await caches.match('/index.html'));
+        if (ehHTML) return (await caches.match(BASE)) || (await caches.match(BASE + 'index.html'));
         return Response.error();
       })
   );
