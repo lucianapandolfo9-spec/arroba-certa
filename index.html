@@ -711,8 +711,20 @@ async function carregarEstadoConta(){
   ]);
   ASSINATURAS_CONTA=a||[];
   LIMITE_USO=limite||null;
-  FAZENDA_COBRANCA_ID=LIMITE_USO?.fazenda_titular_id || FAZENDA.id;
+  // Falha fechada (SEC-CA-050): se a RPC não responder, NÃO cai na fazenda
+  // aberta (pode ser uma extra sem plano — mandar ela pro checkout faz o n8n
+  // criar uma 2ª assinatura, que nasce em 'trial' e vira teste grátis novo).
+  FAZENDA_COBRANCA_ID=LIMITE_USO?.fazenda_titular_id || fazendaTitularLocal();
   ASSINATURA_ATUAL=ASSINATURAS_CONTA.find(x=>x.fazenda_id===FAZENDA_COBRANCA_ID) || null;
+}
+// Espelho de public.fazenda_titular_interna: a própria fazenda se ela tem
+// assinatura; senão a mais antiga do dono que tem (criado_em, id). Sem nenhuma: null.
+function fazendaTitularLocal(){
+  if(!FAZENDA) return null;
+  const temPlano=id=>ASSINATURAS_CONTA.some(a=>a.fazenda_id===id);
+  if(temPlano(FAZENDA.id)) return FAZENDA.id;
+  const ordem=[...FAZENDAS].sort((a,b)=>String(a.criado_em).localeCompare(String(b.criado_em)) || String(a.id).localeCompare(String(b.id)));
+  return ordem.find(f=>temPlano(f.id))?.id || null;
 }
 async function atualizarModoAcesso(){
   MODO_LEITURA=false;
@@ -1016,11 +1028,9 @@ async function reativarFazenda(id){
 }
 async function idFazendaCobranca(){
   if(FAZENDA_COBRANCA_ID) return FAZENDA_COBRANCA_ID;
-  try{
-    const {data,error}=await db.rpc('fazenda_titular',{p_fazenda_id:FAZENDA.id});
-    if(!error && data) return data;
-  }catch(e){}
-  return FAZENDA.id;
+  // Ainda não carregou (ex.: retorno do Mercado Pago roda antes do boot terminar).
+  try{ await carregarEstadoConta(); }catch(e){}
+  return FAZENDA_COBRANCA_ID || null; // null = não manda nada pro n8n (falha fechada)
 }
 
 function renderAvisoAcesso(estado){
@@ -1317,9 +1327,11 @@ async function processarRetornoPagamento(){
     return true;
   }
   try{
+    // A assinatura é da CONTA: vincula na fazenda onde mora o plano (titular).
+    const fazCobranca = await idFazendaCobranca();
+    if(!fazCobranca) throw new Error('fazenda do plano não identificada');
     const res = await fetch(VINCULO_URL,{method:'POST',headers:await headersWebhook(),
-      // A assinatura é da CONTA: vincula na fazenda onde mora o plano (titular).
-      body:JSON.stringify({fazenda_id:await idFazendaCobranca(), preapproval_id:preapproval})});
+      body:JSON.stringify({fazenda_id:fazCobranca, preapproval_id:preapproval})});
     const data = await res.json().catch(()=>null);
     // Quando o workflow falha (ex.: o MP recusa o id), o n8n responde 200 com
     // corpo VAZIO — então checar só o res.ok daria falso positivo. O que vale é
@@ -1446,7 +1458,7 @@ async function confirmarCancelamento(){
   if(ASSINATURA_ATUAL?.gateway_preapproval_id){
     try{
       const res=await fetch(CANCELAMENTO_URL,{method:'POST',headers:await headersWebhook(),
-        body:JSON.stringify({fazenda_id:FAZENDA_COBRANCA_ID||FAZENDA.id})});
+        body:JSON.stringify({fazenda_id:ASSINATURA_ATUAL.fazenda_id})});
       const r=await res.json().catch(()=>null);
       if(!res.ok || r?.ok===false) throw new Error(r?.message||`Erro ${res.status}`);
     }catch(e){
@@ -1456,7 +1468,12 @@ async function confirmarCancelamento(){
   }
 
   // O plano é da conta: cancela na fazenda onde ele mora (titular).
-  const {data,error}=await db.rpc('cancelar_minha_assinatura',{p_fazenda_id:FAZENDA_COBRANCA_ID||FAZENDA.id});
+  const fazCancelar=ASSINATURA_ATUAL?.fazenda_id || FAZENDA_COBRANCA_ID;
+  if(!fazCancelar){
+    if(btn){ btn.disabled=false; btn.textContent='Sim, cancelar assinatura'; }
+    return msg('cancel-msg','Não encontrei o plano da sua conta agora. Atualize a página e tente de novo.');
+  }
+  const {data,error}=await db.rpc('cancelar_minha_assinatura',{p_fazenda_id:fazCancelar});
   if(error){
     if(btn){ btn.disabled=false; btn.textContent='Sim, cancelar assinatura'; }
     return msg('cancel-msg',error.message||'Não consegui cancelar agora. Tenta de novo em instantes.');
@@ -1611,13 +1628,15 @@ async function iniciarPagamento(planoId, jaAvisado){
   if(!jaAvisado && riscoDoPlano(plano)==='bloqueia'){ restaurarBotao(); return confirmarPlanoApertado(plano); }
   const {data:{user}}=await db.auth.getUser();
   if(!user?.email || !FAZENDA?.id){ restaurarBotao(); return msg(msgEl,'Não consegui identificar sua conta. Sai e entra novamente.'); }
+  // Sempre a fazenda onde mora o plano da conta — nunca a fazenda extra
+  // aberta na tela (senão nasceria uma 2ª assinatura, cobrada à parte).
+  const fazCobranca=await idFazendaCobranca();
+  if(!fazCobranca){ restaurarBotao(); return msg(msgEl,'Não encontrei o plano da sua conta agora. Atualize a página e tente de novo — nada foi cobrado.'); }
   const botoes=document.querySelectorAll('#planos-grid button'); botoes.forEach(b=>b.disabled=true);
   msg(msgEl,'Gerando seu checkout seguro…','ok');
   try{
     const res=await fetch(PAGAMENTO_URL,{method:'POST',headers:await headersWebhook(),body:JSON.stringify({
-      // Sempre a fazenda onde mora o plano da conta — nunca a fazenda extra
-      // aberta na tela (senão nasceria uma 2ª assinatura, cobrada à parte).
-      fazenda_id:FAZENDA_COBRANCA_ID||FAZENDA.id, plano_faixa_id:Number(planoId), ciclo:CICLO_PAGAMENTO, payer_email:user.email
+      fazenda_id:fazCobranca, plano_faixa_id:Number(planoId), ciclo:CICLO_PAGAMENTO, payer_email:user.email
     })});
     const data=await res.json().catch(()=>null);
     if(!res.ok) throw new Error(data?.message||data?.error||`Erro ${res.status} ao gerar checkout`);
