@@ -6,14 +6,14 @@
      app desenha até a borda; as margens seguras ficam com env(safe-area-*) no CSS. -->
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <title>Certo Agro — Gestão de pecuária de corte: custo da @ e lucro por lote</title>
-<meta name="description" content="Sistema de gestão para pecuária de corte: custo da arroba produzida, lucro por lote, simulador de vender ou segurar e cotação da @ por praça. Teste grátis por 7 dias." />
+<meta name="description" content="Sistema de gestão para pecuária de corte: custo da arroba produzida, lucro por lote, simulador de vender ou segurar e cotação da @ por praça. Teste grátis por 15 dias." />
 <meta name="robots" content="index,follow" />
 <link rel="canonical" href="https://certoagro.com.br/" />
 <meta property="og:type" content="website" />
 <meta property="og:site_name" content="Certo Agro" />
 <meta property="og:locale" content="pt_BR" />
 <meta property="og:title" content="Certo Agro — Gestão de pecuária de corte: custo da @ e lucro por lote" />
-<meta property="og:description" content="Sistema de gestão para pecuária de corte: custo da arroba produzida, lucro por lote, simulador de vender ou segurar e cotação da @ por praça. Teste grátis por 7 dias." />
+<meta property="og:description" content="Sistema de gestão para pecuária de corte: custo da arroba produzida, lucro por lote, simulador de vender ou segurar e cotação da @ por praça. Teste grátis por 15 dias." />
 <meta property="og:url" content="https://certoagro.com.br/" />
 <meta property="og:image" content="https://certoagro.com.br/assets/og-image.png" />
 <meta property="og:image:width" content="1200" />
@@ -21,7 +21,7 @@
 <meta property="og:image:alt" content="Certo Agro — gestão de pecuária de corte" />
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:title" content="Certo Agro — Gestão de pecuária de corte: custo da @ e lucro por lote" />
-<meta name="twitter:description" content="Sistema de gestão para pecuária de corte: custo da arroba produzida, lucro por lote, simulador de vender ou segurar e cotação da @ por praça. Teste grátis por 7 dias." />
+<meta name="twitter:description" content="Sistema de gestão para pecuária de corte: custo da arroba produzida, lucro por lote, simulador de vender ou segurar e cotação da @ por praça. Teste grátis por 15 dias." />
 <meta name="twitter:image" content="https://certoagro.com.br/assets/og-image.png" />
 <meta name="theme-color" content="#112A1E" />
 
@@ -54,7 +54,7 @@
    "applicationCategory": "BusinessApplication",
    "operatingSystem": "Web",
    "inLanguage": "pt-BR",
-   "description": "Sistema de gestão para pecuária de corte: custo da arroba produzida, lucro por lote, simulador de vender ou segurar e cotação da @ por praça. Teste grátis por 7 dias.",
+   "description": "Sistema de gestão para pecuária de corte: custo da arroba produzida, lucro por lote, simulador de vender ou segurar e cotação da @ por praça. Teste grátis por 15 dias.",
    "publisher": {
     "@id": "https://certoagro.com.br/#org"
    }
@@ -452,7 +452,7 @@
 const SUPABASE_URL = "https://zctczffncbtgpmnyxfup.supabase.co";
 const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpjdGN6ZmZuY2J0Z3Btbnl4ZnVwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA3MjcwMzgsImV4cCI6MjEwNjMwMzAzOH0.83Cg-lkjP3o7uPpcazf9M1BfzkyqOu7pUVAZOyRsO6Y";
 const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
-const DIAS_TRIAL = 7;
+const DIAS_TRIAL = 15; // espelho de public.assinatura_em_modo_leitura (banco): 15 dias desde 12/10/2026 (era 7)
 // Chip COMERCIAL do Certo Agro (celular dedicado da empresa). Subiu pro bloco
 // de config em 02/10/2026 porque DUAS telas usam: "Minha conta → falar com a
 // gente" e a tela "sem acesso". Antes a tela sem-acesso tinha o número
@@ -715,7 +715,7 @@ function renderAvisoAcesso(estado){
   }
   const dias=estado.diasRestantes;
   const urgente = dias!=null && dias<=2;
-  const prazo = dias==null ? 'Você está no teste grátis de 7 dias.'
+  const prazo = dias==null ? 'Você está no teste grátis de 15 dias.'
     : urgente ? `Seu teste ${dias===0?'acaba hoje':dias===1?'acaba amanhã':'acaba em '+dias+' dias'}.`
     : `Você tem ${dias} ${dias===1?'dia':'dias'} de teste grátis.`;
   const corpo = urgente
@@ -928,8 +928,8 @@ async function criarFazenda(){
 function renderBoasVindas(){
   const estado=estadoAssinatura(ASSINATURA_ATUAL);
   $('bv-prazo').textContent = estado.fimTexto
-    ? `Você tem 7 dias grátis, até ${estado.fimTexto}.`
-    : 'Você tem 7 dias grátis.';
+    ? `Você tem 15 dias grátis, até ${estado.fimTexto}.`
+    : 'Você tem 15 dias grátis.';
   renderInstalarBoasVindas();
   screen('scr-boasvindas');
 }
