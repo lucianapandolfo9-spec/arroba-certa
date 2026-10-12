@@ -36,6 +36,14 @@
   .whats{background:var(--bg);color:var(--texto)}
   .insta{background:transparent;color:#fff;border:2px solid rgba(255,255,255,.55)}
   .ico{font-size:22px}
+  .cot{width:100%;margin-top:26px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);border-radius:16px;padding:16px 14px 12px}
+  .cot[hidden]{display:none}
+  .cot h2{font-size:15px;font-weight:700;color:var(--dourado-claro);letter-spacing:.2px}
+  .cot ul{list-style:none;display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+  .cot li{background:rgba(0,0,0,.22);border-radius:12px;padding:10px 8px}
+  .cot li b{display:block;font-size:13px;font-weight:700;color:#dfe8e1}
+  .cot li span{display:block;font-size:22px;font-weight:800;margin-top:2px}
+  .cot p{font-size:12px;color:#b9c8bd;margin-top:10px;line-height:1.4}
   footer{margin-top:30px;font-size:13px;color:#b9c8bd;line-height:1.5}
   footer a{color:#dfe8e1}
 </style>
@@ -56,7 +64,36 @@
       <span class="ico">📸</span> Instagram @cert.oagro
     </a>
   </nav>
+  <section class="cot" id="cot" hidden aria-label="Cotação da arroba do boi gordo">
+    <h2>Arroba do boi gordo</h2>
+    <ul id="cot-lista"></ul>
+    <p id="cot-fonte"></p>
+  </section>
   <footer>Certo Agro · Recife/PE<br><a href="../termos.html">Termos</a> · <a href="../privacidade.html">Privacidade</a></footer>
 </main>
+<script>
+// Cotação pública (função public.cotacao_publica, só leitura, chave anon pública).
+// Se falhar ou o dado estiver velho, o bloco simplesmente não aparece.
+(function(){
+  var URL_='https://zctczffncbtgpmnyxfup.supabase.co/rest/v1/rpc/cotacao_publica';
+  var ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpjdGN6ZmZuY2J0Z3Btbnl4ZnVwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA3MjcwMzgsImV4cCI6MjEwNjMwMzAzOH0.83Cg-lkjP3o7uPpcazf9M1BfzkyqOu7pUVAZOyRsO6Y';
+  fetch(URL_,{method:'POST',headers:{apikey:ANON,Authorization:'Bearer '+ANON,'Content-Type':'application/json'},body:'{}'})
+    .then(function(r){return r.ok?r.json():[]})
+    .then(function(rows){
+      if(!Array.isArray(rows)||rows.length<2)return;
+      var ul=document.getElementById('cot-lista');
+      rows.forEach(function(r){
+        var li=document.createElement('li');
+        var b=document.createElement('b');b.textContent=r.praca;
+        var v=document.createElement('span');
+        v.textContent='R$ '+Number(r.valor_rs).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+        li.appendChild(b);li.appendChild(v);ul.appendChild(li);
+      });
+      var d=rows[0].data.split('-');
+      document.getElementById('cot-fonte').textContent='Cotação de '+d[2]+'/'+d[1]+'/'+d[0]+' · '+rows[0].fonte+' · R$ por arroba';
+      document.getElementById('cot').hidden=false;
+    }).catch(function(){});
+})();
+</script>
 </body>
 </html>
