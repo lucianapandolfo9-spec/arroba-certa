@@ -282,6 +282,26 @@
     line-height:1.45;box-shadow:0 6px 24px rgba(0,0,0,.3)}
   .pwa-link{background:none;border:none;color:var(--verde);font-weight:700;font-size:15px;text-decoration:underline;
     padding:10px;min-height:44px}
+
+  /* ---------- várias fazendas na mesma conta (multi-fazenda, entrega 1 — 12/10/2026) ----------
+     A faixa de troca só aparece com 2+ fazendas ativas: quem tem 1 fazenda vê o app igual. */
+  .faz-barra{padding:0 16px 10px}
+  .faz-barra button{width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;
+    background:var(--verde-suave);color:var(--verde);border:1.5px solid var(--verde-claro);border-radius:12px;
+    padding:10px 14px;min-height:48px;font-weight:600;font-size:15px;text-align:left}
+  .faz-barra .faz-atual{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .faz-barra .faz-trocar{flex:0 0 auto;font-size:14px;font-weight:800;text-decoration:underline}
+  .faz-opcao{width:100%;display:block;text-align:left;background:#fff;border:1.5px solid var(--linha);border-radius:14px;
+    padding:14px 16px;margin:0 0 10px;min-height:60px;font-size:17px;font-weight:800;color:var(--texto)}
+  .faz-opcao.atual{border-color:var(--verde);background:var(--verde-suave)}
+  .faz-opcao small{display:block;font-size:14px;font-weight:500;color:var(--cinza);margin-top:3px}
+  .faz-linha{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 0;border-bottom:1px solid var(--linha)}
+  .faz-linha:last-of-type{border-bottom:none}
+  .faz-linha .faz-info{font-size:16px;font-weight:700}
+  .faz-linha .faz-info small{display:block;font-size:13px;font-weight:500;color:var(--cinza);margin-top:2px}
+  .faz-linha .faz-botoes{display:flex;gap:8px;flex-wrap:wrap}
+  .faz-linha .faz-botoes .btn{min-height:44px}
+  .faz-linha .faz-confirma{flex-basis:100%}
 </style>
 </head>
 <body>
@@ -355,6 +375,8 @@
       </div>
       <button class="btn ghost" onclick="logout()">Sair</button>
     </div>
+    <!-- Várias fazendas: só aparece com 2+ fazendas ativas (renderSeletorFazenda) -->
+    <div id="faz-barra" class="faz-barra hidden"></div>
     <div class="ticker-wrap" onclick="renderCotacoes()">
       <div class="ticker-track" id="ticker-track">Carregando cotações da @…</div>
     </div>
@@ -443,6 +465,10 @@
 </div>
 <div id="pwa-update" class="pwa-update hidden" role="region" aria-label="Atualização disponível"></div>
 <div id="pwa-toast" class="pwa-toast hidden" role="status" aria-live="polite"></div>
+<!-- Trocar de fazenda (multi-fazenda) — preenchido por abrirSeletorFazenda() -->
+<div id="faz-overlay" class="pwa-overlay hidden" onclick="if(event.target===this)fecharSeletorFazenda()">
+  <div id="faz-dialog" class="pwa-dialog" role="dialog" aria-modal="true" aria-labelledby="faz-titulo" tabindex="-1"></div>
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3" integrity="sha384-dl/4LkSyQ4uEucc48NM6VDZLAjLLq9yMzZ5JLXumBq7Ld33XBof73hseOqPhO89+" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw" crossorigin="anonymous"></script>
@@ -516,6 +542,13 @@ function setNav(w){
 let EH_ADMIN=false;
 let AUTHTAB='entrar', FAZENDA=null, COTACOES_TODAS=null, PARSED_LOTES=null, MODO_LEITURA=false, ASSINATURA_ATUAL=null;
 let FAZENDA_RECEM_CRIADA=false, STATS_BLOQUEIO=null;
+// Várias fazendas na mesma conta (multi-fazenda, entrega 1 — 12/10/2026).
+// FAZENDAS = todas as fazendas do dono (inclusive arquivadas), da mais antiga
+// pra mais nova. FAZENDA continua sendo a fazenda ABERTA na tela.
+// FAZENDA_COBRANCA_ID = a fazenda onde mora o plano da conta (a "titular",
+// que vem do banco em limite_uso_fazenda.fazenda_titular_id). Pagar, vincular
+// e cancelar SEMPRE usam ela — nunca a fazenda extra aberta na tela.
+let FAZENDAS=[], FAZENDA_COBRANCA_ID=null, ASSINATURAS_CONTA=[], CABECAS_FAZENDA={}, USUARIO_ID=null, FAZ_FOCO_ANTES=null;
 // Uso do plano (cabeças ativas x teto contratado). Vem da RPC limite_uso_fazenda,
 // que é a MESMA fonte que o trigger do banco usa pra bloquear — front e banco
 // nunca divergem sobre quem está no limite.
@@ -556,7 +589,15 @@ function traduzErro(m){
   if(/rate limit|security purposes/i.test(m)) return 'Muitas tentativas seguidas. Espera um minutinho e tenta de novo.';
   return m;
 }
-async function logout(){ BOOT_ULTIMO_USER_ID=null; await db.auth.signOut(); screen('scr-login'); }
+async function logout(){
+  BOOT_ULTIMO_USER_ID=null;
+  // Celular compartilhado: não deixa a lista de fazendas do anterior na memória.
+  // (A última fazenda aberta fica guardada por usuário no aparelho — ver lembrarFazenda.)
+  fecharSeletorFazenda();
+  FAZENDAS=[]; FAZENDA=null; FAZENDA_COBRANCA_ID=null; ASSINATURAS_CONTA=[]; USUARIO_ID=null;
+  const barra=$('faz-barra'); if(barra){ barra.classList.add('hidden'); barra.innerHTML=''; }
+  await db.auth.signOut(); screen('scr-login');
+}
 async function entrarComGoogle(){
   await db.auth.signInWithOAuth({provider:'google', options:{redirectTo: window.location.origin + window.location.pathname}});
 }
@@ -629,9 +670,16 @@ async function bootReal(){
     $('sem-acesso-email').textContent = user.email;
     screen('scr-sem-acesso'); return;
   }
-  const {data:faz} = await db.from('fazenda').select('*').order('criado_em',{ascending:true}).limit(1);
+  // Todas as fazendas do dono (a RLS só devolve as dele). Abre na última que a
+  // pessoa usou neste aparelho; sem isso, na mais antiga — que era o único
+  // comportamento até a entrega 1 do multi-fazenda, então quem tem 1 fazenda
+  // continua caindo exatamente onde caía.
+  const {data:faz} = await db.from('fazenda').select('*').order('criado_em',{ascending:true});
   if(!faz || !faz.length){ screen('scr-faz'); return; }
-  FAZENDA = faz[0];
+  USUARIO_ID = user.id;
+  FAZENDAS = faz;
+  FAZENDA = fazendaInicial();
+  FAZENDA_COBRANCA_ID = null;
   const voltouDoPagamento = await processarRetornoPagamento();
   await atualizarModoAcesso();
   const {data:admin} = await db.rpc('eh_admin');
@@ -642,7 +690,7 @@ async function bootReal(){
     renderBoasVindas();
     return;
   }
-  $('faz-nome').textContent = FAZENDA.nome;
+  renderSeletorFazenda();
   screen('scr-app');
   loadTicker();
   // Quem volta do Mercado Pago cai em "Minha conta", olhando o plano — não no
@@ -650,14 +698,25 @@ async function bootReal(){
   if(voltouDoPagamento) renderConta(); else renderDashboard();
 }
 
-async function atualizarModoAcesso(){
-  MODO_LEITURA=false;
+// Plano da CONTA visto a partir da fazenda aberta. O banco (limite_uso_fazenda)
+// diz qual fazenda carrega o plano (fazenda_titular_id): a própria, se ela tem
+// assinatura; senão a fazenda principal do dono. Fazenda extra NÃO tem teste
+// nem plano próprio — mostra e obedece o da principal (mesma regra do banco em
+// assinatura_em_modo_leitura). Com 1 fazenda, tudo é igual a antes.
+// Sem a migration no banco (chave ausente) cai na própria fazenda = antigo.
+async function carregarEstadoConta(){
   const [{data:a},{data:limite}]=await Promise.all([
-    db.from('assinatura').select('*').eq('fazenda_id',FAZENDA.id).limit(1),
+    db.from('assinatura').select('*'),
     db.rpc('limite_uso_fazenda',{p_fazenda_id:FAZENDA.id})
   ]);
-  ASSINATURA_ATUAL=a&&a.length?a[0]:null;
+  ASSINATURAS_CONTA=a||[];
   LIMITE_USO=limite||null;
+  FAZENDA_COBRANCA_ID=LIMITE_USO?.fazenda_titular_id || FAZENDA.id;
+  ASSINATURA_ATUAL=ASSINATURAS_CONTA.find(x=>x.fazenda_id===FAZENDA_COBRANCA_ID) || null;
+}
+async function atualizarModoAcesso(){
+  MODO_LEITURA=false;
+  await carregarEstadoConta();
   const estado=estadoAssinatura(ASSINATURA_ATUAL);
   MODO_LEITURA=estado.modoLeitura;
   if(MODO_LEITURA) await carregarStatsBloqueio();
@@ -703,6 +762,267 @@ async function carregarStatsBloqueio(){
   }
   STATS_BLOQUEIO={lotes:ids.length,lancamentos};
 }
+
+// ---------- várias fazendas na mesma conta (multi-fazenda, entrega 1) ----------
+// Regras que valem no BANCO (migration 20261012230000) e que esta tela só espelha:
+//  · um teste grátis por conta: fazenda nova não ganha teste próprio;
+//  · a fazenda extra segue o plano/teste da fazenda principal (vencida = só consulta);
+//  · as cabeças de todas as fazendas ativas somam no limite do plano;
+//  · arquivar tira da lista e da soma, sem apagar nada; a principal não arquiva;
+//  · conta com teste/plano vencido não cadastra fazenda nova.
+// A visão "Todas as fazendas" é a entrega 3 — aqui é sempre uma fazenda por vez.
+function chaveUltimaFazenda(uid){ return `ca:fazenda:v1:${APP_BASE}:${uid}`; }
+function fazendasAtivas(){ return FAZENDAS.filter(f=>!f.arquivada_em); }
+function fazendaInicial(){
+  const ativas=fazendasAtivas();
+  const lista=ativas.length ? ativas : FAZENDAS;
+  const salva=USUARIO_ID ? lsGet(chaveUltimaFazenda(USUARIO_ID)) : null;
+  return lista.find(f=>f.id===salva) || lista[0];
+}
+function lembrarFazenda(){ if(USUARIO_ID && FAZENDA?.id) lsSet(chaveUltimaFazenda(USUARIO_ID), FAZENDA.id); }
+function fazendaTemPlanoProprio(id){ return ASSINATURAS_CONTA.some(a=>a.fazenda_id===id); }
+function nomeFazendaCobranca(){
+  return FAZENDAS.find(f=>f.id===FAZENDA_COBRANCA_ID)?.nome || 'principal';
+}
+async function recarregarFazendas(){
+  const {data}=await db.from('fazenda').select('*').order('criado_em',{ascending:true});
+  if(data && data.length){
+    FAZENDAS=data;
+    if(FAZENDA) FAZENDA=FAZENDAS.find(f=>f.id===FAZENDA.id) || FAZENDA;
+  }
+}
+async function carregarCabecasFazendas(){
+  const {data}=await db.from('lote').select('fazenda_id,qtd_animais').is('data_saida',null);
+  CABECAS_FAZENDA={};
+  (data||[]).forEach(l=>{ CABECAS_FAZENDA[l.fazenda_id]=(CABECAS_FAZENDA[l.fazenda_id]||0)+(Number(l.qtd_animais)||0); });
+}
+function resumoFazenda(f){
+  const n=CABECAS_FAZENDA[f.id]||0;
+  return `${n} ${n===1?'cabeça ativa':'cabeças ativas'}${f.estado?' · '+esc(f.estado):''}${f.praca_referencia?' · @ de '+esc(f.praca_referencia):''}`;
+}
+// Topo do app. Com 1 fazenda ativa: só o nome pequeno, igual sempre foi.
+// Com 2+: uma faixa grande "Você está na Fazenda X — Trocar de fazenda".
+function renderSeletorFazenda(){
+  if(!FAZENDA) return;
+  $('faz-nome').textContent=FAZENDA.nome;
+  const barra=$('faz-barra'); if(!barra) return;
+  if(fazendasAtivas().length<2){ barra.classList.add('hidden'); barra.innerHTML=''; return; }
+  barra.innerHTML=`<button type="button" onclick="abrirSeletorFazenda()" aria-haspopup="dialog">
+      <span class="faz-atual">📍 Você está na <strong>${esc(FAZENDA.nome)}</strong></span>
+      <span class="faz-trocar">Trocar ▾</span>
+    </button>`;
+  barra.classList.remove('hidden');
+}
+async function abrirSeletorFazenda(){
+  const ov=$('faz-overlay'), d=$('faz-dialog'); if(!ov||!d) return;
+  FAZ_FOCO_ANTES=document.activeElement;
+  d.innerHTML='<p class="mut" style="font-size:16px">Carregando suas fazendas…</p>';
+  ov.classList.remove('hidden');
+  d.focus();
+  await carregarCabecasFazendas();
+  const ativas=fazendasAtivas();
+  d.innerHTML=`<h2 id="faz-titulo">Qual fazenda você quer ver?</h2>
+    ${ativas.map(f=>`<button type="button" class="faz-opcao${f.id===FAZENDA?.id?' atual':''}" data-faz="${esc(f.id)}">
+        ${f.id===FAZENDA?.id?'✅ ':''}${esc(f.nome)}<small>${resumoFazenda(f)}${f.id===FAZENDA?.id?' · aberta agora':''}</small>
+      </button>`).join('')}
+    <button type="button" class="btn sec" style="margin-top:6px;min-height:52px;font-size:16px" data-acao="nova">➕ Cadastrar outra fazenda</button>
+    <button type="button" class="btn ghost" style="width:100%;margin-top:8px;min-height:48px;font-size:16px" data-acao="fechar">Fechar</button>`;
+  d.onclick=(e)=>{
+    const b=e.target.closest('button'); if(!b) return;
+    if(b.dataset.faz) return trocarFazenda(b.dataset.faz);
+    if(b.dataset.acao==='nova'){ fecharSeletorFazenda(); return renderNovaFazenda(); }
+    if(b.dataset.acao==='fechar') fecharSeletorFazenda();
+  };
+  (d.querySelector('.faz-opcao.atual')||d).focus();
+}
+function fecharSeletorFazenda(){
+  const ov=$('faz-overlay'); if(!ov || ov.classList.contains('hidden')) return;
+  ov.classList.add('hidden');
+  if(FAZ_FOCO_ANTES && FAZ_FOCO_ANTES.focus) try{ FAZ_FOCO_ANTES.focus(); }catch(e){}
+  FAZ_FOCO_ANTES=null;
+}
+document.addEventListener('keydown',(e)=>{
+  if(e.key==='Escape' && $('faz-overlay') && !$('faz-overlay').classList.contains('hidden')){ e.preventDefault(); fecharSeletorFazenda(); }
+});
+async function trocarFazenda(id){
+  const f=FAZENDAS.find(x=>x.id===id);
+  fecharSeletorFazenda();
+  if(!f || f.id===FAZENDA?.id) return;
+  FAZENDA=f; lembrarFazenda(); renderSeletorFazenda();
+  $('app-body').innerHTML='<p class="mut center" style="padding:30px">Abrindo a fazenda…</p>';
+  await atualizarModoAcesso();
+  window.scrollTo({top:0});
+  await renderDashboard();
+  pwaToast(`Agora você está na ${f.nome}.`);
+}
+// Erro do banco em fazenda → frase de gente. P1005 (principal / última ativa) e
+// P1001 (limite) já vêm escritos pro produtor; o resto ganha texto próprio.
+function mensagemErroFazenda(error){
+  const m=String(error?.message||'');
+  if(error?.code==='42501') return 'Seu teste grátis ou seu plano venceu. Para cadastrar outra fazenda, escolha um plano primeiro. Seus dados continuam salvos.';
+  if(/TRIAL_EXPIRADO/.test(m)) return 'Seu teste grátis ou seu plano venceu. Por enquanto os dados ficam só para consulta — escolha um plano para voltar a mexer.';
+  return esc(m||'Não consegui salvar agora. Tente de novo em instantes.');
+}
+function renderNovaFazenda(){
+  setNav('conta');
+  const pracas=['SP','MS','GO','MG','MT','RJ'];
+  const titulo='<div class="nome" style="font-size:20px;margin:10px 0 4px">🏡 Cadastrar outra fazenda</div>';
+  if(MODO_LEITURA){
+    $('app-body').innerHTML=`${titulo}
+      <div class="card" style="max-width:560px">
+        <div class="msg err" style="display:block;font-size:15px"><strong>Seu teste grátis ou seu plano venceu.</strong> Para cadastrar outra fazenda, escolha um plano primeiro. Seus dados continuam salvos.</div>
+        <button class="btn" style="margin-top:12px;min-height:52px" onclick="renderPagamento()">Escolher plano</button>
+        <button class="btn ghost" style="width:auto;margin-top:8px" onclick="renderConta()">← Voltar para minha conta</button>
+      </div>`;
+    return;
+  }
+  const est=estadoAssinatura(ASSINATURA_ATUAL);
+  const teste = est.trialAtivo
+    ? ` e o mesmo teste grátis${est.fimTexto?`, que continua até <strong>${est.fimTexto}</strong>`:''} — não começa um teste novo`
+    : '';
+  $('app-body').innerHTML=`${titulo}
+    <p class="mut" style="margin-bottom:14px;font-size:15px">Cada fazenda tem os seus lotes e a sua praça da @. Depois é só trocar de fazenda no topo da tela.</p>
+    <div class="card" style="max-width:560px">
+      <label for="nf-nome">Nome da fazenda</label><input id="nf-nome" placeholder="Ex: Sítio Santa Rita" maxlength="80" />
+      <label for="nf-uf">Estado (UF)</label><input id="nf-uf" maxlength="2" style="text-transform:uppercase" value="${esc(FAZENDA?.estado||'')}" />
+      <label for="nf-praca">Praça de referência da @</label>
+      <select id="nf-praca">${pracas.map(p=>`<option value="${p}" ${p===FAZENDA?.praca_referencia?'selected':''}>${p}</option>`).join('')}</select>
+      <div class="mut" style="font-size:12px;margin-top:2px">Nossa fonte (Scot Consultoria) publica só essas praças. Fora delas, escolha a mais próxima.</div>
+      <label for="nf-area">Área em hectares (se quiser)</label><input id="nf-area" type="number" inputmode="decimal" />
+      <div class="msg ok" style="display:block;margin-top:16px;font-size:14px">
+        <strong>Como fica o plano:</strong> esta fazenda usa o mesmo plano da sua conta${teste}. As cabeças de todas as suas fazendas somam no limite do plano.
+      </div>
+      <div id="nf-msg"></div>
+      <button id="btn-nf" class="btn" style="margin-top:16px;min-height:52px;font-size:16px" onclick="criarFazendaExtra()">Cadastrar fazenda</button>
+      <button class="btn ghost" style="width:auto;margin-top:8px" onclick="renderConta()">← Voltar para minha conta</button>
+    </div>`;
+  window.scrollTo({top:0});
+}
+async function criarFazendaExtra(){
+  if(!podeEditar()) return;
+  const nome=$('nf-nome').value.trim();
+  if(!nome) return msg('nf-msg','Escreva o nome da fazenda.');
+  if(fazendasAtivas().some(f=>String(f.nome||'').trim().toLowerCase()===nome.toLowerCase()))
+    return msg('nf-msg','Você já tem uma fazenda com esse nome. Use um nome diferente pra não confundir na hora de lançar.');
+  const area=parseFloat($('nf-area').value);
+  const btn=$('btn-nf'); if(btn){ btn.disabled=true; btn.textContent='Cadastrando…'; }
+  const {data,error}=await db.from('fazenda').insert({
+    nome,
+    estado:$('nf-uf').value.trim().toUpperCase()||null,
+    praca_referencia:$('nf-praca').value.trim().toUpperCase()||null,
+    area_ha: area>0 ? area : null
+  }).select();
+  if(error){
+    if(btn){ btn.disabled=false; btn.textContent='Cadastrar fazenda'; }
+    return msg('nf-msg', mensagemErroFazenda(error));
+  }
+  await recarregarFazendas();
+  const nova=data && data[0] ? FAZENDAS.find(f=>f.id===data[0].id) : null;
+  if(nova){ FAZENDA=nova; lembrarFazenda(); }
+  renderSeletorFazenda();
+  await atualizarModoAcesso();
+  window.scrollTo({top:0});
+  await renderDashboard();
+  pwaToast(`Fazenda ${nome} cadastrada. Você está nela agora — pra trocar, use o botão no topo.`);
+}
+// Cartão "Suas fazendas" em Minha conta: lista, abrir, arquivar, reativar e
+// o botão de cadastrar outra. A principal (onde mora o plano) não arquiva.
+function cartaoFazendasHTML(){
+  const ativas=fazendasAtivas(), arquivadas=FAZENDAS.filter(f=>f.arquivada_em);
+  const linha=f=>{
+    const atual=f.id===FAZENDA?.id;
+    const principal=fazendaTemPlanoProprio(f.id);
+    const podeArquivar=!principal && ativas.length>1;
+    return `<div class="faz-linha" data-faz="${esc(f.id)}">
+        <div class="faz-info">${esc(f.nome)}${atual?' <span class="pill">aberta agora</span>':''}
+          <small>${resumoFazenda(f)}${principal && ativas.length>1?' · principal (é nela que fica o plano)':''}</small></div>
+        <div class="faz-botoes">
+          ${atual?'':'<button type="button" class="btn mini sec" data-acao="abrir">Abrir</button>'}
+          ${podeArquivar?'<button type="button" class="btn mini sec" data-acao="arquivar">Arquivar</button>':''}
+        </div>
+        <div class="faz-confirma"></div>
+      </div>`;
+  };
+  return `<div class="card" style="max-width:560px" id="card-fazendas">
+      <h3>Suas fazendas</h3>
+      <p class="mut" style="font-size:14px;margin-bottom:4px">Tem mais de uma fazenda? Cadastre cada uma aqui. Todas ficam na mesma conta e usam o mesmo plano.</p>
+      ${ativas.map(linha).join('')}
+      <div id="faz-msg-conta"></div>
+      <button type="button" class="btn sec" style="margin-top:12px;min-height:52px;font-size:16px" data-acao="nova">➕ Cadastrar outra fazenda</button>
+      ${arquivadas.length?`<div class="section-title" style="margin:20px 0 4px">Fazendas arquivadas</div>
+        <p class="mut" style="font-size:13px">Não aparecem na lista e as cabeças delas não contam no plano. Nada foi apagado.</p>
+        ${arquivadas.map(f=>`<div class="faz-linha" data-faz="${esc(f.id)}">
+            <div class="faz-info">${esc(f.nome)}<small>arquivada em ${fmtData(String(f.arquivada_em).slice(0,10))}</small></div>
+            <div class="faz-botoes"><button type="button" class="btn mini sec" data-acao="reativar">Reativar</button></div>
+          </div>`).join('')}`:''}
+    </div>`;
+}
+function ligarCartaoFazendas(){
+  const c=$('card-fazendas'); if(!c) return;
+  c.addEventListener('click',(e)=>{
+    const b=e.target.closest('button[data-acao]'); if(!b) return;
+    const linha=b.closest('[data-faz]'), id=linha?.dataset.faz, a=b.dataset.acao;
+    if(a==='nova') return renderNovaFazenda();
+    if(a==='abrir') return trocarFazenda(id);
+    if(a==='arquivar') return pedirArquivarFazenda(id,linha);
+    if(a==='confirmar-arquivar') return confirmarArquivarFazenda(id);
+    if(a==='voltar'){ const p=linha?.querySelector('.faz-confirma'); if(p) p.innerHTML=''; return; }
+    if(a==='reativar') return reativarFazenda(id);
+  });
+}
+function pedirArquivarFazenda(id,linha){
+  const f=FAZENDAS.find(x=>x.id===id); const p=linha?.querySelector('.faz-confirma');
+  if(!f||!p) return;
+  p.innerHTML=`<div class="msg warn" style="display:block;margin-top:8px">
+      <strong>Arquivar a ${esc(f.nome)}?</strong>
+      <ul class="cancel-lista">
+        <li>Ela sai da lista de fazendas.</li>
+        <li>As cabeças dela deixam de contar no plano.</li>
+        <li><strong>Nada é apagado.</strong> Você pode reativar quando quiser.</li>
+      </ul>
+      <div class="cancel-acoes">
+        <button type="button" class="btn mini" data-acao="confirmar-arquivar">Sim, arquivar</button>
+        <button type="button" class="btn mini sec" data-acao="voltar">Voltar</button>
+      </div>
+    </div>`;
+}
+async function confirmarArquivarFazenda(id){
+  if(!podeEditar()) return;
+  const nome=FAZENDAS.find(f=>f.id===id)?.nome||'A fazenda';
+  const {data,error}=await db.from('fazenda').update({arquivada_em:new Date().toISOString()}).eq('id',id).select('id');
+  if(error) return msg('faz-msg-conta', mensagemErroFazenda(error));
+  if(!data || !data.length) return msg('faz-msg-conta','Não consegui arquivar agora. Tente de novo em instantes.');
+  await recarregarFazendas();
+  if(FAZENDA?.id===id){ FAZENDA=fazendasAtivas()[0]||FAZENDA; lembrarFazenda(); }
+  renderSeletorFazenda();
+  await atualizarModoAcesso();
+  await renderConta();
+  pwaToast(`${nome} foi arquivada. Pra trazer de volta, use "Reativar" aqui em Minha conta.`);
+}
+async function reativarFazenda(id){
+  if(!podeEditar()) return;
+  const nome=FAZENDAS.find(f=>f.id===id)?.nome||'A fazenda';
+  const {data,error}=await db.from('fazenda').update({arquivada_em:null}).eq('id',id).select('id');
+  if(error){
+    if(tratarErroPlano(error,'faz-msg-conta')) return;
+    return msg('faz-msg-conta', mensagemErroFazenda(error));
+  }
+  if(!data || !data.length) return msg('faz-msg-conta','Não consegui reativar agora. Tente de novo em instantes.');
+  await recarregarFazendas();
+  renderSeletorFazenda();
+  await atualizarModoAcesso();
+  await renderConta();
+  pwaToast(`${nome} voltou pra lista de fazendas.`);
+}
+async function idFazendaCobranca(){
+  if(FAZENDA_COBRANCA_ID) return FAZENDA_COBRANCA_ID;
+  try{
+    const {data,error}=await db.rpc('fazenda_titular',{p_fazenda_id:FAZENDA.id});
+    if(!error && data) return data;
+  }catch(e){}
+  return FAZENDA.id;
+}
+
 function renderAvisoAcesso(estado){
   const trialBanner=$('trial-banner');
   const leituraBanner=$('modo-leitura-banner');
@@ -934,13 +1254,13 @@ function renderBoasVindas(){
   screen('scr-boasvindas');
 }
 function fecharBoasVindas(){
-  $('faz-nome').textContent = FAZENDA.nome;
+  renderSeletorFazenda();
   screen('scr-app');
   loadTicker();
   renderDashboard();
 }
 function verPlanosDoBoasVindas(){
-  $('faz-nome').textContent = FAZENDA.nome;
+  renderSeletorFazenda();
   screen('scr-app');
   loadTicker();
   renderPagamento();
@@ -998,7 +1318,8 @@ async function processarRetornoPagamento(){
   }
   try{
     const res = await fetch(VINCULO_URL,{method:'POST',headers:await headersWebhook(),
-      body:JSON.stringify({fazenda_id:FAZENDA.id, preapproval_id:preapproval})});
+      // A assinatura é da CONTA: vincula na fazenda onde mora o plano (titular).
+      body:JSON.stringify({fazenda_id:await idFazendaCobranca(), preapproval_id:preapproval})});
     const data = await res.json().catch(()=>null);
     // Quando o workflow falha (ex.: o MP recusa o id), o n8n responde 200 com
     // corpo VAZIO — então checar só o res.ok daria falso positivo. O que vale é
@@ -1022,37 +1343,44 @@ async function renderConta(){
   setNav('conta');
   const f = FAZENDA;
   $('app-body').innerHTML = '<p class="mut center" style="padding:30px">Carregando conta…</p>';
-  const [{data:planos},{data:assinaturas},{data:limite}] = await Promise.all([
+  const [{data:planos}] = await Promise.all([
     db.from('plano_faixa').select('*').eq('ativo',true).order('ordem'),
-    db.from('assinatura').select('*').eq('fazenda_id',f.id).limit(1),
-    db.rpc('limite_uso_fazenda',{p_fazenda_id:f.id})
+    carregarEstadoConta(),
+    carregarCabecasFazendas()
   ]);
   PLANOS_PAGAMENTO = planos || [];
-  ASSINATURA_ATUAL = assinaturas && assinaturas.length ? assinaturas[0] : null;
-  LIMITE_USO = limite || null;
   const pracas = ['SP','MS','GO','MG','MT','RJ'];
+  // Fazenda extra (sem plano próprio): o WhatsApp de contato é o da conta
+  // (fica na principal) — aqui não pede de novo. Plano mostrado = o da conta.
+  const extra = FAZENDA_COBRANCA_ID && FAZENDA_COBRANCA_ID!==f.id;
+  const variasAtivas = fazendasAtivas().length>1;
+  const qtdFazPlano = Number(LIMITE_USO?.fazendas_na_conta)||1;
   $('app-body').innerHTML = `
     ${retornoPagamentoHTML()}
     ${pwaItemContaHTML()}
     <div class="nome" style="font-size:20px;margin:10px 0 4px">👤 Minha conta</div>
-    <p class="mut" style="margin-bottom:14px">Dados-base da fazenda usados nas cotações, análises e cálculos do sistema. Preencheu errado? Corrige aqui.</p>
+    <p class="mut" style="margin-bottom:14px">${variasAtivas?`Dados da <strong>${esc(f.nome)}</strong>, a fazenda aberta agora. `:''}Dados-base da fazenda usados nas cotações, análises e cálculos do sistema. Preencheu errado? Corrige aqui.</p>
     <div class="card" style="max-width:560px">
       <label>Nome da fazenda</label><input id="c-nome" value="${esc(f.nome)}" />
       <label>Estado (UF)</label><input id="c-uf" value="${esc(f.estado||'')}" maxlength="2" style="text-transform:uppercase" />
       <label>Praça de referência da @</label>
       <select id="c-praca">${pracas.map(p=>`<option value="${p}" ${f.praca_referencia===p?'selected':''}>${p}</option>`).join('')}</select>
       <label>Área (hectares)</label><input id="c-area" type="number" value="${f.area_ha??''}" />
-      <label>WhatsApp</label><input id="c-tel" type="tel" inputmode="tel" placeholder="(81) 99192-3030" value="${esc(f.telefone||'')}" />
-      <div class="mut" style="font-size:12px;margin-top:2px">É por aqui que a gente fala com você. Com o DDD, do jeito que você escreve.</div>
+      ${extra?'':`<label>WhatsApp</label><input id="c-tel" type="tel" inputmode="tel" placeholder="(81) 99192-3030" value="${esc(f.telefone||'')}" />
+      <div class="mut" style="font-size:12px;margin-top:2px">É por aqui que a gente fala com você. Com o DDD, do jeito que você escreve.</div>`}
       <div id="conta-msg"></div>
       <button class="btn" style="margin-top:16px" onclick="salvarConta()" ${MODO_LEITURA?'disabled':''}>Salvar alterações</button>
     </div>
     <div class="card" style="max-width:560px">
       <h3>Meu plano</h3>
+      ${extra?`<p class="mut" style="font-size:14px;margin-bottom:10px">O plano da sua conta fica na fazenda <strong>${esc(nomeFazendaCobranca())}</strong> e vale para todas as suas fazendas.</p>`:''}
       ${renderResumoPlano()}
+      ${qtdFazPlano>1?`<p class="mut" style="font-size:13px;margin-top:6px">As cabeças das suas ${qtdFazPlano} fazendas somam no limite do plano.</p>`:''}
       <button class="btn" style="margin-top:14px" onclick="renderPagamento()">${ASSINATURA_ATUAL?'Ver planos e alterar':'Escolher meu plano'}</button>
       ${renderCancelamento()}
-    </div>`;
+    </div>
+    ${cartaoFazendasHTML()}`;
+  ligarCartaoFazendas();
 }
 
 // ---------- cancelamento ----------
@@ -1118,7 +1446,7 @@ async function confirmarCancelamento(){
   if(ASSINATURA_ATUAL?.gateway_preapproval_id){
     try{
       const res=await fetch(CANCELAMENTO_URL,{method:'POST',headers:await headersWebhook(),
-        body:JSON.stringify({fazenda_id:FAZENDA.id})});
+        body:JSON.stringify({fazenda_id:FAZENDA_COBRANCA_ID||FAZENDA.id})});
       const r=await res.json().catch(()=>null);
       if(!res.ok || r?.ok===false) throw new Error(r?.message||`Erro ${res.status}`);
     }catch(e){
@@ -1127,7 +1455,8 @@ async function confirmarCancelamento(){
     }
   }
 
-  const {data,error}=await db.rpc('cancelar_minha_assinatura',{p_fazenda_id:FAZENDA.id});
+  // O plano é da conta: cancela na fazenda onde ele mora (titular).
+  const {data,error}=await db.rpc('cancelar_minha_assinatura',{p_fazenda_id:FAZENDA_COBRANCA_ID||FAZENDA.id});
   if(error){
     if(btn){ btn.disabled=false; btn.textContent='Sim, cancelar assinatura'; }
     return msg('cancel-msg',error.message||'Não consegui cancelar agora. Tenta de novo em instantes.');
@@ -1286,7 +1615,9 @@ async function iniciarPagamento(planoId, jaAvisado){
   msg(msgEl,'Gerando seu checkout seguro…','ok');
   try{
     const res=await fetch(PAGAMENTO_URL,{method:'POST',headers:await headersWebhook(),body:JSON.stringify({
-      fazenda_id:FAZENDA.id, plano_faixa_id:Number(planoId), ciclo:CICLO_PAGAMENTO, payer_email:user.email
+      // Sempre a fazenda onde mora o plano da conta — nunca a fazenda extra
+      // aberta na tela (senão nasceria uma 2ª assinatura, cobrada à parte).
+      fazenda_id:FAZENDA_COBRANCA_ID||FAZENDA.id, plano_faixa_id:Number(planoId), ciclo:CICLO_PAGAMENTO, payer_email:user.email
     })});
     const data=await res.json().catch(()=>null);
     if(!res.ok) throw new Error(data?.message||data?.error||`Erro ${res.status} ao gerar checkout`);
@@ -1304,17 +1635,25 @@ async function salvarConta(){
   if(!podeEditar()) return;
   const nome=$('c-nome').value.trim();
   if(!nome) return msg('conta-msg','Dê um nome pra fazenda.');
-  const tel=$('c-tel').value.trim();
-  if(!telefoneValido(tel)) return msg('conta-msg','Coloca seu WhatsApp com o DDD — é por ali que a gente fala com você.');
-  const {error}=await db.from('fazenda').update({
+  // Fazenda extra não mostra o campo de WhatsApp (o contato é o da conta):
+  // só valida e grava telefone quando o campo está na tela.
+  const campoTel=$('c-tel');
+  const tel=campoTel ? campoTel.value.trim() : null;
+  if(campoTel && !telefoneValido(tel)) return msg('conta-msg','Coloca seu WhatsApp com o DDD — é por ali que a gente fala com você.');
+  const dados={
     nome, estado:$('c-uf').value.trim().toUpperCase()||null,
     praca_referencia:$('c-praca').value.trim().toUpperCase()||null,
-    area_ha:parseFloat($('c-area').value)||null,
-    telefone:tel
-  }).eq('id',FAZENDA.id);
+    area_ha:parseFloat($('c-area').value)||null
+  };
+  if(campoTel) dados.telefone=tel;
+  const {error}=await db.from('fazenda').update(dados).eq('id',FAZENDA.id);
   if(error) return msg('conta-msg',error.message);
   const {data:faz}=await db.from('fazenda').select('*').eq('id',FAZENDA.id).limit(1);
-  if(faz && faz.length){ FAZENDA=faz[0]; $('faz-nome').textContent=FAZENDA.nome; }
+  if(faz && faz.length){
+    FAZENDA=faz[0];
+    FAZENDAS=FAZENDAS.map(x=>x.id===FAZENDA.id?FAZENDA:x);
+    renderSeletorFazenda();
+  }
   msg('conta-msg','Salvo! ✅','ok');
 }
 
@@ -1387,10 +1726,15 @@ async function renderAdmin(){
       const fid=c.fazenda_id;
       const planoOpts=ADMIN_PLANOS.map(p=>`<option value="${p.id}" ${c.plano_faixa_id===p.id?'selected':''}>${esc(p.nome)} (${brl(p.preco_mensal)}/mês)</option>`).join('');
       const statusOpts=ADMIN_STATUS_OPCOES.map(s=>`<option value="${s}" ${c.assinatura_status===s?'selected':''}>${s}</option>`).join('');
+      // Multi-fazenda (entrega 1): fazenda extra não tem assinatura própria —
+      // usa a da principal do mesmo dono. Mexer no plano é na principal; dar
+      // assinatura própria à extra só em combinado manual (fica no "Avançado").
+      const extra=!!c.fazenda_titular_id;
       html+=`<div class="card">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px">
           <div>
-            <div class="nome" style="font-size:17px">${esc(c.nome)||'—'} ${c.estado?`<span class="mut" style="font-size:13px;font-weight:600">· ${esc(c.estado)}</span>`:''}</div>
+            <div class="nome" style="font-size:17px">${esc(c.nome)||'—'} ${c.estado?`<span class="mut" style="font-size:13px;font-weight:600">· ${esc(c.estado)}</span>`:''}
+              ${c.arquivada_em?'<span class="pill warn">arquivada</span>':''} ${extra?'<span class="pill">fazenda extra</span>':''}</div>
             <div class="mut" style="font-size:13px">${esc(c.owner_email)||'sem e-mail vinculado'}</div>
           </div>
           ${badgeEng(c.status_engajamento)}
@@ -1413,6 +1757,8 @@ async function renderAdmin(){
         </div>
 
         <div class="section-title" style="margin:16px 0 8px">Assinatura</div>
+        ${extra?`<div class="msg ok" style="display:block">Fazenda extra da mesma conta: usa o plano da fazenda <strong>${esc(c.fazenda_titular_nome||'principal')}</strong>. Para mudar o plano, edite a fazenda principal.</div>
+        <details style="margin-top:8px"><summary class="mut" style="cursor:pointer">Avançado: dar assinatura própria a esta fazenda (só em combinado manual)</summary>`:''}
         <div class="grid2">
           <div><label>Plano</label>
             <select id="adm-plano-${fid}"><option value="">— sem plano —</option>${planoOpts}</select>
@@ -1428,6 +1774,7 @@ async function renderAdmin(){
         <select id="adm-status-${fid}">${statusOpts}</select>
         <div id="adm-msg-${fid}"></div>
         <button class="btn mini" style="margin-top:10px" data-acao="salvar-assinatura" data-fazenda="${esc(fid)}">Salvar assinatura</button>
+        ${extra?'</details>':''}
       </div>`;
     }
   }
@@ -3011,6 +3358,7 @@ function atualizarOffline(){
 // andamento (usado para não oferecer atualização no meio de um pagamento).
 const PWA_ACOES_QUE_ESCREVEM = {
   criarFazenda:'Criar a fazenda', salvarConta:'Salvar a conta', salvarPreco:'Salvar o preço',
+  criarFazendaExtra:'Cadastrar a fazenda', confirmarArquivarFazenda:'Arquivar a fazenda', reativarFazenda:'Reativar a fazenda',
   salvarFechamento:'Fechar o lote', reabrirLote:'Reabrir o lote', salvarEdicao:'Salvar o lote',
   salvarLote:'Salvar o lote', excluirLote:'Excluir o lote', addPesagem:'Lançar a pesagem',
   delPesagem:'Apagar a pesagem', addCusto:'Lançar o custo', delCusto:'Apagar o custo',
