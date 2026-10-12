@@ -18,12 +18,18 @@ jobs:
     name: segredo no histórico (gitleaks)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      # Pinado por SHA de commit (tag mutavel = supply chain). Atualizar so trocando SHA+comentario juntos,
+      # conferindo com: gh api repos/actions/checkout/git/ref/tags/<tag>
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           fetch-depth: 0
       - name: instalar gitleaks 8.30.1
         run: |
-          curl -sSL "https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz" | tar xz gitleaks
+          # sha256 fixado (conferido em 09/10/2026 contra gitleaks_8.30.1_checksums.txt da release):
+          # se o binario da release mudar, o job falha em vez de rodar codigo desconhecido.
+          curl -sSL -o gitleaks.tgz "https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz"
+          echo "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb  gitleaks.tgz" | sha256sum -c -
+          tar xzf gitleaks.tgz gitleaks
           ./gitleaks version
       - name: varrer histórico completo
         run: |
