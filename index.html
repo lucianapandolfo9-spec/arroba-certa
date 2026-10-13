@@ -508,12 +508,19 @@ const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFz
 // do convite, confirmado (equipe_aceitar_convite).
 const CHAVE_CONVITE_EQUIPE = 'ca:convite-equipe:v1';
 (function capturarConviteEquipe(){
+  // A URL é limpa SEMPRE que o fragmento traz "convite=" — também com token
+  // malformado/cortado e também se o localStorage falhar (Safari privado, cota) —,
+  // para o token nunca ficar na barra de endereço nem chegar ao cliente Supabase.
+  let h='';
+  try{ h = window.location.hash || ''; }catch(e){}
+  if(!/(?:^#|&)convite=/i.test(h)) return;
   try{
-    const m = /(?:^#|&)convite=([0-9a-f]{64})(?:&|$)/.exec(window.location.hash);
-    if(!m) return;
-    localStorage.setItem(CHAVE_CONVITE_EQUIPE, JSON.stringify({t:m[1], em:Date.now()}));
-    history.replaceState(null, '', window.location.pathname + window.location.search);
+    const m = /(?:^#|&)convite=([0-9a-fA-F]{64})(?:&|$)/.exec(h);
+    if(m) localStorage.setItem(CHAVE_CONVITE_EQUIPE, JSON.stringify({t:m[1].toLowerCase(), em:Date.now()}));
   }catch(e){}
+  finally{
+    try{ history.replaceState(null, '', window.location.pathname + window.location.search); }catch(e){}
+  }
 })();
 const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 const DIAS_TRIAL = 15; // espelho de public.assinatura_em_modo_leitura (banco): 15 dias desde 12/10/2026 (era 7)
@@ -1239,7 +1246,7 @@ function autorHTML(r){
 // Na tela do DONO o rótulo só aparece quando a fazenda tem equipe.
 function autorDonoHTML(r){ return fazendaTemEquipe() ? autorHTML(r) : ''; }
 function erroLancamento(error){
-  if(!ehEquipe()) return error.message; // dono: mensagem igual a antes
+  if(!ehEquipe()) return esc(error?.message||''); // dono: mesmo texto de antes, agora escapado (msg() usa innerHTML)
   const m=String(error?.message||'');
   if(/TRIAL_EXPIRADO/.test(m)) return 'Esta fazenda está só para consulta agora. Fale com o dono da fazenda.';
   if(error?.code==='42501' || /row-level security/i.test(m)) return 'Você não tem mais acesso a este lote. O dono pode ter tirado você desta fazenda ou fechado o lote.';
