@@ -172,3 +172,5 @@ footer button.link{background:none;border:0;font:inherit;text-decoration:underli
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 @media (min-width:1000px){.planos{grid-template-columns:repeat(4,1fr)}.plano .mes{font-size:28px}}
+.tela--img{aspect-ratio:auto;max-height:none;border:3px solid var(--apoio);background:#FDF8F5;overflow:hidden;padding-top:30px}
+.tela--img img{display:block;width:100%;height:auto}
