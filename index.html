@@ -302,6 +302,11 @@
   .faz-linha .faz-botoes{display:flex;gap:8px;flex-wrap:wrap}
   .faz-linha .faz-botoes .btn{min-height:44px}
   .faz-linha .faz-confirma{flex-basis:100%}
+  /* Equipe (entrega 2): quem lançou, caixas de marcar grandes, link do convite */
+  .lancado-por{display:block;font-size:12px;font-weight:500;color:var(--cinza);margin-top:2px}
+  .eq-check{display:flex;gap:12px;align-items:center;font-size:16px;font-weight:600;padding:8px 0;min-height:44px;cursor:pointer}
+  .eq-check input{width:24px;height:24px;margin:0;flex-shrink:0}
+  .eq-link input{font-size:13px}
 </style>
 </head>
 <body>
@@ -319,6 +324,8 @@
   </div>
   <!-- Aviso de instalar (PC/Android/iPhone) já na 1ª abertura — preenchido por atualizarFaixaInstalarLogin() -->
   <div id="instalar-login" class="instalar-faixa hidden"></div>
+  <!-- Convite da equipe pendente (entrega 2) — preenchido por atualizarFaixaConviteLogin() -->
+  <div id="convite-login" class="msg ok hidden" style="font-size:15px;line-height:1.45"></div>
   <div class="card">
     <button class="btn sec" onclick="entrarComGoogle()" style="display:flex;align-items:center;justify-content:center;gap:10px">
       <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84c-.21 1.13-.84 2.09-1.8 2.73v2.27h2.9c1.7-1.57 2.7-3.87 2.7-6.64z"/><path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.9-2.27c-.8.54-1.84.86-3.06.86-2.35 0-4.34-1.59-5.05-3.72H.98v2.34C2.47 15.98 5.48 18 9 18z"/><path fill="#FBBC05" d="M3.95 10.69c-.18-.54-.28-1.1-.28-1.69s.1-1.15.28-1.69V4.97H.98A8.99 8.99 0 0 0 0 9c0 1.45.35 2.83.98 4.03l2.97-2.34z"/><path fill="#EA4335" d="M9 3.58c1.32 0 2.51.45 3.44 1.35l2.58-2.58C13.46.89 11.43 0 9 0 5.48 0 2.47 2.02.98 4.97l2.97 2.34C4.66 5.17 6.65 3.58 9 3.58z"/></svg>
@@ -393,11 +400,17 @@
   <div id="limite-banner" class="wrap trial-banner hidden"></div>
   <div id="instalar-banner" class="wrap trial-banner instalar-faixa hidden"></div>
   <div id="modo-leitura-banner" class="wrap hidden" style="padding:12px 32px 0">
-    <div class="msg err" style="margin:0;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+    <div id="ml-dono" class="msg err" style="margin:0;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
       <span><strong>Seu período de teste terminou.</strong> Seus dados continuam disponíveis para consulta, mas novos lançamentos e alterações estão bloqueados.</span>
       <button class="btn mini" onclick="renderPagamento()">Escolher plano</button>
     </div>
+    <!-- Funcionário (entrega 2): nunca vê plano nem pagamento — só o recado. -->
+    <div id="ml-equipe" class="msg err hidden" style="margin:0;font-size:15px">
+      <strong>Esta fazenda está só para consulta.</strong> Você continua vendo os lotes, mas não dá para lançar nada agora. Fale com <span id="ml-dono-nome">o dono da fazenda</span>.
+    </div>
   </div>
+  <!-- Resultado do convite da equipe (entrega 2) -->
+  <div id="convite-banner" class="wrap hidden" style="padding:12px 32px 0"></div>
   <div class="wrap" id="app-body"></div>
 </div>
 
@@ -413,6 +426,12 @@
     </a>
     <div style="margin-top:16px"><a href="#" onclick="logout();return false;" class="mut" style="font-size:13px">Sair</a></div>
   </div>
+</div>
+
+<!-- ================= CONVITE DA EQUIPE (entrega 2) ================= -->
+<div id="scr-convite" class="wrap hidden" style="padding-top:40px">
+  <div class="center"><div class="logo" style="font-size:24px">Convite da equipe 📩</div></div>
+  <div class="card" style="max-width:520px;margin:0 auto" id="convite-tela"></div>
 </div>
 
 <!-- ================= ONBOARDING FAZENDA ================= -->
@@ -437,6 +456,7 @@
     <div class="mut" style="font-size:12px;margin-top:2px">É por aqui que a gente fala com você. Com o DDD, do jeito que você escreve.</div>
     <div id="faz-msg"></div>
     <button class="btn" style="margin-top:16px" onclick="criarFazenda()">Criar fazenda</button>
+    <button id="faz-voltar" type="button" class="btn ghost hidden" style="width:100%;margin-top:10px" onclick="voltarDoCadastroFazenda()">← Voltar para a fazenda onde eu trabalho</button>
   </div>
 </div>
 
@@ -477,6 +497,24 @@
 // ---------- config ----------
 const SUPABASE_URL = "https://zctczffncbtgpmnyxfup.supabase.co";
 const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpjdGN6ZmZuY2J0Z3Btbnl4ZnVwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA3MjcwMzgsImV4cCI6MjEwNjMwMzAzOH0.83Cg-lkjP3o7uPpcazf9M1BfzkyqOu7pUVAZOyRsO6Y";
+// ---------- convite da equipe: guarda o token do link e limpa a URL ----------
+// Entrega 2 (13/10/2026). O link é https://certoagro.com.br/#convite=<64 hex>:
+// fragmento '#', então o token não vai para servidor, log nem Referer. Aqui ele
+// sai da barra de endereço ANTES de qualquer outra coisa (replaceState) e fica
+// guardado neste aparelho até ser usado, por no máximo 7 dias (a validade do
+// convite). Guardado em localStorage — e não sessionStorage — porque quem cria
+// conta com e-mail e senha confirma o e-mail numa ABA NOVA, e a sessionStorage
+// não atravessa abas. O token sozinho não serve: o banco exige o mesmo e-mail
+// do convite, confirmado (equipe_aceitar_convite).
+const CHAVE_CONVITE_EQUIPE = 'ca:convite-equipe:v1';
+(function capturarConviteEquipe(){
+  try{
+    const m = /(?:^#|&)convite=([0-9a-f]{64})(?:&|$)/.exec(window.location.hash);
+    if(!m) return;
+    localStorage.setItem(CHAVE_CONVITE_EQUIPE, JSON.stringify({t:m[1], em:Date.now()}));
+    history.replaceState(null, '', window.location.pathname + window.location.search);
+  }catch(e){}
+})();
 const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 const DIAS_TRIAL = 15; // espelho de public.assinatura_em_modo_leitura (banco): 15 dias desde 12/10/2026 (era 7)
 // Chip COMERCIAL do Certo Agro (celular dedicado da empresa). Subiu pro bloco
@@ -519,7 +557,8 @@ function telefoneValido(v){
 }
 const show = id => $(id).classList.remove('hidden');
 const hide = id => $(id).classList.add('hidden');
-function screen(s){['scr-login','scr-app','scr-faz','scr-nova-senha','scr-sem-acesso','scr-boasvindas'].forEach(hide);show(s);
+function screen(s){['scr-login','scr-app','scr-faz','scr-nova-senha','scr-sem-acesso','scr-boasvindas','scr-convite'].forEach(hide);show(s);
+  if(s==='scr-login') atualizarFaixaConviteLogin();
   // Primeira visita: o aviso de instalar já aparece na tela de login.
   atualizarFaixaInstalarLogin(s==='scr-login');
   pwaTelaMudou();
@@ -595,6 +634,8 @@ async function logout(){
   // (A última fazenda aberta fica guardada por usuário no aparelho — ver lembrarFazenda.)
   fecharSeletorFazenda();
   FAZENDAS=[]; FAZENDA=null; FAZENDA_COBRANCA_ID=null; ASSINATURAS_CONTA=[]; USUARIO_ID=null;
+  FAZENDAS_EQUIPE=[]; NOMES_EQUIPE={}; EQUIPE_DADOS=null; CONVITE_RESULTADO=null;
+  const cb=$('convite-banner'); if(cb){ cb.classList.add('hidden'); cb.innerHTML=''; }
   const barra=$('faz-barra'); if(barra){ barra.classList.add('hidden'); barra.innerHTML=''; }
   await db.auth.signOut(); screen('scr-login');
 }
@@ -674,11 +715,24 @@ async function bootReal(){
   // pessoa usou neste aparelho; sem isso, na mais antiga — que era o único
   // comportamento até a entrega 1 do multi-fazenda, então quem tem 1 fazenda
   // continua caindo exatamente onde caía.
-  const {data:faz} = await db.from('fazenda').select('*').order('criado_em',{ascending:true});
-  if(!faz || !faz.length){ screen('scr-faz'); return; }
+  // Equipe (entrega 2): primeiro tenta usar um convite guardado neste aparelho;
+  // depois junta as fazendas DELE (tabela fazenda, só as próprias pela RLS) com
+  // as fazendas onde ele é funcionário (RPC equipe_minhas_fazendas).
   USUARIO_ID = user.id;
-  FAZENDAS = faz;
-  FAZENDA = fazendaInicial();
+  CONVITE_RESULTADO = await processarConviteEquipe(user);
+  const [{data:faz}] = await Promise.all([
+    db.from('fazenda').select('*').order('criado_em',{ascending:true}),
+    carregarFazendasEquipe()
+  ]);
+  FAZENDAS = faz || [];
+  if(!FAZENDAS.length && !FAZENDAS_EQUIPE.length){
+    if(CONVITE_RESULTADO && !CONVITE_RESULTADO.ok){ mostrarTelaConvite(CONVITE_RESULTADO); return; }
+    $('faz-voltar')?.classList.add('hidden');
+    screen('scr-faz'); return;
+  }
+  FAZENDA = fazendaInicial(CONVITE_RESULTADO?.ok ? CONVITE_RESULTADO.fazendas?.[0]?.id : null);
+  if(FAZENDA_RECEM_CRIADA){ const minha=fazendasAtivas().slice(-1)[0]; if(minha) FAZENDA=minha; }
+  if(CONVITE_RESULTADO?.ok || FAZENDA_RECEM_CRIADA) lembrarFazenda();
   FAZENDA_COBRANCA_ID = null;
   const voltouDoPagamento = await processarRetornoPagamento();
   await atualizarModoAcesso();
@@ -692,6 +746,7 @@ async function bootReal(){
   }
   renderSeletorFazenda();
   screen('scr-app');
+  renderBannerConvite(CONVITE_RESULTADO);
   loadTicker();
   // Quem volta do Mercado Pago cai em "Minha conta", olhando o plano — não no
   // Dashboard, senão paga e não vê confirmação nenhuma.
@@ -727,6 +782,7 @@ function fazendaTitularLocal(){
   return ordem.find(f=>temPlano(f.id))?.id || null;
 }
 async function atualizarModoAcesso(){
+  if(ehEquipe()) return atualizarModoAcessoEquipe();
   MODO_LEITURA=false;
   await carregarEstadoConta();
   const estado=estadoAssinatura(ASSINATURA_ATUAL);
@@ -785,9 +841,10 @@ async function carregarStatsBloqueio(){
 // A visão "Todas as fazendas" é a entrega 3 — aqui é sempre uma fazenda por vez.
 function chaveUltimaFazenda(uid){ return `ca:fazenda:v1:${APP_BASE}:${uid}`; }
 function fazendasAtivas(){ return FAZENDAS.filter(f=>!f.arquivada_em); }
-function fazendaInicial(){
-  const ativas=fazendasAtivas();
-  const lista=ativas.length ? ativas : FAZENDAS;
+function fazendaInicial(preferida){
+  // Dono sem equipe: lista = as fazendas dele, exatamente como antes da entrega 2.
+  const lista=fazendasAbriveis();
+  if(preferida){ const p=lista.find(f=>f.id===preferida); if(p) return p; }
   const salva=USUARIO_ID ? lsGet(chaveUltimaFazenda(USUARIO_ID)) : null;
   return lista.find(f=>f.id===salva) || lista[0];
 }
@@ -818,9 +875,9 @@ function renderSeletorFazenda(){
   if(!FAZENDA) return;
   $('faz-nome').textContent=FAZENDA.nome;
   const barra=$('faz-barra'); if(!barra) return;
-  if(fazendasAtivas().length<2){ barra.classList.add('hidden'); barra.innerHTML=''; return; }
+  if(fazendasAbriveis().length<2){ barra.classList.add('hidden'); barra.innerHTML=''; return; }
   barra.innerHTML=`<button type="button" onclick="abrirSeletorFazenda()" aria-haspopup="dialog">
-      <span class="faz-atual">📍 Você está na <strong>${esc(FAZENDA.nome)}</strong></span>
+      <span class="faz-atual">📍 Você está na <strong>${esc(FAZENDA.nome)}</strong>${ehEquipe()?` <small>(equipe de ${esc(FAZENDA.dono_nome)})</small>`:''}</span>
       <span class="faz-trocar">Trocar ▾</span>
     </button>`;
   barra.classList.remove('hidden');
@@ -831,13 +888,15 @@ async function abrirSeletorFazenda(){
   d.innerHTML='<p class="mut" style="font-size:16px">Carregando suas fazendas…</p>';
   ov.classList.remove('hidden');
   d.focus();
-  await carregarCabecasFazendas();
+  await Promise.all([FAZENDAS.length?carregarCabecasFazendas():null, carregarFazendasEquipe()]);
   const ativas=fazendasAtivas();
   d.innerHTML=`<h2 id="faz-titulo">Qual fazenda você quer ver?</h2>
+    ${FAZENDAS_EQUIPE.length && ativas.length?'<div class="section-title" style="margin:4px 0">Suas fazendas</div>':''}
     ${ativas.map(f=>`<button type="button" class="faz-opcao${f.id===FAZENDA?.id?' atual':''}" data-faz="${esc(f.id)}">
         ${f.id===FAZENDA?.id?'✅ ':''}${esc(f.nome)}<small>${resumoFazenda(f)}${f.id===FAZENDA?.id?' · aberta agora':''}</small>
       </button>`).join('')}
-    <button type="button" class="btn sec" style="margin-top:6px;min-height:52px;font-size:16px" data-acao="nova">➕ Cadastrar outra fazenda</button>
+    ${opcoesSeletorEquipeHTML()}
+    ${FAZENDAS.length?'<button type="button" class="btn sec" style="margin-top:6px;min-height:52px;font-size:16px" data-acao="nova">➕ Cadastrar outra fazenda</button>':''}
     <button type="button" class="btn ghost" style="width:100%;margin-top:8px;min-height:48px;font-size:16px" data-acao="fechar">Fechar</button>`;
   d.onclick=(e)=>{
     const b=e.target.closest('button'); if(!b) return;
@@ -857,7 +916,7 @@ document.addEventListener('keydown',(e)=>{
   if(e.key==='Escape' && $('faz-overlay') && !$('faz-overlay').classList.contains('hidden')){ e.preventDefault(); fecharSeletorFazenda(); }
 });
 async function trocarFazenda(id){
-  const f=FAZENDAS.find(x=>x.id===id);
+  const f=fazendasAbriveis().find(x=>x.id===id) || FAZENDAS.find(x=>x.id===id);
   fecharSeletorFazenda();
   if(!f || f.id===FAZENDA?.id) return;
   FAZENDA=f; lembrarFazenda(); renderSeletorFazenda();
@@ -876,6 +935,7 @@ function mensagemErroFazenda(error){
   return esc(m||'Não consegui salvar agora. Tente de novo em instantes.');
 }
 function renderNovaFazenda(){
+  if(ehEquipe()) return novaFazendaPropria();
   setNav('conta');
   const pracas=['SP','MS','GO','MG','MT','RJ'];
   const titulo='<div class="nome" style="font-size:20px;margin:10px 0 4px">🏡 Cadastrar outra fazenda</div>';
@@ -1037,6 +1097,7 @@ function renderAvisoAcesso(estado){
   const trialBanner=$('trial-banner');
   const leituraBanner=$('modo-leitura-banner');
   if(leituraBanner) leituraBanner.classList.toggle('hidden',!estado.modoLeitura);
+  $('ml-dono')?.classList.remove('hidden'); $('ml-equipe')?.classList.add('hidden');
   if(!trialBanner) return;
   if(!estado.trialAtivo || estado.modoLeitura){
     trialBanner.classList.add('hidden');
@@ -1118,9 +1179,539 @@ function tratarErroPlano(error,msgEl){
 // leva direto pra tela de planos mostrando o que já foi construído.
 function podeEditar(){
   if(!MODO_LEITURA) return true;
+  if(ehEquipe()){
+    pwaToast('Esta fazenda está só para consulta agora. Fale com o dono da fazenda para voltar a lançar.');
+    return false;
+  }
   renderPagamento();
   window.scrollTo({top:0,behavior:'smooth'});
   return false;
+}
+
+// ---------- equipe por convite de e-mail (multi-fazenda, entrega 2 — 13/10/2026) ----------
+// Regras que valem no BANCO (migration 20261013010000) e que esta tela só espelha:
+//  · DONO = quem cadastrou a fazenda; FUNCIONÁRIO = quem aceitou um convite por e-mail;
+//  · o funcionário só entra nas fazendas que o dono marcou no convite;
+//  · ele lança pesagem, custo e vacina, e corrige/apaga só o que ELE lançou;
+//  · ele NÃO vê lucro, custo da @, simulador, preço de venda, total do lote,
+//    plano/pagamento, Admin nem Equipe. Isso é garantido no banco: a tabela lote
+//    e a vw_lote_analise não devolvem nada para ele — a tela dele usa só a RPC
+//    equipe_lotes (peso, GMD, quantidade, datas) e as listas de lançamento;
+//  · teste/plano vencido do dono vale para ele: só consulta, com "fale com o dono".
+// Dono sem equipe: nenhuma tela dele muda (só ganha o cartão "Equipe" em Minha conta).
+let FAZENDAS_EQUIPE=[], NOMES_EQUIPE={}, EQUIPE_DADOS=null, CONVITE_RESULTADO=null;
+function ehEquipe(){ return !!FAZENDA && FAZENDA.__equipe===true; }
+function fazendasAbriveis(){
+  const ativas=fazendasAtivas();
+  return [...(ativas.length ? ativas : FAZENDAS), ...FAZENDAS_EQUIPE];
+}
+async function carregarFazendasEquipe(){
+  const {data,error}=await db.rpc('equipe_minhas_fazendas');
+  // Banco sem a entrega 2 (ou falha): ninguém é funcionário — o app segue como antes.
+  if(error){ FAZENDAS_EQUIPE=[]; return false; }
+  FAZENDAS_EQUIPE=(data||[]).map(f=>({
+    id:f.fazenda_id, nome:f.nome, dono_id:f.dono_id, dono_nome:f.dono_nome||'o dono',
+    somente_consulta:f.somente_consulta===true, __equipe:true
+  }));
+  return true;
+}
+async function carregarNomesEquipe(fazendaId){
+  NOMES_EQUIPE={};
+  if(!fazendaId) return;
+  const {data,error}=await db.rpc('equipe_nomes',{p_fazenda:fazendaId});
+  if(error) return;
+  (data||[]).forEach(n=>{ NOMES_EQUIPE[n.user_id]={nome:n.nome||'—', eh_dono:n.eh_dono===true}; });
+}
+function fazendaTemEquipe(){ return Object.values(NOMES_EQUIPE).some(n=>!n.eh_dono); }
+function nomeAutor(criadoPor){
+  if(criadoPor && criadoPor===USUARIO_ID) return 'você';
+  if(!criadoPor){ // lançado antes de existir equipe = do dono
+    if(!ehEquipe()) return 'você';
+    return Object.values(NOMES_EQUIPE).find(n=>n.eh_dono)?.nome || 'o dono';
+  }
+  return NOMES_EQUIPE[criadoPor]?.nome || 'pessoa que saiu da equipe';
+}
+function dataCurta(ts){ return ts ? new Date(ts).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}) : ''; }
+function autorHTML(r){
+  const q=dataCurta(r?.criado_em);
+  return `<small class="lancado-por">lançado por ${esc(nomeAutor(r?.criado_por))}${q?', '+q:''}</small>`;
+}
+// Na tela do DONO o rótulo só aparece quando a fazenda tem equipe.
+function autorDonoHTML(r){ return fazendaTemEquipe() ? autorHTML(r) : ''; }
+function erroLancamento(error){
+  if(!ehEquipe()) return error.message; // dono: mensagem igual a antes
+  const m=String(error?.message||'');
+  if(/TRIAL_EXPIRADO/.test(m)) return 'Esta fazenda está só para consulta agora. Fale com o dono da fazenda.';
+  if(error?.code==='42501' || /row-level security/i.test(m)) return 'Você não tem mais acesso a este lote. O dono pode ter tirado você desta fazenda ou fechado o lote.';
+  return esc(m||'Não consegui salvar agora. Tente de novo em instantes.');
+}
+
+// ----- convite: guardar, aceitar, avisar -----
+function conviteEquipeGuardado(){
+  try{
+    const o=JSON.parse(localStorage.getItem(CHAVE_CONVITE_EQUIPE)||'null');
+    if(!o || !/^[0-9a-f]{64}$/.test(o.t||'')) return null;
+    if(Date.now()-(o.em||0) > 7*MS_DIA){ localStorage.removeItem(CHAVE_CONVITE_EQUIPE); return null; }
+    return o.t;
+  }catch(e){ return null; }
+}
+function esquecerConviteEquipe(){ try{ localStorage.removeItem(CHAVE_CONVITE_EQUIPE); }catch(e){} }
+function atualizarFaixaConviteLogin(){
+  const el=$('convite-login'); if(!el) return;
+  if(!conviteEquipeGuardado()){ el.classList.add('hidden'); el.innerHTML=''; return; }
+  el.innerHTML='📩 <strong>Você recebeu um convite para trabalhar numa fazenda no Certo Agro.</strong><br>Entre — ou crie sua conta — usando o <strong>mesmo e-mail em que o convite chegou</strong>.';
+  el.classList.remove('hidden');
+}
+async function processarConviteEquipe(user){
+  const token=conviteEquipeGuardado(); if(!token) return null;
+  const {data,error}=await db.rpc('equipe_aceitar_convite',{p_token:token});
+  if(error) return {motivo:'erro'}; // sem internet / banco fora: guarda o convite e tenta no próximo login
+  if(data?.ok){ esquecerConviteEquipe(); return {ok:true, fazendas:data.fazendas||[], dono_nome:data.dono_nome||'o dono'}; }
+  if(data?.motivo==='outro_email') return {motivo:'outro_email', email_convidado:data.email_convidado||'', email_conta:user?.email||''};
+  if(data?.motivo==='email_nao_confirmado') return {motivo:'email_nao_confirmado'};
+  esquecerConviteEquipe();
+  return {motivo:'convite_invalido'};
+}
+function textoConvite(r){
+  if(!r) return null;
+  if(r.ok){
+    const nomes=(r.fazendas||[]).map(f=>f.nome);
+    const onde=nomes.length>1 ? `nas fazendas ${nomes.join(', ')}` : `na ${nomes[0]||'fazenda'}`;
+    return {tipo:'ok', html:`<strong>Pronto! Agora você faz parte da equipe de ${esc(r.dono_nome)} ${esc(onde)}.</strong> Você pode lançar pesagem, custo e vacina. O que você lançar aparece com o seu nome.`};
+  }
+  if(r.motivo==='outro_email') return {tipo:'err', html:`<strong>Este convite foi feito para o e-mail ${esc(r.email_convidado)}</strong>, mas você entrou com <strong>${esc(r.email_conta)}</strong>.<br>Saia e entre com o e-mail do convite. Se preferir usar este e-mail, peça ao dono da fazenda para mandar o convite para ele.`, sair:true};
+  if(r.motivo==='email_nao_confirmado') return {tipo:'err', html:'<strong>Falta confirmar o seu e-mail.</strong> Abra o e-mail que o Certo Agro mandou quando você criou a conta, toque no link de confirmação e depois entre de novo.', sair:true};
+  if(r.motivo==='erro') return {tipo:'warn', html:'<strong>Não consegui abrir o convite agora.</strong> Confira a internet. O convite continua guardado e eu tento de novo na próxima vez que você entrar.'};
+  return {tipo:'err', html:'<strong>Este convite não vale mais.</strong> Ele pode ter vencido (vale 7 dias), ter sido cancelado ou já ter sido usado. Peça ao dono da fazenda para mandar um convite novo.'};
+}
+function renderBannerConvite(r){
+  const el=$('convite-banner'); if(!el) return;
+  const t=textoConvite(r);
+  if(!t){ el.classList.add('hidden'); el.innerHTML=''; return; }
+  el.innerHTML=`<div class="msg ${t.tipo}" style="margin:0;font-size:15px;line-height:1.45">${t.html}
+      <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
+        ${t.sair?'<button type="button" class="btn mini" onclick="logout()">Sair e entrar com outro e-mail</button>':''}
+        <button type="button" class="btn mini sec" onclick="fecharBannerConvite()">Entendi</button>
+      </div></div>`;
+  el.classList.remove('hidden');
+  CONVITE_RESULTADO=null;
+}
+function fecharBannerConvite(){ const el=$('convite-banner'); if(el){ el.classList.add('hidden'); el.innerHTML=''; } }
+function mostrarTelaConvite(r){
+  const t=textoConvite(r)||textoConvite({motivo:'convite_invalido'});
+  $('convite-tela').innerHTML=`<div class="msg ${t.tipo}" style="font-size:15px;line-height:1.5">${t.html}</div>
+    <button type="button" class="btn" style="margin-top:12px;min-height:52px" onclick="logout()">Sair e entrar com outro e-mail</button>
+    ${r.motivo==='erro'||r.motivo==='email_nao_confirmado'?'<button type="button" class="btn sec" style="margin-top:8px;min-height:52px" onclick="tentarConviteDeNovo()">Tentar de novo</button>':''}
+    <button type="button" class="btn ghost" style="width:100%;margin-top:8px" onclick="cadastrarFazendaSemConvite()">Não vim por convite — quero cadastrar a minha fazenda</button>`;
+  screen('scr-convite');
+}
+async function tentarConviteDeNovo(){ BOOT_ULTIMO_USER_ID=null; await boot(); }
+function cadastrarFazendaSemConvite(){ esquecerConviteEquipe(); $('faz-voltar')?.classList.add('hidden'); screen('scr-faz'); }
+
+// ----- funcionário: estado da fazenda (do dono) -----
+async function atualizarModoAcessoEquipe(){
+  const id=FAZENDA?.id;
+  await carregarFazendasEquipe();
+  const atual=FAZENDAS_EQUIPE.find(f=>f.id===id);
+  if(!atual){
+    // Foi tirado desta fazenda (ou o dono arquivou): volta para o que ainda pode abrir.
+    FAZENDA=fazendasAbriveis()[0]||null;
+    if(!FAZENDA){ BOOT_ULTIMO_USER_ID=null; return boot(); }
+    lembrarFazenda(); renderSeletorFazenda();
+    pwaToast('Você não faz mais parte da equipe daquela fazenda.');
+    if(!ehEquipe()) return atualizarModoAcesso();
+  }else{
+    FAZENDA=atual;
+  }
+  LIMITE_USO=null; ASSINATURA_ATUAL=null; FAZENDA_COBRANCA_ID=null; ASSINATURAS_CONTA=[];
+  MODO_LEITURA=FAZENDA.somente_consulta===true;
+  $('trial-banner')?.classList.add('hidden');
+  $('limite-banner')?.classList.add('hidden');
+  const nome=$('ml-dono-nome'); if(nome) nome.textContent=FAZENDA.dono_nome||'o dono da fazenda';
+  $('ml-dono')?.classList.add('hidden');
+  $('ml-equipe')?.classList.toggle('hidden', !MODO_LEITURA);
+  $('modo-leitura-banner')?.classList.toggle('hidden', !MODO_LEITURA);
+}
+function opcoesSeletorEquipeHTML(){
+  if(!FAZENDAS_EQUIPE.length) return '';
+  const donos=[...new Set(FAZENDAS_EQUIPE.map(f=>f.dono_id))];
+  return donos.map(d=>{
+    const lista=FAZENDAS_EQUIPE.filter(f=>f.dono_id===d);
+    return `<div class="section-title" style="margin:12px 0 4px">Equipe de ${esc(lista[0].dono_nome)}</div>
+      ${lista.map(f=>`<button type="button" class="faz-opcao${f.id===FAZENDA?.id?' atual':''}" data-faz="${esc(f.id)}">
+        ${f.id===FAZENDA?.id?'✅ ':''}${esc(f.nome)}<small>você trabalha aqui${f.somente_consulta?' · só consulta':''}${f.id===FAZENDA?.id?' · aberta agora':''}</small>
+      </button>`).join('')}`;
+  }).join('');
+}
+async function novaFazendaPropria(){
+  const minha=fazendasAtivas()[0];
+  if(minha){
+    FAZENDA=minha; lembrarFazenda(); renderSeletorFazenda();
+    await atualizarModoAcesso();
+    return renderNovaFazenda();
+  }
+  $('faz-voltar')?.classList.remove('hidden');
+  screen('scr-faz');
+}
+function voltarDoCadastroFazenda(){ screen('scr-app'); renderContaEquipe(); }
+
+// ----- funcionário: telas SEM dinheiro -----
+async function lotesDaEquipe(){
+  const {data,error}=await db.rpc('equipe_lotes',{p_fazenda:FAZENDA.id});
+  return {lotes:data||[], error};
+}
+function linhaLoteEquipe(l){
+  return `<div class="card lote-card" onclick="renderLote('${esc(l.lote_id)}')">
+      <div class="nome">${esc(l.nome)}</div>
+      <span class="pill">${esc(l.fase||'')}</span> <span class="mut">${l.qtd_animais||0} cab</span>
+      <div class="grid2" style="margin-top:12px">
+        <div class="kpi"><div class="lbl">Peso atual</div><div class="val">${l.peso_atual_kg!=null?num(l.peso_atual_kg,0)+' kg':'—'}</div></div>
+        <div class="kpi"><div class="lbl">GMD (ganho/dia)</div>
+          <div class="val ${l.gmd>3?'neg':''}">${l.gmd!=null?num(l.gmd,2)+' kg/d':'—'}</div>
+          ${l.gmd>3?'<div class="lbl" style="margin-top:3px;color:var(--vermelho)">⚠ impossível — confira peso/datas</div>':''}</div>
+      </div>
+    </div>`;
+}
+async function renderDashboardEquipe(){
+  setNav('dash');
+  const body=$('app-body'); body.innerHTML='<p class="mut center" style="padding:30px">Carregando…</p>';
+  const {lotes,error}=await lotesDaEquipe();
+  if(error){ body.innerHTML='<div class="msg err">Não consegui carregar os lotes agora. Tente de novo em instantes.</div>'; return; }
+  const ids=lotes.map(l=>l.lote_id);
+  const {data:vacinas}=ids.length
+    ? await db.from('sanitario').select('*').in('lote_id',ids).not('proxima_data','is',null).lte('proxima_data',addDias(hoje(),14)).order('proxima_data')
+    : {data:[]};
+  const nomeLote=id=>lotes.find(l=>l.lote_id===id)?.nome||'Lote';
+  const total=lotes.reduce((s,l)=>s+(l.qtd_animais||0),0);
+  const pesoMedio=total?lotes.reduce((s,l)=>s+(Number(l.peso_atual_kg)||0)*(l.qtd_animais||0),0)/total:0;
+  const gmdRuim=lotes.filter(l=>Number(l.gmd)>3);
+  body.innerHTML=`<div class="card hero">
+      <h3>${esc(FAZENDA.nome)}</h3>
+      <div class="big">${total} animais</div>
+      <p style="opacity:.85;font-size:14px;margin-top:6px">Você faz parte da equipe de ${esc(FAZENDA.dono_nome)} · ${lotes.length} lote(s) ativo(s)</p>
+    </div>
+    <div class="dashboard-grid">
+      <div class="dashboard-kpi"><div class="lbl">Animais ativos</div><div class="val">${total}</div></div>
+      <div class="dashboard-kpi"><div class="lbl">Lotes ativos</div><div class="val">${lotes.length}</div></div>
+      <div class="dashboard-kpi"><div class="lbl">Peso médio</div><div class="val">${num(pesoMedio,0)} kg</div></div>
+    </div>
+    <div class="card"><h3>Avisos</h3>
+      ${(vacinas||[]).map(s=>`<div class="msg err"><b>${esc(nomeLote(s.lote_id))}</b><br>${labelEvento(s.evento)}${s.produto?' — '+esc(s.produto):''} vence ${fmtData(s.proxima_data)}</div>`).join('')}
+      ${gmdRuim.map(l=>`<div class="msg err"><b>${esc(l.nome)}</b><br>GMD fora da faixa esperada. Confira pesos e datas.</div>`).join('')}
+      ${(!(vacinas||[]).length && !gmdRuim.length)?'<div class="msg ok">Nenhuma vacina vencendo nos próximos 14 dias.</div>':''}
+    </div>
+    <button class="btn" style="margin:4px 0 30px;min-height:52px;font-size:16px" onclick="renderLotes()">🐂 Ver os lotes e lançar</button>`;
+}
+async function renderLotesEquipe(){
+  setNav('lotes');
+  const body=$('app-body'); body.innerHTML='<p class="mut center" style="padding:30px">Carregando…</p>';
+  const {lotes,error}=await lotesDaEquipe();
+  if(error){ body.innerHTML='<div class="msg err">Não consegui carregar os lotes agora. Tente de novo em instantes.</div>'; return; }
+  body.innerHTML=`<div class="section-title">Lotes da ${esc(FAZENDA.nome)}</div>
+    ${lotes.length?`<div class="cards-grid">${lotes.map(linhaLoteEquipe).join('')}</div>`
+      :'<div class="card center"><p class="mut">Nenhum lote ativo nesta fazenda. Quem cria lote é o dono da fazenda.</p></div>'}
+    <div style="height:30px"></div>`;
+}
+async function renderLoteEquipe(id){
+  EDIT_PES=null; EDIT_CUS=null; EDIT_SAN=null;
+  setNav('lotes');
+  const body=$('app-body'); body.innerHTML='<p class="mut center" style="padding:30px">Carregando…</p>';
+  const [{lotes},{data:pes},{data:cus},{data:san}] = await Promise.all([
+    lotesDaEquipe(),
+    db.from('pesagem').select('*').eq('lote_id',id).order('data',{ascending:false}),
+    db.from('custo').select('*').eq('lote_id',id).order('data',{ascending:false}),
+    db.from('sanitario').select('*').eq('lote_id',id).order('data',{ascending:false}),
+    carregarNomesEquipe(FAZENDA.id),
+  ]);
+  const v=lotes.find(l=>l.lote_id===id);
+  if(!v){
+    body.innerHTML=`<button class="back" onclick="renderLotes()">← Voltar</button>
+      <div class="msg err" style="font-size:15px">Este lote não está mais disponível para você. Ele pode ter sido fechado, ou o dono tirou você desta fazenda.</div>`;
+    return;
+  }
+  const meu=r=>r.criado_por && r.criado_por===USUARIO_ID;
+  const lerSo=MODO_LEITURA;
+  body.innerHTML=`<button class="back" onclick="renderLotes()">← Voltar</button>
+    <div style="margin:6px 0"><div class="nome" style="font-size:22px">${esc(v.nome)}</div>
+      <span class="pill">${esc(v.fase||'')}</span> <span class="mut">${esc(v.sistema||'')} · ${v.qtd_animais||0} cab · ${esc(FAZENDA.nome)}</span></div>
+    <div class="card">
+      <h3>📊 Desempenho</h3>
+      <div class="grid2">
+        <div class="kpi"><div class="lbl">Peso atual</div><div class="val">${v.peso_atual_kg!=null?num(v.peso_atual_kg,0)+' kg':'—'}</div></div>
+        <div class="kpi"><div class="lbl">GMD (ganho por dia)</div>
+          <div class="val ${v.gmd>3?'neg':''}">${v.gmd!=null?num(v.gmd,2)+' kg/d':'—'}</div>
+          ${v.gmd==null?'<div class="lbl" style="margin-top:3px">pese em outra data pra calcular</div>':''}
+          ${v.gmd>3?'<div class="lbl" style="margin-top:3px;color:var(--vermelho)">⚠ impossível na vida real — confira peso e datas</div>':''}</div>
+      </div>
+      ${v.peso_inicial_kg!=null&&v.peso_atual_kg!=null?`<p class="mut" style="margin-top:10px">${num(v.peso_inicial_kg,0)} kg → ${num(v.peso_atual_kg,0)} kg em ${v.dias_periodo??0} dias</p>`:''}
+    </div>
+
+    <div class="card">
+      <h3>⚖️ Pesagens</h3>
+      ${(pes||[]).length>1?'<div style="height:140px;margin-bottom:12px"><canvas id="chart-peso"></canvas></div>':''}
+      ${(pes||[]).map(p=>`<div class="list-item"><span>${fmtData(p.data)}${autorHTML(p)}</span>
+        <span><b>${num(p.peso_medio_kg,0)} kg</b>
+          ${meu(p)&&!lerSo?`<button class="btn ghost mini" title="Corrigir" onclick="editPesagem('${id}','${p.id}','${p.data}',${Number(p.peso_medio_kg)})">✏️</button>
+          <button class="btn ghost mini" title="Apagar" onclick="delPesagem('${id}','${p.id}',this)">🗑️</button>`:''}
+        </span></div>`).join('')||'<p class="mut">Sem pesagens.</p>'}
+      ${lerSo?'':`<div style="display:flex;gap:8px;margin-top:12px">
+        <input id="pes-data" type="date" value="${hoje()}" aria-label="Data da pesagem" />
+        <input id="pes-peso" type="number" inputmode="decimal" placeholder="peso médio kg" aria-label="Peso médio em kg" />
+        <button class="btn mini" id="pes-add" aria-label="Lançar pesagem" onclick="addPesagem('${id}')">+</button>
+      </div>`}
+      <div id="pes-msg"></div>
+    </div>
+
+    <div class="card">
+      <h3>💵 Custos lançados</h3>
+      <p class="mut">A lista do que foi gasto com este lote. Você corrige ou apaga só o que você lançou.</p>
+      ${(cus||[]).map(c=>`<div class="list-item"><span>${fmtData(c.data)} · ${esc(c.categoria)}${autorHTML(c)}</span>
+        <span><b>${brl(c.valor)}</b>
+          ${meu(c)&&!lerSo?`<button class="btn ghost mini" title="Corrigir" onclick="editCusto('${id}','${c.id}','${c.data}',${esc(JSON.stringify(String(c.categoria??'')))},${Number(c.valor)})">✏️</button>
+          <button class="btn ghost mini" title="Apagar" onclick="delCusto('${id}','${c.id}',this)">🗑️</button>`:''}
+        </span></div>`).join('')||'<p class="mut">Sem custos.</p>'}
+      ${lerSo?'':`<div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+        <input id="cus-data" type="date" value="${hoje()}" style="flex:1;min-width:130px" aria-label="Data do custo" />
+        <select id="cus-cat" style="flex:1;min-width:130px" aria-label="Tipo de custo">
+          <option value="alimentacao">Alimentação</option><option value="sanitario">Sanitário</option>
+          <option value="mao_obra">Mão de obra</option><option value="operacional">Operacional</option>
+          <option value="fixo">Fixo</option><option value="outro">Outro</option>
+        </select>
+        <input id="cus-valor" type="number" inputmode="decimal" placeholder="R$ valor" style="flex:1;min-width:110px" aria-label="Valor em reais" />
+        <button class="btn mini" id="cus-add" aria-label="Lançar custo" onclick="addCusto('${id}')">+</button>
+      </div>`}
+      <div id="cus-msg"></div>
+    </div>
+
+    <div class="card">
+      <h3>💉 Sanitário</h3>
+      ${lerSo?'':guiaVacinacaoHTML(v.fase)}
+      ${proximasSanitario(san).map(s=>`<div class="msg err">⚠ ${labelEvento(s.evento)}${s.produto?' — '+esc(s.produto):''} — próxima dose ${fmtData(s.proxima_data)}</div>`).join('')}
+      ${(san||[]).map(s=>`<div class="list-item"><span>${fmtData(s.data)} · ${labelEvento(s.evento)}${s.produto?' — '+esc(s.produto):''}${s.proxima_data?' <span class="mut">(próx.: '+fmtData(s.proxima_data)+')</span>':''}${autorHTML(s)}</span>
+        <span><b>${s.custo!=null?brl(s.custo):''}</b>
+          ${meu(s)&&!lerSo?`<button class="btn ghost mini" title="Apagar" onclick="delSanitario('${id}','${s.id}',this)">🗑️</button>`:''}
+        </span></div>`).join('')||'<p class="mut">Sem eventos sanitários.</p>'}
+      ${lerSo?'':`<div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+        <input id="san-data" type="date" value="${hoje()}" style="flex:1;min-width:130px" aria-label="Data do evento" />
+        <select id="san-evento" style="flex:1;min-width:130px" aria-label="Tipo de evento">
+          <option value="vacina">Vacina</option><option value="vermifugo">Vermífugo</option>
+          <option value="exame">Exame</option><option value="tratamento">Tratamento</option>
+        </select>
+        <input id="san-produto" placeholder="Produto (ex: Aftosa)" style="flex:1;min-width:140px" aria-label="Produto" />
+        <input id="san-proxima" type="date" style="flex:1;min-width:130px" title="Próxima dose (opcional)" aria-label="Próxima dose (opcional)" />
+        <input id="san-custo" type="number" inputmode="decimal" placeholder="R$ custo (opc.)" style="flex:1;min-width:110px" aria-label="Custo em reais (opcional)" />
+        <button class="btn mini" id="san-add" aria-label="Lançar evento sanitário" onclick="addSanitario('${id}')">+</button>
+      </div>`}
+      <div id="san-msg"></div>
+    </div>
+    <div style="height:30px"></div>`;
+  renderGraficoPeso(pes);
+}
+async function renderContaEquipe(){
+  setNav('conta');
+  const body=$('app-body'); body.innerHTML='<p class="mut center" style="padding:30px">Carregando…</p>';
+  const [{data:{user}}]=await Promise.all([db.auth.getUser(), carregarFazendasEquipe()]);
+  const donos=[...new Set(FAZENDAS_EQUIPE.map(f=>f.dono_id))];
+  body.innerHTML=`${pwaItemContaHTML()}
+    <div class="nome" style="font-size:20px;margin:10px 0 4px">👤 Minha conta</div>
+    <div class="card" style="max-width:560px">
+      <p style="font-size:15px">Você entrou com <strong>${esc(user?.email||'')}</strong>.</p>
+    </div>
+    <div class="card" style="max-width:560px">
+      <h3>Onde você trabalha</h3>
+      ${donos.map(d=>{ const l=FAZENDAS_EQUIPE.filter(f=>f.dono_id===d); return `<div style="margin:10px 0 4px;font-weight:700">Equipe de ${esc(l[0].dono_nome)}</div>
+        ${l.map(f=>`<div class="faz-linha"><div class="faz-info">${esc(f.nome)}${f.id===FAZENDA?.id?' <span class="pill">aberta agora</span>':''}<small>${f.somente_consulta?'só consulta — fale com o dono':'você pode lançar'}</small></div>
+          <div class="faz-botoes">${f.id===FAZENDA?.id?'':`<button type="button" class="btn mini sec" onclick="trocarFazenda('${esc(f.id)}')">Abrir</button>`}</div></div>`).join('')}`; }).join('')}
+    </div>
+    <div class="card" style="max-width:560px">
+      <h3>O que você pode fazer</h3>
+      <ul style="margin:6px 0 0;padding-left:20px;line-height:1.7;font-size:15px">
+        <li>Lançar <strong>pesagem, custo e vacina</strong> nos lotes das fazendas acima.</li>
+        <li>Corrigir ou apagar <strong>só o que você mesmo lançou</strong>.</li>
+        <li>Tudo o que você lança aparece com o seu nome para o dono.</li>
+      </ul>
+      <p class="mut" style="font-size:14px;margin-top:10px">O plano e os pagamentos ficam com o dono da fazenda.</p>
+    </div>
+    <div class="card" style="max-width:560px">
+      <h3>Tem fazenda sua também?</h3>
+      ${fazendasAtivas().length
+        ? `<p class="mut" style="font-size:14px">Suas fazendas aparecem no botão do topo, junto com as da equipe.</p>
+           <button type="button" class="btn sec" style="margin-top:8px;min-height:48px" onclick="trocarFazenda('${esc(fazendasAtivas()[0].id)}')">Abrir a minha fazenda</button>`
+        : `<p class="mut" style="font-size:14px">Você pode cadastrar a sua e acompanhar o seu gado, com 15 dias de teste grátis. Não muda nada na equipe.</p>
+           <button type="button" class="btn sec" style="margin-top:8px;min-height:48px" onclick="novaFazendaPropria()">Cadastrar a minha fazenda</button>`}
+    </div>
+    <div style="height:30px"></div>`;
+}
+
+// ----- dono: cartão "Equipe" em Minha conta -----
+async function carregarEquipeDono(){
+  const {data,error}=await db.rpc('equipe_listar');
+  EQUIPE_DADOS = error ? null : (data||{membros:[],convites:[]});
+}
+function cartaoEquipeHTML(){
+  if(!EQUIPE_DADOS) return ''; // banco sem a entrega 2: não mostra o cartão
+  const ativas=fazendasAtivas();
+  const varias=ativas.length>1;
+  const membros=EQUIPE_DADOS.membros||[], convites=EQUIPE_DADOS.convites||[];
+  const nomes=l=>(l||[]).map(f=>esc(f.nome)).join(', ');
+  const envio=c=>c.envio==='enviado'?' · e-mail enviado':c.envio==='falhou'?' · o e-mail não saiu — use "Reenviar" ou mande o link pelo WhatsApp':' · e-mail saindo em instantes';
+  const linhaMembro=m=>`<div class="faz-linha" data-membro="${esc(m.user_id)}">
+      <div class="faz-info">${esc(m.nome||m.email||'Pessoa')}
+        <small>${esc(m.email||'')}${varias?' · '+nomes(m.fazendas):''} · ${m.ultimo_lancamento?'último lançamento em '+dataCurta(m.ultimo_lancamento):'ainda não lançou nada'}</small></div>
+      <div class="faz-botoes">
+        ${varias?'<button type="button" class="btn mini sec" data-acao="eq-fazendas">Escolher fazendas</button>':''}
+        <button type="button" class="btn mini sec" data-acao="eq-remover">Remover</button>
+      </div>
+      <div class="faz-confirma"></div>
+    </div>`;
+  const linhaConvite=c=>`<div class="faz-linha" data-convite="${esc(c.id)}" data-email="${esc(c.email)}">
+      <div class="faz-info">${esc(c.email)} <span class="pill">${c.vencido?'convite vencido':'esperando resposta'}</span>
+        <small>${varias?nomes(c.fazendas)+' · ':''}${c.vencido?'venceu — toque em "Reenviar" para valer mais 7 dias':'vale até '+dataCurta(c.expira_em)+envio(c)}</small></div>
+      <div class="faz-botoes">
+        <button type="button" class="btn mini sec" data-acao="eq-reenviar">Reenviar</button>
+        <button type="button" class="btn mini sec" data-acao="eq-cancelar">Cancelar convite</button>
+      </div>
+      <div class="faz-confirma"></div>
+    </div>`;
+  return `<div class="card" style="max-width:560px" id="card-equipe">
+      <h3>👥 Equipe</h3>
+      <p class="mut" style="font-size:14px;margin-bottom:6px">Convide quem trabalha com você. A pessoa entra com o e-mail dela e pode <strong>lançar pesagem, custo e vacina</strong>. Ela <strong>não vê</strong> lucro, custo da @, preço de venda, simulador nem o seu plano.</p>
+      ${membros.length?membros.map(linhaMembro).join(''):'<p class="mut" style="font-size:14px">Ninguém na sua equipe ainda.</p>'}
+      ${convites.length?`<div class="section-title" style="margin:16px 0 4px">Convites</div>${convites.map(linhaConvite).join('')}`:''}
+      <div class="section-title" style="margin:18px 0 4px">Convidar uma pessoa</div>
+      <label for="eq-email">E-mail da pessoa</label>
+      <input id="eq-email" type="email" inputmode="email" autocomplete="off" maxlength="254" placeholder="maria@gmail.com" />
+      ${varias?`<div style="margin-top:12px;font-weight:700;font-size:15px">Em quais fazendas ela vai trabalhar?</div>
+        ${ativas.map(f=>`<label class="eq-check"><input type="checkbox" name="eq-faz" value="${esc(f.id)}" ${f.id===FAZENDA?.id?'checked':''}> ${esc(f.nome)}</label>`).join('')}`
+        :`<p class="mut" style="font-size:14px;margin-top:6px">Ela vai trabalhar na ${esc(ativas[0]?.nome||'sua fazenda')}.</p>`}
+      <div id="eq-msg"></div>
+      <button type="button" class="btn" style="margin-top:14px;min-height:52px;font-size:16px" data-acao="eq-convidar">Enviar convite por e-mail</button>
+      <div id="eq-link"></div>
+    </div>`;
+}
+function ligarCartaoEquipe(){
+  const c=$('card-equipe'); if(!c) return;
+  c.addEventListener('click',(e)=>{
+    const b=e.target.closest('button[data-acao]'); if(!b) return;
+    const a=b.dataset.acao;
+    const linha=b.closest('[data-membro],[data-convite]');
+    const uid=linha?.dataset.membro, cid=linha?.dataset.convite;
+    if(a==='eq-convidar') return equipeConvidar();
+    if(a==='eq-reenviar') return equipeReenviar(cid, linha?.dataset.email);
+    if(a==='eq-cancelar') return equipeCancelarConvite(cid);
+    if(a==='eq-remover') return equipePedirRemover(uid, linha);
+    if(a==='eq-sim-remover') return equipeConfirmarRemover(uid);
+    if(a==='eq-fazendas') return equipeEscolherFazendas(uid, linha);
+    if(a==='eq-salvar-fazendas') return equipeSalvarFazendas(uid, linha);
+    if(a==='eq-copiar') return equipeCopiarLink();
+    if(a==='eq-voltar'){ const p=linha?.querySelector('.faz-confirma'); if(p) p.innerHTML=''; }
+  });
+}
+async function atualizarCartaoEquipe(){
+  await carregarEquipeDono();
+  const velho=$('card-equipe'); if(!velho) return;
+  const link=$('eq-link')?.innerHTML||'';
+  velho.outerHTML=cartaoEquipeHTML();
+  ligarCartaoEquipe();
+  if(link && $('eq-link')) $('eq-link').innerHTML=link;
+}
+function erroEquipe(error){
+  // P2001..P2006 já vêm do banco escritos para o produtor.
+  if(/^P200\d$/.test(error?.code||'')) return esc(error.message);
+  return 'Não consegui fazer isso agora. Confira a internet e tente de novo.';
+}
+let EQUIPE_LINK=null;
+function mostrarLinkConvite(email, token){
+  EQUIPE_LINK = token ? window.location.origin + APP_BASE + '#convite=' + token : null;
+  const el=$('eq-link'); if(!el) return;
+  el.innerHTML=`<div class="msg ok" style="display:block;font-size:15px;line-height:1.45;margin-top:12px">
+      ✅ <strong>Convite enviado para ${esc(email)}.</strong> O e-mail chega em até 1 minuto (peça para olhar também o spam). O convite vale por 7 dias.
+      ${EQUIPE_LINK?`<br><br>Se preferir, mande o link pelo WhatsApp. <strong>Ele só funciona para quem entrar com o e-mail ${esc(email)}.</strong>
+      <button type="button" class="btn sec" style="margin-top:10px;min-height:48px" data-acao="eq-copiar">📋 Copiar link para mandar no WhatsApp</button>
+      <div class="eq-link" id="eq-link-campo"></div>`:''}
+    </div>`;
+}
+async function equipeCopiarLink(){
+  if(!EQUIPE_LINK) return;
+  try{ await navigator.clipboard.writeText(EQUIPE_LINK); pwaToast('Link copiado. Agora é só colar na conversa do WhatsApp.'); }
+  catch(e){
+    const campo=$('eq-link-campo');
+    if(campo){ campo.innerHTML=`<label for="eq-link-txt" style="margin-top:8px">Copie o link abaixo:</label><input id="eq-link-txt" readonly value="${esc(EQUIPE_LINK)}" />`; const i=$('eq-link-txt'); i.focus(); i.select(); }
+  }
+}
+async function equipeConvidar(){
+  const email=($('eq-email')?.value||'').trim().toLowerCase();
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return msg('eq-msg','Confira o e-mail: parece que falta alguma coisa (exemplo: maria@gmail.com).');
+  const ativas=fazendasAtivas();
+  const marcadas=ativas.length>1
+    ? [...document.querySelectorAll('input[name="eq-faz"]:checked')].map(i=>i.value)
+    : (ativas[0]?[ativas[0].id]:[]);
+  if(!marcadas.length) return msg('eq-msg','Marque pelo menos uma fazenda para essa pessoa trabalhar.');
+  const btn=document.querySelector('#card-equipe [data-acao="eq-convidar"]'); if(btn){ btn.disabled=true; btn.textContent='Enviando…'; }
+  const {data,error}=await db.rpc('equipe_criar_convite',{p_email:email, p_fazendas:marcadas});
+  if(btn){ btn.disabled=false; btn.textContent='Enviar convite por e-mail'; }
+  if(error) return msg('eq-msg', erroEquipe(error));
+  msg('eq-msg','');
+  await atualizarCartaoEquipe();
+  mostrarLinkConvite(email, data?.token);
+}
+async function equipeReenviar(id, email){
+  if(!id) return;
+  const {data,error}=await db.rpc('equipe_reenviar_convite',{p_convite:id});
+  if(error) return msg('eq-msg', erroEquipe(error));
+  await atualizarCartaoEquipe();
+  mostrarLinkConvite(email||'a pessoa', data?.token);
+}
+async function equipeCancelarConvite(id){
+  if(!id) return;
+  const {error}=await db.rpc('equipe_cancelar_convite',{p_convite:id});
+  if(error) return msg('eq-msg', erroEquipe(error));
+  await atualizarCartaoEquipe();
+  pwaToast('Convite cancelado. O link que foi mandado não funciona mais.');
+}
+function equipePedirRemover(uid, linha){
+  const m=(EQUIPE_DADOS?.membros||[]).find(x=>x.user_id===uid); const p=linha?.querySelector('.faz-confirma');
+  if(!m||!p) return;
+  p.innerHTML=`<div class="msg warn" style="display:block;margin-top:8px;font-size:15px">
+      <strong>Remover ${esc(m.nome||m.email)} da equipe?</strong>
+      <ul class="cancel-lista">
+        <li>Ela deixa de ver ${(m.fazendas||[]).length>1?'as suas fazendas':'a fazenda'} na hora.</li>
+        <li><strong>O que ela já lançou continua guardado</strong>, com o nome dela.</li>
+        <li>Se precisar, é só convidar de novo.</li>
+      </ul>
+      <div class="cancel-acoes">
+        <button type="button" class="btn mini" data-acao="eq-sim-remover">Sim, remover</button>
+        <button type="button" class="btn mini sec" data-acao="eq-voltar">Voltar</button>
+      </div>
+    </div>`;
+}
+async function equipeConfirmarRemover(uid){
+  const nome=(EQUIPE_DADOS?.membros||[]).find(x=>x.user_id===uid)?.nome||'A pessoa';
+  const {data,error}=await db.rpc('equipe_remover_membro',{p_user:uid});
+  if(error) return msg('eq-msg', erroEquipe(error));
+  await atualizarCartaoEquipe();
+  pwaToast(data?.ok ? `${nome} saiu da equipe. O que foi lançado continua guardado.` : 'Essa pessoa já não estava na equipe.');
+}
+function equipeEscolherFazendas(uid, linha){
+  const m=(EQUIPE_DADOS?.membros||[]).find(x=>x.user_id===uid); const p=linha?.querySelector('.faz-confirma');
+  if(!m||!p) return;
+  const tem=new Set((m.fazendas||[]).map(f=>f.id));
+  p.innerHTML=`<div class="msg ok" style="display:block;margin-top:8px">
+      <strong>Em quais fazendas ${esc(m.nome||m.email)} trabalha?</strong>
+      ${fazendasAtivas().map(f=>`<label class="eq-check"><input type="checkbox" name="eq-faz-m" value="${esc(f.id)}" ${tem.has(f.id)?'checked':''}> ${esc(f.nome)}</label>`).join('')}
+      <div class="cancel-acoes">
+        <button type="button" class="btn mini" data-acao="eq-salvar-fazendas">Salvar</button>
+        <button type="button" class="btn mini sec" data-acao="eq-voltar">Voltar</button>
+      </div>
+    </div>`;
+}
+async function equipeSalvarFazendas(uid, linha){
+  const marcadas=[...(linha||document).querySelectorAll('input[name="eq-faz-m"]:checked')].map(i=>i.value);
+  if(!marcadas.length) return msg('eq-msg','Marque pelo menos uma fazenda. Para tirar a pessoa de tudo, use "Remover".');
+  const {error}=await db.rpc('equipe_definir_fazendas',{p_user:uid, p_fazendas:marcadas});
+  if(error) return msg('eq-msg', erroEquipe(error));
+  await atualizarCartaoEquipe();
+  pwaToast('Pronto. A pessoa já vê só as fazendas marcadas.');
 }
 
 // ---------- ticker & cotações ----------
@@ -1352,13 +1943,15 @@ function retornoPagamentoHTML(){
 }
 
 async function renderConta(){
+  if(ehEquipe()) return renderContaEquipe();
   setNav('conta');
   const f = FAZENDA;
   $('app-body').innerHTML = '<p class="mut center" style="padding:30px">Carregando conta…</p>';
   const [{data:planos}] = await Promise.all([
     db.from('plano_faixa').select('*').eq('ativo',true).order('ordem'),
     carregarEstadoConta(),
-    carregarCabecasFazendas()
+    carregarCabecasFazendas(),
+    carregarEquipeDono()
   ]);
   PLANOS_PAGAMENTO = planos || [];
   const pracas = ['SP','MS','GO','MG','MT','RJ'];
@@ -1391,8 +1984,10 @@ async function renderConta(){
       <button class="btn" style="margin-top:14px" onclick="renderPagamento()">${ASSINATURA_ATUAL?'Ver planos e alterar':'Escolher meu plano'}</button>
       ${renderCancelamento()}
     </div>
-    ${cartaoFazendasHTML()}`;
+    ${cartaoFazendasHTML()}
+    ${cartaoEquipeHTML()}`;
   ligarCartaoFazendas();
+  ligarCartaoEquipe();
 }
 
 // ---------- cancelamento ----------
@@ -1564,6 +2159,7 @@ async function garantirPlanosCarregados(){
   PLANOS_PAGAMENTO = planos || [];
 }
 async function renderPagamento(){
+  if(ehEquipe()) return renderLotesEquipe(); // funcionário não vê plano, venda, simulador nem edita lote
   setNav('conta');
   await garantirPlanosCarregados();
   // ATENÇÃO — isto aqui já esteve errado e custou caro. O checkout do plano mensal
@@ -2106,6 +2702,7 @@ async function salvarLeadTriagem(id){
 
 // ---------- dashboard ----------
 async function renderDashboard(){
+  if(ehEquipe()) return renderDashboardEquipe();
   setNav('dash');
   const body=$('app-body'); body.innerHTML='<p class="mut center" style="padding:30px">Carregando…</p>';
   const [{data:lotes,error},{data:vacinasProx}]=await Promise.all([
@@ -2163,6 +2760,7 @@ async function renderDashboard(){
 
 // ---------- meus lotes ----------
 async function renderLotes(){
+  if(ehEquipe()) return renderLotesEquipe();
   setNav('lotes');
   const body=$('app-body'); body.innerHTML='<p class="mut center" style="padding:30px">Carregando…</p>';
   const {data:lotes,error}=await db.from('vw_lote_analise').select('*').eq('fazenda_id',FAZENDA.id).order('nome');
@@ -2236,14 +2834,18 @@ async function renderLotes(){
 
 // ---------- detalhe do lote ----------
 async function renderLote(id){
+  if(ehEquipe()) return renderLoteEquipe(id);
   EDIT_PES=null; EDIT_CUS=null; EDIT_SAN=null;
   const body=$('app-body'); body.innerHTML='<p class="mut center" style="padding:30px">Carregando…</p>';
+  // "lançado por" só aparece quando a fazenda tem equipe (dono sozinho: tela igual a antes)
+  NOMES_EQUIPE={};
   const [{data:vs},{data:lote},{data:pes},{data:cus},{data:san}] = await Promise.all([
     db.from('vw_lote_analise').select('*').eq('lote_id',id).single(),
     db.from('lote').select('*').eq('id',id).single(),
     db.from('pesagem').select('*').eq('lote_id',id).order('data',{ascending:false}),
     db.from('custo').select('*').eq('lote_id',id).order('data',{ascending:false}),
     db.from('sanitario').select('*').eq('lote_id',id).order('data',{ascending:false}),
+    carregarNomesEquipe(FAZENDA.id),
   ]);
   const v=vs; const lucro=Number(v.lucro_cab);
   const fechado = !v.ativo;
@@ -2332,7 +2934,7 @@ async function renderLote(id){
       <h3>⚖️ Pesagens</h3>
       <p class="mut">Pese esse lote de tempos em tempos (a cada 30 dias é um bom intervalo). É a partir de duas pesagens que calculamos o ganho de peso por dia (GMD).</p>
       ${(pes||[]).length>1?'<div style="height:140px;margin-bottom:12px"><canvas id="chart-peso"></canvas></div>':''}
-      ${(pes||[]).map(p=>`<div class="list-item"><span>${fmtData(p.data)}</span>
+      ${(pes||[]).map(p=>`<div class="list-item"><span>${fmtData(p.data)}${autorDonoHTML(p)}</span>
         <span><b>${num(p.peso_medio_kg,0)} kg</b>
           <button class="btn ghost mini" title="Editar" onclick="editPesagem('${id}','${p.id}','${p.data}',${p.peso_medio_kg})">✏️</button>
           <button class="btn ghost mini" title="Excluir" onclick="delPesagem('${id}','${p.id}',this)">🗑️</button>
@@ -2349,7 +2951,7 @@ async function renderLote(id){
     <div class="card">
       <h3>💵 Custos do período</h3>
       <p class="mut">Registre tudo que você gasta com esse lote — é o que define se ele está dando lucro de verdade.</p>
-      ${(cus||[]).map(c=>`<div class="list-item"><span>${fmtData(c.data)} · ${esc(c.categoria)}</span>
+      ${(cus||[]).map(c=>`<div class="list-item"><span>${fmtData(c.data)} · ${esc(c.categoria)}${autorDonoHTML(c)}</span>
         <span><b>${brl(c.valor)}</b>
           <button class="btn ghost mini" title="Editar" onclick="editCusto('${id}','${c.id}','${c.data}',${esc(JSON.stringify(String(c.categoria??'')))},${Number(c.valor)})">✏️</button>
           <button class="btn ghost mini" title="Excluir" onclick="delCusto('${id}','${c.id}',this)">🗑️</button>
@@ -2373,7 +2975,7 @@ async function renderLote(id){
       <p class="mut">Registre vacina, vermífugo, exame ou tratamento. Preencha "próxima dose" pra receber o aviso aqui antes de vencer.</p>
       ${guiaVacinacaoHTML(v.fase)}
       ${proximasSanitario(san).map(s=>`<div class="msg err">⚠ ${labelEvento(s.evento)}${s.produto?' — '+esc(s.produto):''} — próxima dose ${fmtData(s.proxima_data)}</div>`).join('')}
-      ${(san||[]).map(s=>`<div class="list-item"><span>${fmtData(s.data)} · ${labelEvento(s.evento)}${s.produto?' — '+esc(s.produto):''}${s.proxima_data?' <span class="mut">(próx.: '+fmtData(s.proxima_data)+')</span>':''}</span>
+      ${(san||[]).map(s=>`<div class="list-item"><span>${fmtData(s.data)} · ${labelEvento(s.evento)}${s.produto?' — '+esc(s.produto):''}${s.proxima_data?' <span class="mut">(próx.: '+fmtData(s.proxima_data)+')</span>':''}${autorDonoHTML(s)}</span>
         <span><b>${s.custo!=null?brl(s.custo):''}</b>
           <button class="btn ghost mini" title="Excluir" onclick="delSanitario('${id}','${s.id}',this)">🗑️</button>
         </span></div>`).join('')||'<p class="mut">Sem eventos sanitários.</p>'}
@@ -2409,6 +3011,7 @@ const hoje = () => new Date().toISOString().slice(0,10);
 
 // ---------- fechar lote (registrar venda) ----------
 async function renderFecharLote(id){
+  if(ehEquipe()) return renderLotesEquipe(); // funcionário não vê plano, venda, simulador nem edita lote
   const body=$('app-body'); body.innerHTML='<p class="mut center" style="padding:30px">Carregando…</p>';
   const {data:v,error}=await db.from('vw_lote_analise').select('*').eq('lote_id',id).single();
   if(error){ body.innerHTML=`<div class="msg err">${esc(error.message)}</div>`; return; }
@@ -2472,7 +3075,7 @@ async function addPesagem(id){
   let error;
   if(EDIT_PES){ ({error}=await db.from('pesagem').update({data,peso_medio_kg:peso}).eq('id',EDIT_PES)); EDIT_PES=null; }
   else ({error}=await db.from('pesagem').insert({lote_id:id,data,peso_medio_kg:peso}));
-  if(error) return msg('pes-msg',error.message);
+  if(error) return msg('pes-msg',erroLancamento(error));
   renderLote(id);
 }
 function editPesagem(loteId,pesId,data,peso){
@@ -2486,7 +3089,7 @@ async function delPesagem(loteId,pesId,btn){
   if(!podeEditar()) return;
   if(btn.dataset.arm!=='1'){ btn.dataset.arm='1'; btn.textContent='confirma?'; btn.style.color='var(--vermelho)'; return; }
   const {error}=await db.from('pesagem').delete().eq('id',pesId);
-  if(error) return msg('pes-msg',error.message);
+  if(error) return msg('pes-msg',erroLancamento(error));
   renderLote(loteId);
 }
 
@@ -2498,7 +3101,7 @@ async function addCusto(id){
   let error;
   if(EDIT_CUS){ ({error}=await db.from('custo').update({data,categoria:$('cus-cat').value,valor}).eq('id',EDIT_CUS)); EDIT_CUS=null; }
   else ({error}=await db.from('custo').insert({lote_id:id,data,categoria:$('cus-cat').value,valor}));
-  if(error) return msg('cus-msg',error.message);
+  if(error) return msg('cus-msg',erroLancamento(error));
   renderLote(id);
 }
 function editCusto(loteId,cusId,data,categoria,valor){
@@ -2512,7 +3115,7 @@ async function delCusto(loteId,cusId,btn){
   if(!podeEditar()) return;
   if(btn.dataset.arm!=='1'){ btn.dataset.arm='1'; btn.textContent='confirma?'; btn.style.color='var(--vermelho)'; return; }
   const {error}=await db.from('custo').delete().eq('id',cusId);
-  if(error) return msg('cus-msg',error.message);
+  if(error) return msg('cus-msg',erroLancamento(error));
   renderLote(loteId);
 }
 
@@ -2579,14 +3182,14 @@ async function addSanitario(id){
   if(!data) return msg('san-msg','Informe a data do evento.');
   if(data>hoje()) return msg('san-msg','Data no futuro? Confira.');
   const {error}=await db.from('sanitario').insert({lote_id:id,data,evento,produto,proxima_data:proxima,custo});
-  if(error) return msg('san-msg',error.message);
+  if(error) return msg('san-msg',erroLancamento(error));
   renderLote(id);
 }
 async function delSanitario(loteId,sanId,btn){
   if(!podeEditar()) return;
   if(btn.dataset.arm!=='1'){ btn.dataset.arm='1'; btn.textContent='confirma?'; btn.style.color='var(--vermelho)'; return; }
   const {error}=await db.from('sanitario').delete().eq('id',sanId);
-  if(error) return msg('san-msg',error.message);
+  if(error) return msg('san-msg',erroLancamento(error));
   renderLote(loteId);
 }
 
@@ -2611,6 +3214,7 @@ function renderGraficoPeso(pes){
 // ---------- simulador vender vs segurar ----------
 let SIM_V=null;
 async function simularLote(id){
+  if(ehEquipe()) return renderLotesEquipe(); // funcionário não vê plano, venda, simulador nem edita lote
   const body=$('app-body'); body.innerHTML='<p class="mut center" style="padding:30px">Carregando…</p>';
   const {data:v,error}=await db.from('vw_lote_analise').select('*').eq('lote_id',id).single();
   if(error){ body.innerHTML=`<div class="msg err">${esc(error.message)}</div>`; return; }
@@ -2681,6 +3285,7 @@ async function rodarSimulacao(id){
 
 // ---------- editar lote ----------
 async function editarLote(id){
+  if(ehEquipe()) return renderLotesEquipe(); // funcionário não vê plano, venda, simulador nem edita lote
   const body=$('app-body');
   const {data:l,error}=await db.from('lote').select('*').eq('id',id).single();
   if(error){ body.innerHTML=`<div class="msg err">${esc(error.message)}</div>`; return; }
@@ -2744,6 +3349,7 @@ async function excluirLote(id){
 
 // ---------- novo lote ----------
 function novoLote(){
+  if(ehEquipe()) return renderLotesEquipe(); // funcionário não vê plano, venda, simulador nem edita lote
   const body=$('app-body');
   body.innerHTML=`<button class="back" onclick="renderLotes()">← Voltar</button>
     <div class="card"><h3>Novo lote</h3>
@@ -2792,6 +3398,7 @@ function baixarModelo(){
   XLSX.writeFile(wb,'modelo-lotes-certo-agro.xlsx');
 }
 function renderImportar(){
+  if(ehEquipe()) return renderLotesEquipe(); // funcionário não vê plano, venda, simulador nem edita lote
   const body=$('app-body');
   body.innerHTML=`<button class="back" onclick="renderLotes()">← Voltar</button>
     <div class="card">
@@ -3386,7 +3993,9 @@ const PWA_ACOES_QUE_ESCREVEM = {
   confirmarCancelamento:'Cancelar a assinatura', enviarPergunta:'Enviar a pergunta',
   adminLiberarDaFila:'Liberar o acesso', adminToggleAcesso:'Alterar o acesso',
   adminSalvarAssinatura:'Salvar a assinatura', assumirLead:'Assumir o contato',
-  liberarLead:'Liberar o contato', salvarLeadTriagem:'Salvar a triagem'
+  liberarLead:'Liberar o contato', salvarLeadTriagem:'Salvar a triagem',
+  equipeConvidar:'Enviar o convite', equipeReenviar:'Reenviar o convite', equipeCancelarConvite:'Cancelar o convite',
+  equipeConfirmarRemover:'Remover da equipe', equipeSalvarFazendas:'Salvar as fazendas da pessoa'
 };
 Object.keys(PWA_ACOES_QUE_ESCREVEM).forEach((nome)=>{
   const orig = window[nome];
