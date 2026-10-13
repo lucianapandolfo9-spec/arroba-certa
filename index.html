@@ -493,6 +493,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3" integrity="sha384-dl/4LkSyQ4uEucc48NM6VDZLAjLLq9yMzZ5JLXumBq7Ld33XBof73hseOqPhO89+" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1" integrity="sha384-jb8JQMbMoBUzgWatfe6COACi2ljcDdZQ2OxczGA3bGNeWe+6DChMTBJemed7ZnvJ" crossorigin="anonymous"></script>
+<script src="assets/track.js"></script>
 <script>
 // ---------- config ----------
 const SUPABASE_URL = "https://zctczffncbtgpmnyxfup.supabase.co";
@@ -523,6 +524,8 @@ const CHAVE_CONVITE_EQUIPE = 'ca:convite-equipe:v1';
   }
 })();
 const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+// Medicao com consentimento (assets/track.js). Sem faixa aqui: so rastreia quem aceitou na landing (/lp/).
+if(window.CertoTrack) CertoTrack.init();
 const DIAS_TRIAL = 15; // espelho de public.assinatura_em_modo_leitura (banco): 15 dias desde 12/10/2026 (era 7)
 // Chip COMERCIAL do Certo Agro (celular dedicado da empresa). Subiu pro bloco
 // de config em 02/10/2026 porque DUAS telas usam: "Minha conta → falar com a
@@ -617,8 +620,10 @@ async function doAuth(){
   try{
     let res;
     if(AUTHTAB==='entrar') res=await db.auth.signInWithPassword({email,password:senha});
-    else res=await db.auth.signUp({email,password:senha,options:{emailRedirectTo: window.location.origin + window.location.pathname}});
+    else res=await db.auth.signUp({email,password:senha,options:{emailRedirectTo: window.location.origin + window.location.pathname, data: window.CertoTrack ? CertoTrack.utmsCadastro() : {}}});
     if(res.error) throw res.error;
+    // E-mail ja cadastrado: o Supabase devolve usuario sem identidades. Nao conta como cadastro novo.
+    if(AUTHTAB==='criar' && window.CertoTrack && res.data?.user?.identities?.length!==0) CertoTrack.track('CompleteRegistration');
     if(AUTHTAB==='criar' && !res.data.session){
       msg('login-msg','Conta criada! Te enviamos um e-mail de confirmação — clica no link lá e depois volta aqui pra entrar. 📧','ok');
     }
@@ -1847,6 +1852,7 @@ async function criarFazenda(){
     telefone:tel
   });
   if(error) return msg('faz-msg',error.message);
+  if(window.CertoTrack) CertoTrack.track('StartTrial');
   FAZENDA_RECEM_CRIADA=true;
   // Força reboot de verdade: acabou de nascer a fazenda, precisa buscar ela
   // de novo. Sem isso a trava de "mesmo usuário" pularia essa busca.
@@ -2229,6 +2235,7 @@ async function iniciarPagamento(planoId, jaAvisado){
   const plano=PLANOS_PAGAMENTO.find(p=>Number(p.id)===Number(planoId));
   if(!plano){ restaurarBotao(); return msg(msgEl,'Esse plano não está disponível no momento.'); }
   if(!jaAvisado && riscoDoPlano(plano)==='bloqueia'){ restaurarBotao(); return confirmarPlanoApertado(plano); }
+  if(window.CertoTrack) CertoTrack.track('InitiateCheckout',{currency:'BRL',value:Number(CICLO_PAGAMENTO==='anual'?plano.preco_anual:plano.preco_mensal)||0});
   const {data:{user}}=await db.auth.getUser();
   if(!user?.email || !FAZENDA?.id){ restaurarBotao(); return msg(msgEl,'Não consegui identificar sua conta. Sai e entra novamente.'); }
   // Sempre a fazenda onde mora o plano da conta — nunca a fazenda extra
