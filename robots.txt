@@ -1,5 +1,6 @@
-# certoagro.com.br — o app inteiro vive em "/" (SPA com login), então não há
-# rota de tela de app separada pra bloquear. Libera tudo e aponta o sitemap.
+# certoagro.com.br: a landing vive em "/" e o app em "/app/" (tela de login, com
+# meta noindex). Nao bloqueamos /app/ aqui de proposito: o buscador precisa
+# poder abrir a pagina para ler o noindex. Libera tudo e aponta o sitemap.
 User-agent: *
 Allow: /
 
