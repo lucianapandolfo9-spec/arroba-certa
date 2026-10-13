@@ -7,14 +7,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <title>Certo Agro — Gestão de pecuária de corte: custo da @ e lucro por lote</title>
 <meta name="description" content="Sistema de gestão para pecuária de corte: custo da arroba produzida, lucro por lote, simulador de vender ou segurar e cotação da @ por praça. Teste grátis por 15 dias." />
-<meta name="robots" content="index,follow" />
-<link rel="canonical" href="https://certoagro.com.br/" />
+<!-- O app fica em /app/ e nao e indexado. A pagina publica (SEO, JSON-LD, canonical) e a landing da raiz. -->
+<meta name="robots" content="noindex" />
 <meta property="og:type" content="website" />
 <meta property="og:site_name" content="Certo Agro" />
 <meta property="og:locale" content="pt_BR" />
 <meta property="og:title" content="Certo Agro — Gestão de pecuária de corte: custo da @ e lucro por lote" />
 <meta property="og:description" content="Sistema de gestão para pecuária de corte: custo da arroba produzida, lucro por lote, simulador de vender ou segurar e cotação da @ por praça. Teste grátis por 15 dias." />
-<meta property="og:url" content="https://certoagro.com.br/" />
 <meta property="og:image" content="https://certoagro.com.br/assets/og-image.png" />
 <meta property="og:image:width" content="1200" />
 <meta property="og:image:height" content="630" />
@@ -25,49 +24,12 @@
 <meta name="twitter:image" content="https://certoagro.com.br/assets/og-image.png" />
 <meta name="theme-color" content="#112A1E" />
 
-<script type="application/ld+json">
-{
- "@context": "https://schema.org",
- "@graph": [
-  {
-   "@type": "Organization",
-   "@id": "https://certoagro.com.br/#org",
-   "name": "Certo Agro",
-   "url": "https://certoagro.com.br/",
-   "logo": "https://certoagro.com.br/assets/icon-512.png",
-   "email": "contato@certoagro.com.br"
-  },
-  {
-   "@type": "WebSite",
-   "@id": "https://certoagro.com.br/#site",
-   "url": "https://certoagro.com.br/",
-   "name": "Certo Agro",
-   "inLanguage": "pt-BR",
-   "publisher": {
-    "@id": "https://certoagro.com.br/#org"
-   }
-  },
-  {
-   "@type": "SoftwareApplication",
-   "name": "Certo Agro",
-   "url": "https://certoagro.com.br/",
-   "applicationCategory": "BusinessApplication",
-   "operatingSystem": "Web",
-   "inLanguage": "pt-BR",
-   "description": "Sistema de gestão para pecuária de corte: custo da arroba produzida, lucro por lote, simulador de vender ou segurar e cotação da @ por praça. Teste grátis por 15 dias.",
-   "publisher": {
-    "@id": "https://certoagro.com.br/#org"
-   }
-  }
- ]
-}
-</script>
-<link rel="icon" type="image/png" href="assets/favicon.png" />
+<link rel="icon" type="image/png" href="../assets/favicon.png" />
 
 <!-- PWA — instalável sem loja, tela cheia. Ícones derivados do símbolo
      homologado (assets/logo-simbolo.png), não redesenhados. -->
 <link rel="manifest" href="manifest.json" />
-<link rel="apple-touch-icon" href="assets/apple-touch-icon.png" />
+<link rel="apple-touch-icon" href="../assets/apple-touch-icon.png" />
 <!-- iOS não lê o manifest pra virar "app de tela cheia" — precisa destas
      duas, mesmo com o manifest presente. -->
 <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -317,7 +279,7 @@
 <div id="scr-login" class="wrap hidden" style="padding-top:60px">
   <div class="center" style="margin-bottom:8px">
     <div style="display:inline-flex;align-items:center;gap:10px">
-      <img src="assets/logo-simbolo.png" alt="" style="height:46px" />
+      <img src="../assets/logo-simbolo.png" alt="" style="height:46px" />
       <span style="font-weight:800;font-size:26px;letter-spacing:-.5px"><span style="color:var(--verde)">Certo</span> <span style="color:var(--dourado)">Agro</span></span>
     </div>
     <p class="mut" style="margin-top:10px">Sua @ custa X. O mercado paga Y. Decida.</p>
@@ -345,9 +307,9 @@
     <button class="btn ghost" style="width:100%;margin-top:10px" id="btn-esqueci" onclick="esqueciSenha()">Esqueci minha senha</button>
   </div>
   <p class="mut center" style="font-size:12px;margin-top:18px">
-    <a href="termos.html" style="color:var(--cinza)">Termos de Uso</a> ·
-    <a href="privacidade.html" style="color:var(--cinza)">Privacidade</a> ·
-    <a href="cancelamento.html" style="color:var(--cinza)">Cancelamento</a>
+    <a href="../termos.html" style="color:var(--cinza)">Termos de Uso</a> ·
+    <a href="../privacidade.html" style="color:var(--cinza)">Privacidade</a> ·
+    <a href="../cancelamento.html" style="color:var(--cinza)">Cancelamento</a>
   </p>
   <p class="center"><button type="button" id="pwa-login-link" class="pwa-link hidden" onclick="abrirConvite(true)">Instalar aplicativo</button></p>
 </div>
@@ -356,7 +318,7 @@
 <div id="scr-nova-senha" class="wrap hidden" style="padding-top:60px">
   <div class="center" style="margin-bottom:8px">
     <div style="display:inline-flex;align-items:center;gap:9px">
-      <img src="assets/logo-simbolo.png" alt="" style="height:40px" />
+      <img src="../assets/logo-simbolo.png" alt="" style="height:40px" />
       <span style="font-weight:800;font-size:22px;letter-spacing:-.5px"><span style="color:var(--verde)">Certo</span> <span style="color:var(--dourado)">Agro</span></span>
     </div>
     <p class="mut" style="margin-top:10px">Criar uma senha nova</p>
@@ -376,7 +338,7 @@
   <header class="top">
     <div class="top-row">
       <div class="logo" style="display:flex;align-items:center;gap:7px">
-        <img src="assets/logo-simbolo.png" alt="" style="height:26px" />
+        <img src="../assets/logo-simbolo.png" alt="" style="height:26px" />
         <span style="font-weight:800;font-size:14px;letter-spacing:-.3px;white-space:nowrap"><span style="color:var(--verde)">Certo</span> <span style="color:var(--dourado)">Agro</span></span>
         <small id="faz-nome">—</small>
       </div>
@@ -531,13 +493,12 @@ const DIAS_TRIAL = 15; // espelho de public.assinatura_em_modo_leitura (banco): 
 // ⚠️ Número único — trocar aqui troca em todo lugar. Não chumbar de novo.
 const WHATSAPP_SUPORTE = '5581991923030';
 const MS_DIA = 24*60*60*1000;
-// ⚠️ ONDE O APP MORA. Única constante de caminho do PWA: start_url/scope do
-// manifest.json são relativos ('./'), o service worker deriva a base do escopo
-// em que foi registrado, e as chaves de localStorage usam esta base. Se o app
-// sair da raiz (ex.: '/app/'), troque SÓ esta linha e publique index.html,
-// sw.js e manifest.json juntos na mesma pasta. A landing (/pecuaria/, /lp/)
-// fica de fora: o sw.js manda esses caminhos direto pra rede.
-const APP_BASE = '/';
+// ⚠️ ONDE O APP MORA. Desde a landing publica (13/10/2026) o app vive em /app/ e
+// a raiz e a landing. Única constante de caminho do PWA: start_url/scope do
+// manifest.json, o service worker (deriva a base do escopo) e as chaves de
+// localStorage usam esta base. index.html, sw.js e manifest.json andam juntos
+// na mesma pasta (/app/). Assets e paginas legais ficam na raiz (../).
+const APP_BASE = '/app/';
 
 // ---------- helpers ----------
 const $ = id => document.getElementById(id);
@@ -2037,7 +1998,7 @@ function abrirCancelamento(){
     <strong>O que acontece se você cancelar:</strong>
     <ul class="cancel-lista">
       <li>${ateQuando}</li>
-      <li>Nenhuma cobrança nova é feita. Cancelar não gera estorno do período já pago — exceto arrependimento em até 7 dias do primeiro pagamento (art. 49 do CDC) e cobrança indevida. <a href="cancelamento.html" target="_blank" rel="noopener">Ver a política</a>.</li>
+      <li>Nenhuma cobrança nova é feita. Cancelar não gera estorno do período já pago — exceto arrependimento em até 7 dias do primeiro pagamento (art. 49 do CDC) e cobrança indevida. <a href="../cancelamento.html" target="_blank" rel="noopener">Ver a política</a>.</li>
       <li><strong>Seus dados não são apagados.</strong> Lotes, pesagens, custos e histórico continuam aqui para consulta.</li>
       <li>Você pode voltar quando quiser, e encontra tudo como deixou.</li>
     </ul>
@@ -2190,7 +2151,7 @@ async function renderPagamento(){
     </div>
     <div id="planos-grid" class="planos-grid">${renderPlanosPagamento()}</div>
     <div class="pagamento-resumo"><strong>${PAGAMENTO_PRODUCAO_ATIVO?'Como funciona':'Pagamento em ativação'}</strong><div class="mut" style="margin-top:5px">${PAGAMENTO_PRODUCAO_ATIVO?'Você escolhe o plano, confirma os dados no Mercado Pago e volta com a assinatura registrada. <strong>Conclua o pagamento neste mesmo aparelho</strong> — é assim que a assinatura entra na sua conta.':'Os planos já estão definidos. O checkout será liberado assim que a credencial oficial do Mercado Pago for conectada e homologada.'}</div></div>
-    <p class="mut" style="font-size:12px;margin:10px 0">Ao assinar, você concorda com os <a href="termos.html" target="_blank" rel="noopener" style="color:var(--cinza)">Termos de Uso</a> e a <a href="cancelamento.html" target="_blank" rel="noopener" style="color:var(--cinza)">Política de Cancelamento</a> — cancelamento fácil, direto na sua conta.</p>
+    <p class="mut" style="font-size:12px;margin:10px 0">Ao assinar, você concorda com os <a href="../termos.html" target="_blank" rel="noopener" style="color:var(--cinza)">Termos de Uso</a> e a <a href="../cancelamento.html" target="_blank" rel="noopener" style="color:var(--cinza)">Política de Cancelamento</a> — cancelamento fácil, direto na sua conta.</p>
     <button class="btn ghost" style="width:auto" onclick="renderConta()">← Voltar para minha conta</button>
     <div id="pagamento-msg"></div>`;
 }
