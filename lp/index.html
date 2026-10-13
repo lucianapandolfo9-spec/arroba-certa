@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Certo Agro: quanto custa a sua arroba? Teste grátis 15 dias</title>
+<meta name="description" content="Calcule o custo da @ produzida, o preço mínimo de venda e a margem do lote. App de gestão de pecuária de corte. Teste grátis por 15 dias.">
+<link rel="canonical" href="https://certoagro.com.br/lp/">
+<meta name="robots" content="index,follow">
+<meta name="theme-color" content="#112A1E">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Certo Agro">
+<meta property="og:locale" content="pt_BR">
+<meta property="og:title" content="Certo Agro: quanto custa a sua arroba? Teste grátis 15 dias">
+<meta property="og:description" content="Calcule o custo da @ produzida, o preço mínimo de venda e a margem do lote. App de gestão de pecuária de corte. Teste grátis por 15 dias.">
+<meta property="og:url" content="https://certoagro.com.br/lp/">
+<meta property="og:image" content="https://certoagro.com.br/assets/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Certo Agro, gestão de pecuária de corte">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Certo Agro: quanto custa a sua arroba? Teste grátis 15 dias">
+<meta name="twitter:description" content="Calcule o custo da @ produzida, o preço mínimo de venda e a margem do lote. App de gestão de pecuária de corte. Teste grátis por 15 dias.">
+<meta name="twitter:image" content="https://certoagro.com.br/assets/og-image.png">
+<link rel="icon" type="image/png" href="../assets/favicon.png">
+<link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+
+
+<script type="application/ld+json">
+{
+ "@context": "https://schema.org",
+ "@graph": [
+  {
+   "@type": "Organization",
+   "@id": "https://certoagro.com.br/#org",
+   "name": "Certo Agro",
+   "url": "https://certoagro.com.br/",
+   "logo": "https://certoagro.com.br/assets/icon-512.png",
+   "email": "contato@certoagro.com.br"
+  },
+  {
+   "@type": "WebSite",
+   "@id": "https://certoagro.com.br/#site",
+   "url": "https://certoagro.com.br/",
+   "name": "Certo Agro",
+   "inLanguage": "pt-BR",
+   "publisher": { "@id": "https://certoagro.com.br/#org" }
+  },
+  {
+   "@type": "SoftwareApplication",
+   "name": "Certo Agro",
+   "url": "https://certoagro.com.br/",
+   "applicationCategory": "BusinessApplication",
+   "operatingSystem": "Web",
+   "inLanguage": "pt-BR",
+   "description": "Sistema de gestão para pecuária de corte: custo da arroba produzida, lucro por lote, simulador de vender ou segurar e cotação da @ por praça. Teste grátis por 15 dias.",
+   "publisher": { "@id": "https://certoagro.com.br/#org" }
+  }
+ ]
+}
+</script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/landing.css">
+</head>
+<body>
+<a class="pular" href="#conteudo">Ir para o conteúdo</a>
+
+<header class="topo">
+  <div class="wrap">
+    <a class="marca" href="/lp/" aria-label="Certo Agro, página inicial">
+      <img src="../assets/logo-simbolo.png" alt="" width="44" height="44">
+      <span><span>Certo</span> <span class="agro">Agro</span></span>
+    </a>
+    <a class="btn btn--linha" href="/" data-app>Entrar</a>
+  </div>
+</header>
+
+<main id="conteudo">
+
+  <!-- 1. HERO -->
+  <section class="hero escuro" aria-labelledby="hero-titulo">
+    <div class="wrap">
+      <!-- Titulo A (padrao). Alternativas para teste A/B:
+           B: "Boi bonito não é lucro certo. Descubra o que sua @ custa."
+           C: "Quanto custa a sua arroba? Em 1 minuto você sabe." -->
+      <h1 id="hero-titulo">Sua @ custa quanto pra produzir? O frigorífico paga quanto? Você sabe a diferença?</h1>
+      <p class="apoio">O Certo Agro faz a conta do seu lote: custo da @, preço mínimo e hora de vender.</p>
+      <div class="hero__acoes">
+        <a class="btn btn--ouro" href="/" data-app data-teste="hero">Testar grátis por 15 dias</a>
+        <a class="btn btn--linha" href="https://wa.me/5581991923030" data-wa rel="noopener">Falar no WhatsApp</a>
+      </div>
+      <p class="hero__nota">Sem cartão. Cancela quando quiser.</p><!-- [confirmar] -->
+    </div>
+  </section>
+
+  <!-- 3. CALCULADORA -->
+  <section class="calc" id="calculadora" aria-labelledby="calc-titulo">
+    <div class="wrap">
+      <h2 id="calc-titulo">Quanto custa a sua @? Faça a conta agora.</h2>
+      <p class="lead">Digite 7 números do seu lote. O resultado aparece na hora. Não precisa de conta e nada fica salvo.</p>
+
+      <form class="calc__caixa" id="calc-form" novalidate autocomplete="off">
+        <div class="campos">
+          <div class="campo">
+            <label for="c-pesoEntrada">Peso de entrada (kg)</label>
+            <input id="c-pesoEntrada" name="pesoEntrada" type="text" inputmode="decimal" aria-describedby="e-pesoEntrada">
+            <p class="erro" id="e-pesoEntrada" role="alert"></p>
+          </div>
+          <div class="campo">
+            <label for="c-pesoSaida">Peso atual ou de saída (kg)</label>
+            <input id="c-pesoSaida" name="pesoSaida" type="text" inputmode="decimal" aria-describedby="e-pesoSaida">
+            <p class="erro" id="e-pesoSaida" role="alert"></p>
+          </div>
+          <div class="campo">
+            <label for="c-dias">Dias no pasto ou cocho</label>
+            <input id="c-dias" name="dias" type="text" inputmode="numeric" aria-describedby="e-dias">
+            <p class="erro" id="e-dias" role="alert"></p>
+          </div>
+          <div class="campo">
+            <label for="c-custoDia">Custo por cabeça por dia (R$)<span class="dica">dieta, mão de obra e vacina</span></label>
+            <input id="c-custoDia" name="custoDia" type="text" inputmode="decimal" aria-describedby="e-custoDia">
+            <p class="erro" id="e-custoDia" role="alert"></p>
+          </div>
+          <div class="campo">
+            <label for="c-custoCompra">Custo de compra do magro (R$ por cabeça)</label>
+            <input id="c-custoCompra" name="custoCompra" type="text" inputmode="decimal" aria-describedby="e-custoCompra">
+            <p class="erro" id="e-custoCompra" role="alert"></p>
+          </div>
+          <div class="campo">
+            <label for="c-precoArroba">Preço da @ (R$)<span class="dica">já vem com a cotação do dia, você pode mudar</span></label>
+            <input id="c-precoArroba" name="precoArroba" type="text" inputmode="decimal" aria-describedby="e-precoArroba dica-praca">
+            <p class="dica" id="dica-praca" style="font-size:16px;color:var(--suave);margin-top:6px" hidden></p>
+            <div class="chips" id="chips-praca" role="group" aria-label="Usar a cotação de uma praça" hidden></div>
+            <p class="erro" id="e-precoArroba" role="alert"></p>
+          </div>
+          <div class="campo">
+            <label for="c-rendimento">Rendimento de carcaça<span class="dica">0,53 é o comum. Aceita de 0,40 a 0,60.</span></label>
+            <input id="c-rendimento" name="rendimento" type="text" inputmode="decimal" value="0,53" aria-describedby="e-rendimento">
+            <p class="erro" id="e-rendimento" role="alert"></p>
+          </div>
+        </div>
+        <div class="calc__acao">
+          <button class="btn btn--verde btn--bloco" type="submit">Calcular agora</button>
+        </div>
+
+        <div class="resultado" id="resultado" hidden aria-live="polite" tabindex="-1">
+          <dl>
+            <div class="item"><dt>Ganho por dia</dt><dd id="r-gmd"></dd></div>
+            <div class="item"><dt>Arrobas do boi pronto</dt><dd id="r-arrobas"></dd></div>
+            <div class="item"><dt>Custo da @ produzida</dt><dd id="r-custoArroba"></dd></div>
+            <div class="item"><dt>Custo total por cabeça</dt><dd id="r-custoCabeca"></dd></div>
+            <div class="item"><dt>Preço mínimo da @ para não perder</dt><dd id="r-precoMinimo"></dd></div>
+            <div class="item item--destaque"><dt>Margem por cabeça</dt><dd id="r-margem"></dd></div>
+          </dl>
+          <a class="btn btn--ouro btn--bloco" id="salvar-lote" href="/" data-app>Salvar esse lote no meu app (grátis)</a>
+          <p class="nota">Conta de exemplo com os números que você digitou. Não é promessa de lucro.</p>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <!-- 4. COTACAO AO VIVO -->
+  <section class="cotacao" id="cotacao" aria-labelledby="cot-titulo">
+    <div class="wrap">
+      <h2 id="cot-titulo">A @ hoje, nas 4 praças</h2>
+      <ul class="cot-lista" id="cot-lista" hidden></ul>
+      <p class="cot-fonte" id="cot-fonte">Cotação em atualização. Use o preço do seu frigorífico na calculadora.</p>
+    </div>
+  </section>
+
+  <!-- 5. COMO FUNCIONA -->
+  <section id="como-funciona" aria-labelledby="como-titulo">
+    <div class="wrap">
+      <h2 id="como-titulo">Como funciona</h2>
+      <ol class="passos">
+        <li class="passo">
+          <div class="tela tela--img"><span class="tarja">Fazenda de demonstração</span><img src="../assets/tela-1-novo-lote.jpg" alt="Tela do Certo Agro: formulário de novo lote com nome, fase e sistema" width="600" height="746" loading="lazy" decoding="async"></div>
+          <h3><span class="passo__n">1</span> Cadastre o lote.</h3>
+          <p>Quantas cabeças, de onde vieram.</p>
+        </li>
+        <li class="passo">
+          <div class="tela tela--img"><span class="tarja">Fazenda de demonstração</span><img src="../assets/tela-2-pesagens.jpg" alt="Tela do Certo Agro: gráfico de pesagens do lote, de 382 kg a 488 kg" width="600" height="742" loading="lazy" decoding="async"></div>
+          <h3><span class="passo__n">2</span> Lance peso e custo.</h3>
+          <p>Do seu jeito, no celular.</p>
+        </li>
+        <li class="passo">
+          <!-- TODO-tela-3: print ATUAL do app (Santa Helena) com lucro e preço mínimo corretos. Não usar o vídeo de 06/10: os cards de lucro dele estão com número errado. -->
+          <h3><span class="passo__n">3</span> Veja o lucro e a hora de vender.</h3>
+          <p>Sem planilha.</p>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- 6. O QUE VOCE GANHA -->
+  <section class="ganhos escuro" aria-labelledby="ganha-titulo">
+    <div class="wrap">
+      <h2 id="ganha-titulo">O que você ganha</h2>
+      <ul>
+        <li><b>Custo da @ produzida</b>O número que quase ninguém tem.</li>
+        <li><b>Vender agora ou segurar</b>O sistema faz as duas contas.</li>
+        <li><b>Alerta de vacina</b>O aviso chega antes do prazo.</li>
+        <li><b>Relação de troca</b>Quantas @ compram um magro.</li>
+        <li><b>Relatório do lote</b>Pronto para você conferir e guardar.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- 7. PRECOS (fixos no HTML; conferidos contra plano_faixa pela rotina das 23h) -->
+  <section id="precos" aria-labelledby="precos-titulo">
+    <div class="wrap">
+      <h2 id="precos-titulo">Preço fixo. Paga pelo tamanho do rebanho.</h2>
+      <ul class="planos">
+        <li class="plano">
+          <h3>Iniciante</h3>
+          <p class="ate">até 100 cabeças</p>
+          <p class="mes">R$ 99<small>/mês</small></p>
+          <p class="ano">R$ 990/ano</p>
+          <a class="btn btn--verde btn--bloco" href="/" data-app data-teste="iniciante">Testar grátis por 15 dias</a>
+        </li>
+        <li class="plano">
+          <h3>Essencial</h3>
+          <p class="ate">até 300 cabeças</p>
+          <p class="mes">R$ 169,90<small>/mês</small></p>
+          <p class="ano">R$ 1.699/ano</p>
+          <a class="btn btn--verde btn--bloco" href="/" data-app data-teste="essencial">Testar grátis por 15 dias</a>
+        </li>
+        <li class="plano">
+          <h3>Profissional</h3>
+          <p class="ate">até 700 cabeças</p>
+          <p class="mes">R$ 249,90<small>/mês</small></p>
+          <p class="ano">R$ 2.499/ano</p>
+          <a class="btn btn--verde btn--bloco" href="/" data-app data-teste="profissional">Testar grátis por 15 dias</a>
+        </li>
+        <li class="plano">
+          <h3>Premium</h3>
+          <p class="ate">acima de 700 cabeças</p>
+          <p class="mes">R$ 399,90<small>/mês</small></p>
+          <p class="ano">R$ 3.999/ano</p>
+          <a class="btn btn--verde btn--bloco" href="/" data-app data-teste="premium">Testar grátis por 15 dias</a>
+        </li>
+      </ul>
+      <p class="preco-nota">Pague 10 meses e use 12.</p>
+      <div class="empresarial">
+        <p><strong>Empresarial.</strong> Mais de uma fazenda ou necessidade especial? Valor sob consulta. Chame no WhatsApp (81) 99192-3030.</p>
+        <a class="btn btn--verde" href="https://wa.me/5581991923030" data-wa rel="noopener">Falar no WhatsApp</a>
+      </div>
+      <p class="todos">Todos começam com 15 dias grátis.</p>
+    </div>
+  </section>
+
+  <!-- 8. GARANTIA -->
+  <section class="garantia" aria-labelledby="garantia-titulo">
+    <div class="wrap">
+      <h2 id="garantia-titulo">Sem prisão.</h2>
+      <p class="lead">Cancela em 2 cliques. Usa até o fim do período pago. Seus dados continuam salvos.</p>
+      <p class="miudo">Sem estorno por cancelamento. Exceções previstas em lei: cobrança indevida e arrependimento em até 7 dias na compra online (CDC, art. 49).</p>
+    </div>
+  </section>
+
+  <!-- 9. FAQ -->
+  <section id="perguntas" aria-labelledby="faq-titulo">
+    <div class="wrap">
+      <h2 id="faq-titulo">Perguntas frequentes</h2>
+      <details>
+        <summary>Precisa de cartão no teste?</summary>
+        <p>Não. O teste de 15 dias não pede cartão.</p><!-- [confirmar] -->
+      </details>
+      <details>
+        <summary>Funciona no celular?</summary>
+        <p>Funciona. Foi feito para o celular, direto no navegador, sem baixar loja de aplicativo.</p>
+      </details>
+      <details>
+        <summary>Quem vê meus dados?</summary>
+        <p>Só você. Os números do seu lote não são vendidos nem divulgados. Detalhes na <a href="../{f}.html">Política de Privacidade</a>.</p><!-- [confirmar] -->
+      </details>
+      <details>
+        <summary>Mais de uma fazenda?</summary>
+        <p>Para isso existe o plano Empresarial. Chame no WhatsApp (81) 99192-3030 e a gente monta o valor.</p>
+      </details>
+      <details>
+        <summary>Internet ruim no campo?</summary>
+        <p>Você precisa de sinal para abrir e salvar. Lance os números quando chegar onde pega.</p><!-- [confirmar se funciona offline] -->
+      </details>
+      <details>
+        <summary>Como cancelo?</summary>
+        <p>Em 2 cliques, dentro do app. Você usa até o fim do período pago e seus dados continuam salvos.</p>
+      </details>
+      <details>
+        <summary>Preciso saber de computador?</summary>
+        <p>Não. Se você usa WhatsApp, usa o Certo Agro. Digita peso e custo, o resto é conta que o sistema faz. Se travar, chama no WhatsApp.</p>
+      </details>
+      <details>
+        <summary>Isso garante lucro?</summary>
+        <p>Não. O Certo Agro mostra a conta do seu lote. A decisão é sua.</p>
+      </details>
+    </div>
+  </section>
+
+  <!-- 10. QUEM SOMOS -->
+  <section class="quem" aria-labelledby="quem-titulo" style="background:var(--areia)">
+    <div class="wrap">
+      <h2 id="quem-titulo">Gente de verdade, no Brasil.</h2>
+      <p>O Certo Agro é feito em Recife (PE) para o pecuarista de corte. Dúvida? Fala com a gente.</p>
+      <p class="dados">Certo Agro · CNPJ 66.521.744/0001-60 · <a href="mailto:contato@certoagro.com.br">contato@certoagro.com.br</a> · WhatsApp comercial (81) 99192-3030</p>
+      <p style="margin-top:20px"><a class="btn btn--verde" href="https://wa.me/5581991923030" data-wa rel="noopener">Falar no WhatsApp</a></p>
+    </div>
+  </section>
+</main>
+
+<!-- 11. RODAPE -->
+<footer>
+  <div class="wrap">
+    <nav aria-label="Páginas legais">
+      <a href="../{f}.html">Termos</a>
+      <a href="../{f}.html">Privacidade</a>
+      <a href="../{f}.html">Cancelamento</a>
+      <button type="button" class="link" id="prefs-cookies">Preferências de cookies</button>
+    </nav>
+    <p>Certo Agro, Recife/PE</p>
+  </div>
+</footer>
+
+<script src="../assets/calc.js"></script>
+<script src="../assets/track.js"></script>
+<script src="../assets/landing.js"></script>
+</body>
+</html>

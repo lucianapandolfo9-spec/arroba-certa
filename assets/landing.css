@@ -1,0 +1,176 @@
+/* Landing publica do Certo Agro. Celular primeiro, publico 55+: texto grande,
+   contraste alto, botoes grandes. Tokens da marca (Manual de Marca). */
+:root{
+  --verde:#112A1E; --verde-2:#1B3B2B; --apoio:#54705D; --dourado:#B08A33; --dourado-claro:#D4B15A;
+  --creme:#FDF8F5; --areia:#E2D5B0; --texto:#17241D; --suave:#3F5A49; --vermelho:#9B1C1C; --linha:#D9CDB4;
+  --raio:16px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%;scroll-padding-top:12px}
+@media (prefers-reduced-motion:no-preference){html{scroll-behavior:smooth}}
+body{font-family:'Montserrat',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;font-weight:400;
+  font-size:18px;line-height:1.6;color:var(--texto);background:var(--creme);overflow-x:hidden}
+html.com-faixa-cookies body{padding-bottom:190px}
+img{max-width:100%;display:block}
+a{color:var(--verde)}
+h1,h2,h3{font-weight:800;line-height:1.15;letter-spacing:-.3px}
+.wrap{width:100%;max-width:1040px;margin:0 auto;padding:0 20px}
+section{padding:56px 0}
+h2{font-size:clamp(26px,6.4vw,38px);margin-bottom:14px}
+.lead{font-size:20px;color:var(--suave);max-width:640px}
+
+/* foco visivel e skip link */
+:focus-visible{outline:3px solid var(--dourado);outline-offset:3px;border-radius:4px}
+.escuro :focus-visible,.topo :focus-visible,.faixa-cookies :focus-visible{outline-color:var(--creme)}
+.pular{position:absolute;left:12px;top:-80px;background:var(--creme);color:var(--verde);font-weight:700;
+  padding:12px 18px;border-radius:10px;z-index:100;text-decoration:none}
+.pular:focus{top:12px}
+
+/* botoes */
+.btn{display:inline-flex;align-items:center;justify-content:center;text-align:center;min-height:60px;padding:14px 26px;
+  border-radius:14px;border:2px solid transparent;font:inherit;font-size:19px;font-weight:700;line-height:1.2;
+  text-decoration:none;cursor:pointer;transition:transform .12s ease,background .12s ease}
+.btn:active{transform:scale(.98)}
+.btn--ouro{background:var(--dourado);color:var(--verde)}
+.btn--ouro:hover{background:#C29B44}
+.btn--verde{background:var(--verde);color:var(--creme)}
+.btn--verde:hover{background:var(--verde-2)}
+.btn--linha{background:transparent;color:inherit;border-color:currentColor}
+.btn--bloco{width:100%}
+.btn--cookie{min-height:52px;min-width:130px;background:var(--creme);color:var(--verde);border-color:var(--creme);padding:10px 22px}
+.btn--cookie:hover{background:var(--areia)}
+
+/* topo */
+.topo{background:var(--verde);color:var(--creme)}
+.topo .wrap{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:72px}
+.marca{display:flex;align-items:center;gap:12px;text-decoration:none;color:var(--creme);font-weight:800;font-size:24px;letter-spacing:-.4px}
+.marca img{width:44px;height:44px;background:var(--creme);border-radius:50%;padding:3px;object-fit:contain}
+.marca .agro{color:var(--dourado)}
+.topo .btn{min-height:48px;padding:8px 22px;font-size:17px}
+
+/* hero */
+.hero{background:var(--verde);color:var(--creme);padding:36px 0 64px;position:relative;overflow:hidden}
+.hero::after{content:"";position:absolute;right:-120px;top:-120px;width:360px;height:360px;border-radius:50%;background:var(--verde-2);z-index:0}
+.hero .wrap{position:relative;z-index:1}
+.hero h1{font-size:clamp(32px,8.6vw,56px);max-width:760px}
+.hero p.apoio{font-size:21px;margin-top:20px;max-width:620px;color:#E4EAE5}
+.hero__acoes{display:flex;flex-direction:column;gap:14px;margin-top:30px;max-width:420px}
+.hero__nota{margin-top:14px;font-size:17px;color:#E4EAE5}
+
+/* calculadora */
+.calc{background:var(--creme)}
+.calc__caixa{background:#fff;border:2px solid var(--linha);border-radius:var(--raio);padding:22px 18px;margin-top:26px}
+.campos{display:grid;gap:22px;counter-reset:campo}
+.campo{counter-increment:campo}
+.campo label{display:block;font-weight:700;font-size:19px;line-height:1.3}
+.campo label::before{content:counter(campo);display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;margin-right:10px;
+  border-radius:50%;background:var(--verde);color:var(--creme);font-size:15px;font-weight:800;vertical-align:1px}
+.campo .dica{display:block;font-size:16px;color:var(--suave);margin-top:4px}
+.campo input{width:100%;min-height:60px;margin-top:8px;padding:10px 14px;font:inherit;font-size:22px;font-weight:600;color:var(--texto);
+  background:var(--creme);border:2px solid var(--apoio);border-radius:12px}
+.campo input:focus-visible{outline:3px solid var(--dourado);outline-offset:2px}
+.campo input[aria-invalid="true"]{border-color:var(--vermelho);background:#FFF4F2}
+.erro{color:var(--vermelho);font-weight:700;font-size:17px;margin-top:6px}
+.erro:empty{display:none}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.chips[hidden]{display:none}
+.chip{min-height:48px;padding:6px 14px;font:inherit;font-size:16px;font-weight:700;color:var(--verde);background:var(--areia);border:2px solid transparent;border-radius:12px;cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--verde);color:var(--creme)}
+.calc__acao{margin-top:26px}
+.resultado{margin-top:30px;border-top:2px solid var(--linha);padding-top:26px}
+.resultado[hidden]{display:none}
+.resultado dl{display:grid;gap:12px}
+.resultado .item{background:var(--creme);border:2px solid var(--linha);border-radius:14px;padding:14px 16px}
+.resultado dt{font-size:17px;font-weight:600;color:var(--suave)}
+.resultado dd{font-size:28px;font-weight:800;color:var(--verde);line-height:1.2;margin-top:2px}
+.resultado .item--destaque{background:var(--verde);border-color:var(--verde)}
+.resultado .item--destaque dt{color:#E4EAE5}
+.resultado .item--destaque dd{color:var(--creme)}
+.resultado .item--destaque dd.neg{color:#FFC9C0}
+.resultado .item--destaque dd small{font-size:20px;font-weight:600}
+.resultado dd.neg{color:var(--vermelho)}
+.resultado .nota{font-size:16px;color:var(--suave);margin-top:16px}
+.resultado .btn{margin-top:20px}
+
+/* cotacao */
+.cotacao{background:var(--areia)}
+.cot-lista{list-style:none;display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:22px}
+.cot-lista li{background:var(--creme);border-radius:14px;padding:14px 12px;text-align:center}
+.cot-lista b{display:block;font-size:18px;color:var(--suave)}
+.cot-lista span{display:block;font-size:28px;font-weight:800;color:var(--verde)}
+.cot-fonte{margin-top:16px;font-size:17px;color:var(--texto)}
+
+/* como funciona */
+.passos{list-style:none;display:grid;gap:30px;margin-top:28px}
+.passo h3{font-size:22px;margin:14px 0 4px}
+.passo p{font-size:19px;color:var(--suave)}
+.tela{position:relative;aspect-ratio:9/16;max-height:420px;width:100%;max-width:236px;background:#fff;border:3px dashed var(--apoio);border-radius:18px;
+  display:flex;align-items:center;justify-content:center;text-align:center;padding:16px;font-weight:700;color:var(--apoio)}
+.tela .tarja{position:absolute;left:0;right:0;top:0;background:var(--verde);color:var(--creme);font-size:14px;padding:6px 8px;border-radius:14px 14px 0 0}
+.passo__n{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:50%;background:var(--dourado);color:var(--verde);font-weight:800;font-size:20px}
+
+/* ganhos */
+.ganhos{background:var(--verde);color:var(--creme)}
+.ganhos h2{color:var(--creme)}
+.ganhos ul{list-style:none;display:grid;gap:14px;margin-top:24px}
+.ganhos li{background:var(--verde-2);border-radius:14px;padding:18px;font-size:19px}
+.ganhos li b{display:block;color:var(--dourado-claro);font-size:20px;margin-bottom:2px}
+
+/* precos */
+.planos{list-style:none;display:grid;gap:16px;margin-top:26px}
+.plano{background:#fff;border:2px solid var(--linha);border-radius:var(--raio);padding:22px 18px}
+.plano h3{font-size:24px}
+.plano .ate{color:var(--suave);font-size:18px}
+.plano .mes{font-size:32px;font-weight:800;color:var(--verde);margin-top:10px;line-height:1.1}
+.plano .mes small{font-size:18px;font-weight:600}
+.plano .ano{font-size:19px;font-weight:600;color:var(--suave);margin:4px 0 16px}
+.preco-nota{margin-top:22px;font-size:21px;font-weight:700;color:var(--verde)}
+.empresarial{margin-top:20px;background:var(--areia);border-radius:var(--raio);padding:20px 18px}
+.empresarial a.btn{margin-top:14px}
+.todos{margin-top:18px;font-size:19px;font-weight:700}
+
+/* garantia, faq, quem somos */
+.garantia{background:var(--areia)}
+.garantia .miudo{font-size:16px;color:var(--suave);margin-top:14px;max-width:640px}
+details{background:#fff;border:2px solid var(--linha);border-radius:14px;margin-top:12px}
+summary{cursor:pointer;list-style:none;padding:18px 54px 18px 18px;font-weight:700;font-size:19px;position:relative;min-height:60px;display:flex;align-items:center}
+summary::-webkit-details-marker{display:none}
+summary::after{content:"+";position:absolute;right:18px;font-size:30px;font-weight:600;color:var(--dourado)}
+details[open] summary::after{content:"\2212"}
+details p{padding:0 18px 18px;font-size:19px;color:var(--suave)}
+.quem p{font-size:19px;margin-top:10px;max-width:640px}
+.quem .dados{margin-top:18px;font-size:17px;color:var(--suave)}
+
+/* rodape e cookies */
+footer{background:var(--verde);color:var(--creme);padding:36px 0 40px;font-size:17px}
+footer a,footer button.link{color:var(--creme)}
+footer nav{display:flex;flex-wrap:wrap;gap:6px 22px;margin-bottom:14px}
+footer nav a,footer nav button{min-height:44px;display:inline-flex;align-items:center}
+footer button.link{background:none;border:0;font:inherit;text-decoration:underline;cursor:pointer;padding:0}
+.faixa-cookies{position:fixed;left:0;right:0;bottom:0;z-index:50;background:var(--verde);color:var(--creme);padding:18px 20px calc(18px + env(safe-area-inset-bottom));
+  box-shadow:0 -6px 24px rgba(0,0,0,.3);font-size:18px}
+.faixa-cookies a{color:var(--dourado-claro)}
+.faixa-cookies__botoes{display:flex;gap:12px;margin-top:14px;flex-wrap:wrap}
+
+@media (min-width:720px){
+  body{font-size:19px}
+  section{padding:80px 0}
+  .hero{padding:56px 0 88px}
+  .hero__acoes{flex-direction:row;align-items:center;max-width:none}
+  .hero__acoes .btn--linha{min-width:0}
+  .calc__caixa{padding:32px}
+  .campos{grid-template-columns:1fr 1fr;gap:26px 28px}
+  .resultado dl{grid-template-columns:1fr 1fr}
+  .resultado .item--destaque{grid-column:1/-1}
+  .cot-lista{grid-template-columns:repeat(4,1fr)}
+  .passos{grid-template-columns:repeat(3,1fr)}
+  .ganhos ul{grid-template-columns:1fr 1fr}
+  .planos{grid-template-columns:1fr 1fr}
+  .faixa-cookies{display:flex;align-items:center;justify-content:space-between;gap:24px}
+  .faixa-cookies__botoes{margin-top:0;flex-shrink:0}
+  html.com-faixa-cookies body{padding-bottom:120px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+@media (min-width:1000px){.planos{grid-template-columns:repeat(4,1fr)}.plano .mes{font-size:28px}}
+.tela--img{aspect-ratio:auto;max-height:none;border:3px solid var(--apoio);background:#FDF8F5;overflow:hidden;padding-top:30px}
+.tela--img img{display:block;width:100%;height:auto}
