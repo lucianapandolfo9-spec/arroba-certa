@@ -2350,11 +2350,12 @@ let ADMIN_PLANOS=null;
 // ---------- admin: sub-abas (Clientes / Leads) ----------
 // Aba nova dentro do Admin que já existe — não ferramenta separada: auth já
 // resolvida (eh_admin), cliente Supabase já carregado aqui. Decisão de 02/10.
-let ADMIN_SUBTAB='clientes'; // 'clientes' | 'leads'
+let ADMIN_SUBTAB='clientes'; // 'clientes' | 'leads' | 'ativacao'
 function adminTabsHtml(){
-  return `<div class="tabs" style="max-width:320px;margin-bottom:14px">
+  return `<div class="tabs" style="max-width:460px;margin-bottom:14px">
     <button class="${ADMIN_SUBTAB==='clientes'?'on':''}" onclick="setAdminSubtab('clientes')">Clientes</button>
     <button class="${ADMIN_SUBTAB==='leads'?'on':''}" onclick="setAdminSubtab('leads')">Leads</button>
+    <button class="${ADMIN_SUBTAB==='ativacao'?'on':''}" onclick="setAdminSubtab('ativacao')">Ativação</button>
   </div>`;
 }
 function setAdminSubtab(t){ ADMIN_SUBTAB=t; renderAdmin(); }
@@ -2378,6 +2379,7 @@ let ADMIN_LEADS_CACHE=[];
 async function renderAdmin(){
   setNav('admin');
   if(ADMIN_SUBTAB==='leads') return renderAdminLeads();
+  if(ADMIN_SUBTAB==='ativacao') return renderAdminAtivacao();
   const body=$('app-body'); body.innerHTML=adminTabsHtml()+'<p class="mut center" style="padding:30px">Carregando…</p>';
   const [{data:clientes,error},{data:planos},{data:pendentes}]=await Promise.all([
     db.rpc('admin_dashboard_clientes'),
@@ -2466,6 +2468,99 @@ async function renderAdmin(){
   }
   body.innerHTML=html;
   ligarAcoesAdmin(body);
+}
+
+// ---------- Admin: funil de ativação (onboarding PR 1) ----------
+// RPC admin_funil_ativacao() (só admin; cortesia já vem fora). "Ativado" =
+// lote em 24 h + custo em 3 dias (decisão 13 do grill). A lista "Paradas" traz
+// o texto da régua (nota de Atendimento, seção 3b) pronto para o WhatsApp, que
+// a Luciana manda à mão. Condição: C = sem lote; A = lote e 2ª pesagem; B = lote
+// sem 2ª pesagem. Até o dia 2 usa o texto do D1; do dia 3 em diante, o do D3.
+// Sem nome da pessoa no texto (regra: nome só quando o lead confirmar).
+const PASSO_PARADO_LABEL={sem_lote:'sem lote', sem_custo:'sem custo', sem_2a_pesagem:'sem 2ª pesagem', completo:'completo'};
+const REGUA_TEXTOS={
+  D1_C:'Bom dia! Conseguiu entrar no Certo Agro? Se travou em algum passo, me manda um print ou um áudio que eu te ajudo. O primeiro lote leva poucos minutos. 🐂',
+  D1_B:'Bom dia! Vi que você já lançou o lote, boa. Agora, se tiver a pesagem de algum animal, lança também que o sistema passa a mostrar o ganho de peso por dia. Se precisar, me chama.',
+  D3_A:'Oi! Já deu pra ver o custo da sua arroba no seu lote? Esse é o número que mais muda a decisão de quando vender. Me conta o que achou, se quiser. 🐂',
+  D3_B:'Oi! Falta só a pesagem pro sistema calcular o ganho de peso e o custo da arroba do seu lote. Se quiser, me manda os pesos por áudio que eu te mostro como lançar.',
+  D3_C:'Oi! Sem pressa. Se for mais fácil, a gente faz juntos: te ligo ou a gente troca áudio por aqui, e em 10 minutos o primeiro lote fica lançado. Prefere como?'
+};
+function condicaoRegua(c){
+  if(c.passo_parado==='sem_lote' || !c.primeiro_lote_em) return 'C';
+  return c.segunda_pesagem_em ? 'A' : 'B';
+}
+function textoRegua(c){
+  const cond=condicaoRegua(c);
+  const dia=(Number(c.dias_desde_cadastro)||0)<=2 ? 'D1' : 'D3';
+  // Condição A pula o D1 (já foi além): usa o texto do D3.
+  const chave=(dia==='D1' && cond==='A') ? 'D3_A' : `${dia}_${cond}`;
+  return {cond, chave, texto:REGUA_TEXTOS[chave]||''};
+}
+function telefoneWaMe(t){
+  const d=String(t??'').replace(/[^0-9]/g,'');
+  if(!d) return null;
+  const n=(d.startsWith('55') && d.length>11) ? d : '55'+d;
+  return (n.length===12 || n.length===13) ? n : null;
+}
+async function renderAdminAtivacao(){
+  const body=$('app-body'); body.innerHTML=adminTabsHtml()+'<p class="mut center" style="padding:30px">Carregando…</p>';
+  const {data,error}=await db.rpc('admin_funil_ativacao');
+  if(error){ body.innerHTML=adminTabsHtml()+`<div class="msg err">Não consegui ler o funil: ${esc(error.message)}</div>`; return; }
+  const linhas=data||[];
+  const conta=f=>linhas.filter(f).length;
+  const total=linhas.length;
+  const kpi=(lbl,val,cls='')=>`<div class="dashboard-kpi"><div class="lbl">${lbl}</div><div class="val ${cls}">${val}</div></div>`;
+  let html=adminTabsHtml()+`<div class="nome" style="font-size:20px;margin:10px 0 4px">Funil de ativação</div>
+    <p class="mut" style="margin-bottom:14px">Contas novas (sem cortesia). Ativada = lote em 24 h e custo em 3 dias. Com poucas contas, olhe a contagem, não o percentual.</p>
+    <div class="dashboard-grid">
+      ${kpi('Contas',total)}
+      ${kpi('Ativadas',conta(c=>c.ativado===true),'pos')}
+      ${kpi('Lote em 24 h',conta(c=>c.lote_em_24h===true))}
+      ${kpi('Custo em 3 dias',conta(c=>c.custo_em_3d===true))}
+    </div>
+    <div class="dashboard-grid">
+      ${kpi('Paradas sem lote',conta(c=>c.passo_parado==='sem_lote'),'neg')}
+      ${kpi('Paradas sem custo',conta(c=>c.passo_parado==='sem_custo'))}
+      ${kpi('Sem 2ª pesagem',conta(c=>c.passo_parado==='sem_2a_pesagem'))}
+      ${kpi('Completas',conta(c=>c.passo_parado==='completo'),'pos')}
+    </div>
+    <div class="section-title">Paradas</div>`;
+  const paradas=linhas.filter(c=>c.passo_parado && c.passo_parado!=='completo')
+    .sort((a,b)=>(Number(a.dias_desde_cadastro)||0)-(Number(b.dias_desde_cadastro)||0));
+  if(!paradas.length) html+='<div class="card center"><p class="mut">Nenhuma conta parada agora.</p></div>';
+  paradas.forEach((c,i)=>{
+    const r=textoRegua(c);
+    const tel=telefoneWaMe(c.telefone);
+    const origem=[c.utm_source,c.utm_campaign].filter(Boolean).map(esc).join(' · ') || 'sem origem';
+    const href=tel?`https://wa.me/${tel}?text=${encodeURIComponent(r.texto)}`:'';
+    html+=`<div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap">
+        <div>
+          <div class="nome" style="font-size:17px">${esc(c.fazenda_nome)||'(sem nome)'}</div>
+          <div class="mut" style="font-size:13px">${esc(c.dono_email)||'sem e-mail'} · ${esc(c.telefone)||'sem telefone'}</div>
+        </div>
+        <span class="pill warn">${esc(PASSO_PARADO_LABEL[c.passo_parado]||c.passo_parado)}</span>
+      </div>
+      <div class="grid2" style="margin-top:10px">
+        <div class="kpi"><div class="lbl">Dias desde o cadastro</div><div class="val">${Number(c.dias_desde_cadastro)||0}</div></div>
+        <div class="kpi"><div class="lbl">Origem</div><div class="val" style="font-size:14px">${origem}</div></div>
+        <div class="kpi"><div class="lbl">Último acesso</div><div class="val" style="font-size:14px">${c.ultimo_acesso_em?fmtDataHora(c.ultimo_acesso_em):'nunca registrado'}</div></div>
+        <div class="kpi"><div class="lbl">Assinatura</div><div class="val" style="font-size:14px">${esc(c.status_assinatura)||'—'}</div></div>
+      </div>
+      <p class="mut" style="margin-top:8px">E-mail D1: ${c.aviso_d1_em?fmtDataHora(c.aviso_d1_em):'não enviado'} · E-mail D3: ${c.aviso_d3_em?fmtDataHora(c.aviso_d3_em):'não enviado'}</p>
+      <label for="regua-${i}">Mensagem (${r.chave.replace('_',', condição ')}), dá para ajustar antes de mandar</label>
+      <textarea id="regua-${i}" rows="4" data-regua="${i}" style="width:100%">${esc(r.texto)}</textarea>
+      ${tel
+        ? `<a class="btn" id="regua-link-${i}" href="${esc(href)}" target="_blank" rel="noopener" style="display:block;text-align:center;text-decoration:none;margin-top:10px">Abrir no WhatsApp</a>`
+        : '<div class="msg warn">Telefone ausente ou inválido. Não dá para abrir o WhatsApp.</div>'}
+    </div>`;
+  });
+  body.innerHTML=html;
+  // O texto editado vai para o link na hora (nada de dado de cliente em onclick).
+  paradas.forEach((c,i)=>{
+    const ta=$('regua-'+i), a=$('regua-link-'+i), tel=telefoneWaMe(c.telefone);
+    if(ta && a && tel) ta.addEventListener('input',()=>{ a.href=`https://wa.me/${tel}?text=${encodeURIComponent(ta.value)}`; });
+  });
 }
 
 // Os botões do Admin carregam dado digitado por CLIENTE (nome de fazenda,
