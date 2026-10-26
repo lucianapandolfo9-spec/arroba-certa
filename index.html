@@ -3360,16 +3360,35 @@ function renderGraficoPeso(pes){
 }
 
 // ---------- simulador vender vs segurar ----------
-let SIM_V=null;
+let SIM_V=null, SIM_GEN={};
+const SIM_RESERVA={gmd:1.0, custoDia:8, preco:335};
+// Quais campos continuam com o valor genérico (a pessoa não trocou).
+function simCamposGenericos(){
+  const nomes={gmd:'ganho por dia', custo:'custo por dia', hoje:'preço da @ hoje', fut:'preço da @ futuro'};
+  return Object.keys(nomes).filter(k=>SIM_GEN[k]!=null && $('sm-'+k) && Number($('sm-'+k).value).toFixed(2)===SIM_GEN[k]).map(k=>nomes[k]);
+}
+function simGenAtualizar(){
+  ['gmd','custo','hoje'].forEach(k=>{
+    const el=$('sm-gen-'+k); if(!el) return;
+    el.classList.toggle('hidden', !(SIM_GEN[k]!=null && Number($('sm-'+k).value).toFixed(2)===SIM_GEN[k]));
+  });
+}
 async function simularLote(id){
   if(ehEquipe()) return renderLotesEquipe(); // funcionário não vê plano, venda, simulador nem edita lote
   const body=$('app-body'); body.innerHTML='<p class="mut center" style="padding:30px">Carregando…</p>';
   const {data:v,error}=await db.from('vw_lote_analise').select('*').eq('lote_id',id).single();
   if(error){ body.innerHTML=`<div class="msg err">${esc(error.message)}</div>`; return; }
   SIM_V=v;
-  const gmd = v.gmd!=null ? Number(v.gmd) : 1.0;
-  const custoDia = (v.custo_periodo_cab && v.dias_periodo>0) ? (Number(v.custo_periodo_cab)/Number(v.dias_periodo)) : 8;
-  const precoHoje = v.preco_arroba_usado!=null ? Number(v.preco_arroba_usado) : 335;
+  // Valores de reserva quando falta dado do lote. NÃO são da fazenda: ficam
+  // rotulados "estimativa genérica" no campo e no resultado (correção do grill 26/10).
+  const gmdGen = v.gmd==null;
+  const custoGen = !(v.custo_periodo_cab && v.dias_periodo>0);
+  const precoGen = v.preco_arroba_usado==null;
+  const gmd = gmdGen ? SIM_RESERVA.gmd : Number(v.gmd);
+  const custoDia = custoGen ? SIM_RESERVA.custoDia : (Number(v.custo_periodo_cab)/Number(v.dias_periodo));
+  const precoHoje = precoGen ? SIM_RESERVA.preco : Number(v.preco_arroba_usado);
+  SIM_GEN={gmd:gmdGen?gmd.toFixed(2):null, custo:custoGen?custoDia.toFixed(2):null, hoje:precoGen?precoHoje.toFixed(2):null, fut:precoGen?precoHoje.toFixed(2):null};
+  const rotGen=(campo,txt)=>`<div class="msg warn sim-gen" id="sm-gen-${campo}" style="margin:6px 0 0;font-size:13px"><strong>Estimativa genérica, não é da sua fazenda.</strong> ${txt}</div>`;
   body.innerHTML=`<button class="back" onclick="renderLote('${id}')">← Voltar ao lote</button>
     <div class="nome" style="font-size:22px;margin:6px 0">🔮 Vender hoje ou segurar?</div>
     <p class="mut">Simulação pra <b>${esc(v.nome)}</b> — ${v.qtd_animais} cabeças. Ajuste os valores e veja o que rende mais.</p>
@@ -3378,14 +3397,17 @@ async function simularLote(id){
       <label>Segurar por quantos dias?</label>
       <input id="sm-dias" type="number" value="30" />
       <label>Preço da @ HOJE (R$)</label>
-      <input id="sm-hoje" type="number" step="0.01" value="${precoHoje.toFixed(2)}" />
+      <input id="sm-hoje" type="number" step="0.01" value="${precoHoje.toFixed(2)}" oninput="simGenAtualizar()" />
+      ${precoGen?rotGen('hoje','Não há cotação da @ para a sua praça. Coloque o preço que o frigorífico te paga.'):''}
       <label>Preço da @ que você ESPERA daqui a esses dias (R$)</label>
-      <input id="sm-fut" type="number" step="0.01" value="${precoHoje.toFixed(2)}" placeholder="sua aposta pro futuro" />
+      <input id="sm-fut" type="number" step="0.01" value="${precoHoje.toFixed(2)}" placeholder="sua aposta para o futuro" oninput="simGenAtualizar()" />
       <label>Custo por cabeça por dia pra manter o boi (R$)</label>
-      <input id="sm-custo" type="number" step="0.01" value="${custoDia.toFixed(2)}" />
-      <div class="mut" style="font-size:12px;margin-top:2px">Ração + mão de obra + tudo que você gasta por dia, dividido pelo número de cabeças. Já vem calculado com base no histórico do lote — ajuste se achar que vai mudar.</div>
+      <input id="sm-custo" type="number" step="0.01" value="${custoDia.toFixed(2)}" oninput="simGenAtualizar()" />
+      ${custoGen?rotGen('custo','Este lote ainda não tem custo lançado com período. Lance os custos para o app usar o seu número.'):''}
+      <div class="mut" style="font-size:12px;margin-top:2px">Ração + mão de obra + tudo que você gasta por dia, dividido pelo número de cabeças. Com custos lançados, já vem calculado pelo histórico do lote; ajuste se achar que vai mudar.</div>
       <label>Ganho de peso por dia — GMD (kg)</label>
-      <input id="sm-gmd" type="number" step="0.01" value="${gmd.toFixed(2)}" />
+      <input id="sm-gmd" type="number" step="0.01" value="${gmd.toFixed(2)}" oninput="simGenAtualizar()" />
+      ${gmdGen?rotGen('gmd','Sem a 2ª pesagem o app não sabe o ganho real deste lote.'):''}
       <div class="mut" style="font-size:12px;margin-top:2px">Quanto o animal engorda por dia, em média. Referência: 0,4-0,8 no pasto, 0,8-1,2 no semiconfinamento, 1,0-1,6 no confinamento.</div>
       <div id="sm-msg"></div>
       <button class="btn" style="margin-top:16px;background:var(--terra)" onclick="rodarSimulacao('${id}')">Simular</button>
@@ -3403,7 +3425,9 @@ async function rodarSimulacao(id){
   });
   if(error) return msg('sm-msg',error.message);
   const r=data, qtd=Number(v.qtd_animais)||1, ganho=Number(r.ganho_de_segurar), segurar=r.recomendacao==='segurar';
+  const gen=simCamposGenericos();
   $('sm-result').innerHTML=`
+    ${gen.length?`<div class="msg warn" style="margin-top:14px"><strong>Atenção: este resultado usa estimativa genérica, não é da sua fazenda</strong> (${gen.join(', ')}). Troque pelos seus números para decidir de verdade.</div>`:''}
     <div class="card ${segurar?'':''}" style="background:${segurar?'var(--verde)':'var(--terra)'};color:#fff;border:none">
       <h3 style="color:#E2D5B0">Recomendação</h3>
       <div class="big">${segurar?'📈 Segurar '+num(dias,0)+' dias':'💰 Vender hoje'}</div>
