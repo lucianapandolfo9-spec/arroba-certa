@@ -90,6 +90,12 @@
     --texto:#17241D; --cinza:#6b6f68; --linha:#E6DFCE;
     --vermelho:#b91c1c; --vermelho-bg:#fee2e2; --verde-bg:#E3ECE6;
     --dourado:#B08A33; --areia:#E2D5B0;
+    /* Gráficos (painel de dinheiro, 26/10/2026): ordem fixa por categoria,
+       validada no dataviz (validate_palette.js, modo claro: todas as checagens passam;
+       contraste < 3:1 em 2 cores, por isso cada gráfico tem os números escritos ao lado). */
+    --cat-compra:#2f7d4f; --cat-alimentacao:#c99a2e; --cat-sanitario:#2a78d6;
+    --cat-mao_obra:#eb6834; --cat-operacional:#6250d6; --cat-fixo:#e87ba4; --cat-outro:#898781;
+    --graf-grade:#e1e0d9;
   }
   *{box-sizing:border-box;margin:0;padding:0}
   body{font-family:'Montserrat',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
@@ -310,28 +316,12 @@
   .eq-check{display:flex;gap:12px;align-items:center;font-size:16px;font-weight:600;padding:8px 0;min-height:44px;cursor:pointer}
   .eq-check input{width:24px;height:24px;margin:0;flex-shrink:0}
   .eq-link input{font-size:13px}
-  /* Onboarding PR 1 (26/10/2026): prejuízo aparece como prejuízo; tour; exemplo; checklist */
+  /* Onboarding PR 1 (26/10/2026): prejuízo aparece como prejuízo; exemplo */
   .hero.hero-prejuizo{background:linear-gradient(135deg,#7f1d1d,var(--vermelho))}
   .hero.hero-prejuizo h3{color:#fde2e2}
   .exemplo-card{border:2px dashed var(--dourado)}
   .tarja-exemplo{background:var(--dourado);color:#fff;font-weight:800;letter-spacing:.6px;font-size:13px;
     padding:8px 12px;border-radius:10px;text-align:center}
-  .exemplo-trio{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
-  .exemplo-trio .val{font-size:19px}
-  @media(max-width:520px){.exemplo-trio{grid-template-columns:1fr}}
-  .checklist-ativacao{border:1.5px solid var(--verde-claro)}
-  .ck-lista{list-style:none;margin:12px 0 0;padding:0}
-  .ck-item{border-top:1px solid var(--linha)}
-  .ck-item:first-child{border-top:none}
-  .ck-item,.ck-botao{display:flex;align-items:center;gap:12px;padding:10px 0;min-height:52px}
-  .ck-botao{width:100%;background:none;border:none;text-align:left;color:var(--texto);cursor:pointer;font:inherit;padding:10px 0}
-  .ck-marca{flex:0 0 32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;
-    font-weight:800;background:var(--verde-suave);color:var(--verde);border:1.5px solid var(--verde-claro)}
-  .ck-marca.ok{background:var(--verde);color:#fff;border-color:var(--verde)}
-  .ck-texto{flex:1;font-size:15px}
-  .ck-texto small{display:block;color:var(--cinza);font-size:13px;margin-top:2px}
-  .ck-item.feito .ck-texto b{color:var(--cinza)}
-  .ck-ir{font-size:24px;color:var(--verde);font-weight:800}
   .video-fachada{display:flex;align-items:center;gap:14px;width:100%;min-height:96px;border-radius:14px;padding:16px;
     background:linear-gradient(135deg,var(--verde),var(--verde-claro));color:#fff;border:none;text-align:left;font:inherit;margin:4px 0 12px}
   button.video-fachada{cursor:pointer}
@@ -344,7 +334,60 @@
   .video-box{position:relative;width:100%;aspect-ratio:16/9;border-radius:14px;overflow:hidden;background:#000;margin:4px 0 12px}
   .video-box.vertical{aspect-ratio:9/16;max-height:62vh;width:auto;margin-left:auto;margin-right:auto}
   .video-box iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
-  .tour-passos{font-size:14px;font-weight:700;color:var(--dourado);margin:0 0 6px;letter-spacing:.3px}
+  .coach-balao .video-box.vertical{max-height:46vh}
+  /* Tutorial interativo (coach marks, 26/10/2026): escurece a tela, acende o
+     alvo com borda dourada e ancora um balão ao lado. O alvo continua clicável;
+     4 faixas transparentes em volta dele seguram o toque no resto da tela. */
+  .coach.hidden{display:none}
+  .coach-spot{position:fixed;z-index:290;border-radius:14px;pointer-events:none;
+    box-shadow:0 0 0 3px var(--dourado),0 0 0 9999px rgba(17,42,30,.72)}
+  .coach-bloq{position:fixed;z-index:291;background:transparent}
+  .coach-balao{position:fixed;z-index:295;background:#fff;color:var(--texto);border-radius:16px;
+    border-top:5px solid var(--dourado);box-shadow:0 12px 40px rgba(0,0,0,.35);padding:16px 16px 14px;
+    width:min(380px,calc(100vw - 16px));max-height:calc(100vh - 16px);overflow:auto}
+  .coach-balao:focus{outline:none}
+  .coach-num{font-size:14px;font-weight:700;color:var(--dourado);margin:0 0 4px;letter-spacing:.3px}
+  .coach-balao h2{font-size:20px;line-height:1.25;font-weight:800;color:var(--verde);margin:0 0 6px}
+  .coach-balao p{font-size:16px;line-height:1.45;margin:0 0 8px}
+  .coach-acoes{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  .coach-acoes button{flex:1 1 auto;min-height:48px;font-size:16px;font-weight:800;border-radius:12px;padding:10px 12px}
+  .coach-acoes .coach-sec{background:var(--verde-suave);color:var(--verde)}
+  .coach-acoes .coach-pri{background:var(--verde);color:#fff}
+  .coach-acoes .coach-pular{flex-basis:100%;background:none;color:var(--cinza);font-size:14px;font-weight:600;
+    text-decoration:underline;min-height:40px}
+  .coach-video-btn{background:var(--dourado);color:#fff}
+  .coach-pulse{animation:coachPulse 1.4s ease-in-out infinite;border-radius:10px}
+  @keyframes coachPulse{0%,100%{box-shadow:0 0 0 0 rgba(176,138,51,.7)}50%{box-shadow:0 0 0 7px rgba(176,138,51,0)}}
+  @media (prefers-reduced-motion:reduce){.coach-pulse{animation:none;outline:3px solid var(--dourado)}}
+  /* Painel "Dinheiro da fazenda" (PR 2) */
+  .din-frase{font-size:17px;line-height:1.5;margin:0 0 14px}
+  .din-trio{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+  .din-bloco{background:var(--bg);border-radius:12px;padding:12px}
+  .din-bloco .lbl{font-size:13px;color:var(--cinza);font-weight:700;text-transform:uppercase;letter-spacing:.4px}
+  .din-bloco .val{font-size:21px;font-weight:800;margin-top:4px}
+  .din-bloco small{display:block;font-size:12px;color:var(--cinza);margin-top:3px}
+  .hero .din-bloco{background:rgba(255,255,255,.12)}
+  .hero .din-bloco .lbl,.hero .din-bloco small{color:#F4EEDF}
+  .hero .din-bloco .val{color:#fff}
+  .hero .din-bloco .val.falta{color:#fecaca}
+  @media(max-width:520px){.din-trio{grid-template-columns:1fr}}
+  .din-nota{font-size:13px;color:var(--cinza);margin-top:10px}
+  .din-link{background:none;border:none;padding:0;color:inherit;font:inherit;font-weight:700;text-decoration:underline;cursor:pointer;width:auto}
+  .din-graf{position:relative;width:100%}
+  .din-pizza{display:grid;grid-template-columns:200px minmax(0,1fr);gap:18px;align-items:center}
+  @media(max-width:560px){.din-pizza{grid-template-columns:1fr}.din-pizza .din-graf{max-width:220px;margin:0 auto}}
+  .din-lista{list-style:none;margin:0;padding:0}
+  .din-lista li{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--linha);font-size:15px}
+  .din-lista li:last-child{border-bottom:none}
+  .din-lista .sw{flex:0 0 14px;height:14px;border-radius:4px}
+  .din-lista .nm{flex:1}
+  .din-lista .vl{font-weight:800;white-space:nowrap}
+  .din-lista .pc{color:var(--cinza);font-size:13px;min-width:42px;text-align:right}
+  .din-lista li.total{font-weight:800;border-top:2px solid var(--linha)}
+  .din-tabela{width:100%;border-collapse:collapse;font-size:14px;margin-top:6px}
+  .din-tabela td{padding:6px 0;border-bottom:1px solid var(--linha)}
+  .din-tabela td:last-child{text-align:right;font-weight:700}
+  .regua-linha{font-size:15px;line-height:1.45;margin-top:10px}
   .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 </style>
 </head>
@@ -524,9 +567,18 @@
 </div>
 <div id="pwa-update" class="pwa-update hidden" role="region" aria-label="Atualização disponível"></div>
 <div id="pwa-toast" class="pwa-toast hidden" role="status" aria-live="polite"></div>
-<!-- Tour de 3 passos do dono (onboarding PR 1): preenchido por desenharTour() -->
-<div id="tour-overlay" class="pwa-overlay hidden">
-  <div id="tour-dialog" class="pwa-dialog" role="dialog" aria-modal="true" aria-labelledby="tour-titulo" tabindex="-1"></div>
+<!-- Tutorial interativo do dono (coach marks): controlado por tour*() -->
+<div id="coach" class="coach hidden">
+  <div class="coach-bloq" id="coach-b1"></div><div class="coach-bloq" id="coach-b2"></div>
+  <div class="coach-bloq" id="coach-b3"></div><div class="coach-bloq" id="coach-b4"></div>
+  <div class="coach-spot" id="coach-spot"></div>
+  <div class="coach-balao" id="coach-balao" role="dialog" aria-modal="false" aria-labelledby="coach-titulo" aria-describedby="coach-texto" tabindex="-1">
+    <p class="coach-num" id="coach-num"></p>
+    <h2 id="coach-titulo"></h2>
+    <div id="coach-texto" aria-live="polite"></div>
+    <div id="coach-video"></div>
+    <div class="coach-acoes" id="coach-acoes"></div>
+  </div>
 </div>
 <!-- Trocar de fazenda (multi-fazenda) — preenchido por abrirSeletorFazenda() -->
 <div id="faz-overlay" class="pwa-overlay hidden" onclick="if(event.target===this)fecharSeletorFazenda()">
@@ -686,7 +738,7 @@ function traduzErro(m){
 }
 async function logout(){
   BOOT_ULTIMO_USER_ID=null;
-  if(TOUR.aberto){ TOUR.passo=0; TOUR.esperandoLote=false; esconderTour(); }
+  if(TOUR.aberto) tourEncerrar();
   // Celular compartilhado: não deixa a lista de fazendas do anterior na memória.
   // (A última fazenda aberta fica guardada por usuário no aparelho — ver lembrarFazenda.)
   fecharSeletorFazenda();
@@ -808,7 +860,12 @@ async function bootReal(){
   loadTicker();
   // Quem volta do Mercado Pago cai em "Minha conta", olhando o plano — não no
   // Dashboard, senão paga e não vê confirmação nenhuma.
-  if(voltouDoPagamento) renderConta(); else renderDashboard();
+  if(voltouDoPagamento) renderConta();
+  else {
+    await renderDashboard();
+    // Tutorial para todo dono (novo ou antigo), uma vez por aparelho; "Pular" encerra.
+    setTimeout(()=>{ if(viewAtual()==='dash' && !MODO_LEITURA) iniciarTour('primeiro-acesso'); },900); // conta só leitura não lança nada: sem tutorial automático
+  }
 }
 
 // Plano da CONTA visto a partir da fazenda aberta. O banco (limite_uso_fazenda)
@@ -1506,6 +1563,7 @@ async function renderLoteEquipe(id){
 
     <div class="card">
       <h3>⚖️ Pesagens</h3>
+      ${slotTutorial('pesagem')}
       ${(pes||[]).length>1?'<div style="height:140px;margin-bottom:12px"><canvas id="chart-peso"></canvas></div>':''}
       ${(pes||[]).map(p=>`<div class="list-item"><span>${fmtData(p.data)}${autorHTML(p)}</span>
         <span><b>${num(p.peso_medio_kg,0)} kg</b>
@@ -1543,6 +1601,7 @@ async function renderLoteEquipe(id){
 
     <div class="card">
       <h3>💉 Sanitário</h3>
+      ${slotTutorial('sanitario')}
       ${lerSo?'':guiaVacinacaoHTML(v.fase)}
       ${proximasSanitario(san).map(s=>`<div class="msg err">⚠ ${labelEvento(s.evento)}${s.produto?' — '+esc(s.produto):''} — próxima dose ${fmtData(s.proxima_data)}</div>`).join('')}
       ${(san||[]).map(s=>`<div class="list-item"><span>${fmtData(s.data)} · ${labelEvento(s.evento)}${s.produto?' — '+esc(s.produto):''}${s.proxima_data?' <span class="mut">(próx.: '+fmtData(s.proxima_data)+')</span>':''}${autorHTML(s)}</span>
@@ -2875,21 +2934,24 @@ async function renderDashboard(){
   if(ehEquipe()) return renderDashboardEquipe();
   setNav('dash');
   const body=$('app-body'); body.innerHTML='<p class="mut center" style="padding:30px">Carregando…</p>';
-  const [{data:lotes,error},{data:vacinasProx}]=await Promise.all([
+  const [{data:lotes,error},{data:vacinasProx},{data:custos},{data:sans}]=await Promise.all([
     db.from('vw_lote_analise').select('*').eq('fazenda_id',FAZENDA.id).order('nome'),
     db.from('sanitario').select('*, lote:lote_id!inner(nome, fazenda_id)').eq('lote.fazenda_id',FAZENDA.id).not('proxima_data','is',null).lte('proxima_data',addDias(hoje(),14)).order('proxima_data'),
+    // Painel de dinheiro: todos os custos e o custo do sanitário da fazenda (RLS do dono já filtra).
+    db.from('custo').select('valor, categoria, data, lote:lote_id!inner(fazenda_id)').eq('lote.fazenda_id',FAZENDA.id),
+    db.from('sanitario').select('custo, data, lote:lote_id!inner(fazenda_id)').eq('lote.fazenda_id',FAZENDA.id).not('custo','is',null),
   ]);
   if(error){ body.innerHTML=`<div class="msg err">${esc(error.message)}</div>`; return; }
   const todos=lotes||[];
   // Painel vazio: exemplo só de leitura (Santa Helena), nada vai ao banco.
   if(!todos.length){
     body.innerHTML=exemploPainelHTML();
+    desenharGraficosDinheiro(DINHEIRO_EXEMPLO);
     registrarExemploVisto();
     return;
   }
   const ativos=todos.filter(l=>l.ativo);
   const totalAnimais=ativos.reduce((s,l)=>s+(l.qtd_animais||0),0);
-  const temPreco=ativos.some(l=>l.preco_arroba_usado!=null);
   // Lucro honesto: só lotes com a compra informada entram em lucro/ranking.
   const comCompra=ativos.filter(l=>!loteSemCompra(l));
   const semCompra=ativos.filter(l=>loteSemCompra(l));
@@ -2902,12 +2964,14 @@ async function renderDashboard(){
   const comPreco=ativos.filter(l=>l.preco_arroba_usado!=null);
   const precoMedio=comPreco.reduce((s,l)=>s+Number(l.preco_arroba_usado||0),0)/Math.max(comPreco.length,1);
 
-  let html=checklistAtivacaoHTML(todos)+heroRebanhoHTML(ativos,totalAnimais,temPreco,'Lucro estimado da fazenda')+`
+  const din=contaDinheiro(todos,custos||[],sans||[]);
+  let html=painelDinheiroHTML(din)+`
+  <div class="section-title">Seu rebanho</div>
   <div class="dashboard-grid">
     <div class="dashboard-kpi"><div class="lbl">Animais ativos</div><div class="val">${totalAnimais}</div></div>
     <div class="dashboard-kpi"><div class="lbl">Lotes ativos</div><div class="val">${ativos.length}</div></div>
     <div class="dashboard-kpi"><div class="lbl">Peso médio</div><div class="val">${num(pesoMedio,0)} kg</div></div>
-    <div class="dashboard-kpi"><div class="lbl">${lucroMedio!=null&&lucroMedio<0?'Prejuízo':'Lucro'} médio/cabeça</div>${lucroMedio==null
+    <div class="dashboard-kpi"><div class="lbl">${lucroMedio!=null&&lucroMedio<0?'Prejuízo':'Lucro'} médio/cabeça (gado na fazenda)</div>${lucroMedio==null
       ? '<div class="val" style="font-size:16px">falta a compra</div>'
       : `<div class="val ${lucroMedio<0?'neg':'pos'}">${brl(lucroMedio)}</div>`}</div>
   </div>`;
@@ -2919,7 +2983,7 @@ async function renderDashboard(){
   }
 
   if(!ativos.length){
-    html+=`<div class="card center"><p class="mut">Nenhum lote ativo agora.</p><button class="btn" style="margin-top:12px" onclick="novoLote()">+ Criar lote</button></div>`;
+    html+=`<div class="card center"><p class="mut">Nenhum lote ativo agora.</p><button class="btn" id="btn-criar-lote" style="margin-top:12px" onclick="novoLote()">+ Criar lote</button></div>`;
   }else{
     html+=`<div class="dashboard-columns">
       <div class="card"><h3>Desempenho dos lotes</h3>
@@ -2937,37 +3001,276 @@ async function renderDashboard(){
     </div>`;
   }
   body.innerHTML=html;
+  desenharGraficosDinheiro(din);
 }
 
-// ---------- painel vazio: exemplo só de leitura (onboarding PR 1) ----------
+// ---------- painel "Dinheiro da fazenda" (PR 2, 26/10/2026) ----------
+// Gastou / Vale hoje / Sobra + 3 gráficos. Regras do grill (itens 3 a 7):
+// lotes vendidos SOMAM (gastou = custo do lote, vale = recebido na venda);
+// lote ativo sem a compra informada NÃO entra na conta do lucro (só nos
+// gráficos de gasto, que mostram o que foi lançado). Sem cotação: fica fora.
+// Números do lote vêm da vw_lote_analise (a mesma conta do banco); o front só soma.
+const CATEGORIAS_DINHEIRO=[
+  {chave:'compra', nome:'Compra do gado'},
+  {chave:'alimentacao', nome:'Alimentação'},
+  {chave:'sanitario', nome:'Sanitário'},
+  {chave:'mao_obra', nome:'Mão de obra'},
+  {chave:'operacional', nome:'Operacional'},
+  {chave:'fixo', nome:'Fixo'},
+  {chave:'outro', nome:'Outro'},
+];
+const brl0 = v => v==null?"-":new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL',maximumFractionDigits:0}).format(v);
+// Rótulo curto em cima da barra do mês (sem "R$" para caber em 6 barras no celular).
+function milCurto(v){
+  const a=Math.abs(v);
+  if(a>=1e6) return num(v/1e6,1)+' mi';
+  if(a>=1e3) return num(v/1e3,a>=1e4?0:1)+' mil';
+  return num(v,0);
+}
+function pctTexto(p){ return p>0 && p<1 ? '<1%' : num(p,0)+'%'; }
+function brlCurto(v){
+  const a=Math.abs(v);
+  if(a>=1e6) return 'R$ '+num(v/1e6,1)+' mi';
+  if(a>=1e3) return 'R$ '+num(v/1e3,a>=1e4?0:1)+' mil';
+  return 'R$ '+num(v,0);
+}
+function corToken(nome,reserva){
+  try{ const v=getComputedStyle(document.documentElement).getPropertyValue(nome).trim(); return v||reserva; }catch(e){ return reserva; }
+}
+// Quanto foi gasto no lote: vendido = custo do lote (compra + custos);
+// ativo = custo por cabeça × cabeças (compra + custos do período).
+function gastouLote(l){
+  if(l.ativo===false && l.custo_lote_total!=null) return Number(l.custo_lote_total)||0;
+  return (Number(l.custo_cab_total)||0)*(Number(l.qtd_animais)||0);
+}
+function compraLote(l){
+  const c=Number(l.custo_compra_cab)||0;
+  return c>0 ? c*(Number(l.qtd_animais)||0) : 0;
+}
+function ultimosMeses(n){
+  const nomes=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+  const d=new Date(); d.setDate(1);
+  const out=[];
+  for(let i=n-1;i>=0;i--){
+    const m=new Date(d.getFullYear(),d.getMonth()-i,1);
+    out.push({chave:`${m.getFullYear()}-${String(m.getMonth()+1).padStart(2,'0')}`, rotulo:nomes[m.getMonth()], rotuloLongo:`${nomes[m.getMonth()]}/${m.getFullYear()}`, valor:0});
+  }
+  return out;
+}
+// De onde veio a @ da frase do topo.
+function fraseArroba(lotes){
+  if(!lotes.length) return '';
+  const ref=lotes.filter(l=>l.preco_arroba_praticado==null && l.preco_arroba_referencia!=null);
+  if(ref.length===lotes.length){
+    const l=ref[0];
+    return `@ ${brl(l.preco_arroba_referencia)}, fonte Scot Consultoria, praça ${esc(FAZENDA?.praca_referencia||'')}, ${fmtData(l.preco_arroba_referencia_data)}`;
+  }
+  const media=lotes.reduce((s,l)=>s+Number(l.preco_arroba_usado||0),0)/lotes.length;
+  if(!ref.length) return `@ ${lotes.length>1?'média ':''}${brl(media)}, preço que você informou`;
+  return `@ média ${brl(media)}, entre o preço que você informou e a Scot Consultoria`;
+}
+function contaDinheiro(lotes,custos,sans){
+  const ativos=lotes.filter(l=>l.ativo!==false), vendidos=lotes.filter(l=>l.ativo===false);
+  const semCompra=ativos.filter(loteSemCompra);
+  const semCotacao=ativos.filter(l=>!loteSemCompra(l) && valorLoteHoje(l)==null);
+  const naConta=ativos.filter(l=>!loteSemCompra(l) && valorLoteHoje(l)!=null);
+  const recebido=vendidos.reduce((s,l)=>s+(Number(l.receita_venda_total)||0),0);
+  const estimado=naConta.reduce((s,l)=>s+valorLoteHoje(l),0);
+  const gastou=[...naConta,...vendidos].reduce((s,l)=>s+gastouLote(l),0);
+  const valeHoje=recebido+estimado, sobra=valeHoje-gastou;
+  const temConta=(naConta.length+vendidos.length)>0;
+  // Para onde foi o dinheiro: tudo o que foi lançado (compra + custos + sanitário).
+  const porCat={}; CATEGORIAS_DINHEIRO.forEach(c=>{ porCat[c.chave]=0; });
+  lotes.forEach(l=>{ porCat.compra+=compraLote(l); });
+  custos.forEach(c=>{ const k=(c.categoria in porCat && c.categoria!=='compra')?c.categoria:'outro'; porCat[k]+=Number(c.valor)||0; });
+  sans.forEach(s=>{ porCat.sanitario+=Number(s.custo)||0; });
+  const categorias=CATEGORIAS_DINHEIRO.map(c=>({...c, valor:porCat[c.chave]})).filter(c=>c.valor>0);
+  // Gasto mês a mês: compra no mês da entrada, custos e sanitário pela data.
+  const meses=ultimosMeses(6), idx={};
+  meses.forEach((m,i)=>{ idx[m.chave]=i; });
+  const soma=(data,v)=>{ const k=String(data||'').slice(0,7); if(idx[k]!=null && v) meses[idx[k]].valor+=v; };
+  lotes.forEach(l=>soma(l.data_inicial, compraLote(l)));
+  custos.forEach(c=>soma(c.data, Number(c.valor)||0));
+  sans.forEach(s=>soma(s.data, Number(s.custo)||0));
+
+  let frase;
+  if(naConta.length){
+    frase=`Você já investiu <b>${brl0(gastou)}</b>. Se vender hoje (${fraseArroba(naConta)}), volta <b>${brl0(valeHoje)}</b>. ${sobra<0?'Falta':'Sobra'} <b class="${sobra<0?'neg':'pos'}">${brl0(Math.abs(sobra))}</b>.`;
+  }else if(vendidos.length){
+    frase=`Você investiu <b>${brl0(gastou)}</b>. As vendas trouxeram <b>${brl0(recebido)}</b>. ${sobra<0?'Ficou faltando':'Sobrou'} <b class="${sobra<0?'neg':'pos'}">${brl0(Math.abs(sobra))}</b>.`;
+  }else{
+    const comValor=semCompra.filter(l=>valorLoteHoje(l)!=null);
+    const vale=comValor.reduce((s,l)=>s+valorLoteHoje(l),0);
+    frase=comValor.length
+      ? `Seu gado vale hoje <b>${brl0(vale)}</b> (${fraseArroba(comValor)}). Para ver quanto sobra, falta só quanto você pagou pelo lote.`
+      : 'Para ver quanto sobra, informe quanto pagou pelo lote e o preço da @.';
+  }
+  const notas=[];
+  if(semCompra.length && temConta) notas.push(`${semCompra.length} lote(s) sem o valor de compra não entram na conta.`);
+  if(semCotacao.length) notas.push(`${semCotacao.length} lote(s) sem cotação da @ não entram na conta.`);
+  return {gastou, valeHoje, recebido, estimado, sobra, temConta, frase, notas,
+    loteSemCompraId:semCompra[0]?.lote_id||null, categorias, meses};
+}
+// Mesmos gráficos com os números da Fazenda Santa Helena (exemplo, nada gravado).
+function dinheiroExemplo(){
+  const x=(window.CertoCalc && CertoCalc.exemploSantaHelena) ? CertoCalc.exemploSantaHelena() : null;
+  if(!x) return null;
+  const e=x.dados;
+  const mapa={'Sal mineral e suplemento':'alimentacao','Mão de obra':'mao_obra','Vacina e vermífugo':'sanitario'};
+  const porCat={compra:e.compraTotal};
+  e.custos.forEach(c=>{ const k=mapa[c.nome]||'outro'; porCat[k]=(porCat[k]||0)+c.valor; });
+  const categorias=CATEGORIAS_DINHEIRO.map(c=>({...c, valor:porCat[c.chave]||0})).filter(c=>c.valor>0);
+  const meses=ultimosMeses(6), idx={};
+  meses.forEach((m,i)=>{ idx[m.chave]=i; });
+  const entrada=addDias(hoje(),-e.dias);
+  if(idx[entrada.slice(0,7)]!=null) meses[idx[entrada.slice(0,7)]].valor+=e.compraTotal;
+  // Custos do exemplo espalhados por igual nos dias do lote.
+  const porDia=x.custosLancados/e.dias;
+  for(let i=0;i<e.dias;i++){ const k=addDias(entrada,i).slice(0,7); if(idx[k]!=null) meses[idx[k]].valor+=porDia; }
+  return {gastou:x.gastou, valeHoje:x.valeHoje, recebido:0, estimado:x.valeHoje, sobra:x.sobra, temConta:true,
+    frase:`Você já investiu <b>${brl0(x.gastou)}</b>. Se vender hoje (@ ${brl(e.precoArroba)}, valor de exemplo), volta <b>${brl0(x.valeHoje)}</b>. ${x.sobra<0?'Falta':'Sobra'} <b class="${x.sobra<0?'neg':'pos'}">${brl0(Math.abs(x.sobra))}</b>.`,
+    notas:[], categorias, meses, exemplo:true};
+}
+let DINHEIRO_EXEMPLO=null;
+function painelDinheiroHTML(d){
+  if(!d) return '';
+  const ex=!!d.exemplo;
+  const tarja=ex?'<div class="tarja-exemplo" style="margin-bottom:12px">EXEMPLO · números de demonstração, não são da sua fazenda</div>':'';
+  const falta=d.sobra<0;
+  const total=d.categorias.reduce((s,c)=>s+c.valor,0);
+  let topo=`<div class="card${ex?' exemplo-card':''}" id="painel-dinheiro" data-conta="${d.temConta?1:0}">
+    ${tarja}<h3>Dinheiro da fazenda</h3>
+    <p class="din-frase">${d.frase}</p>`;
+  if(d.temConta){
+    topo+=`<div class="din-trio">
+        <div class="din-bloco"><div class="lbl">Gastou</div><div class="val">${brl0(d.gastou)}</div></div>
+        <div class="din-bloco"><div class="lbl">Vale hoje</div><div class="val">${brl0(d.valeHoje)}</div>${d.recebido>0?`<small>${brl0(d.recebido)} já recebidos + ${brl0(d.estimado)} estimados (gado na fazenda)</small>`:''}</div>
+        <div class="din-bloco"><div class="lbl">${falta?'Falta (prejuízo)':'Sobra'}</div><div class="val ${falta?'neg':'pos'}">${brl0(Math.abs(d.sobra))}</div></div>
+      </div>
+      <div class="section-title" style="margin:18px 2px 6px">Gastou x ${falta?'prejuízo':'lucro'}</div>
+      <div class="din-graf" style="height:118px"><canvas id="din-graf-gs" role="img" aria-label="Gastou ${brl0(d.gastou)}; ${falta?'prejuízo':'lucro'} ${brl0(Math.abs(d.sobra))}"></canvas></div>`;
+  }else if(d.loteSemCompraId){
+    topo+=`<p class="din-nota"><button type="button" class="din-link" onclick="editarLote('${d.loteSemCompraId}',true)">Lucro: informe quanto pagou</button></p>`;
+  }
+  if(d.notas.length) topo+=`<p class="din-nota">${d.notas.join(' ')}</p>`;
+  topo+='</div>';
+
+  const cat=`<div class="card${ex?' exemplo-card':''}" id="din-cat">
+    <h3>Para onde foi o dinheiro${ex?' <span class="pill">exemplo</span>':''}</h3>
+    ${total>0?`<div class="din-pizza">
+      <div class="din-graf" style="height:200px"><canvas id="din-graf-cat" role="img" aria-label="Gasto por categoria, a lista ao lado tem os valores"></canvas></div>
+      <ul class="din-lista">
+        ${[...d.categorias].sort((a,b)=>b.valor-a.valor).map(c=>`<li><span class="sw" style="background:var(--cat-${c.chave})" aria-hidden="true"></span><span class="nm">${c.nome}</span><span class="vl">${brl0(c.valor)}</span><span class="pc">${pctTexto(c.valor/total*100)}</span></li>`).join('')}
+        <li class="total"><span class="nm">Total lançado</span><span class="vl">${brl0(total)}</span><span class="pc">100%</span></li>
+      </ul>
+    </div>${!ex && d.notas.length?'<p class="din-nota">Inclui o que foi lançado em todos os lotes.</p>':''}`
+    :'<p class="mut">Nada lançado ainda. Informe quanto pagou pelo lote e lance os custos: o gráfico aparece aqui.</p>'}
+  </div>`;
+
+  const temMes=d.meses.some(m=>m.valor>0);
+  const mes=`<div class="card${ex?' exemplo-card':''}" id="din-mes">
+    <h3>Gasto mês a mês${ex?' <span class="pill">exemplo</span>':''}</h3>
+    ${temMes?`<p class="mut" style="font-size:13px;margin:-4px 0 8px">Últimos 6 meses, em reais. Compra do gado no mês da entrada, custos e vacinas pela data.</p>
+    <div class="din-graf" style="height:220px"><canvas id="din-graf-mes" role="img" aria-label="Gasto por mês nos últimos 6 meses, valores na tabela abaixo"></canvas></div>
+    <details style="margin-top:8px"><summary style="cursor:pointer;font-weight:700;color:var(--verde);min-height:40px;display:flex;align-items:center">Ver em números</summary>
+      <table class="din-tabela">${d.meses.map(m=>`<tr><td>${m.rotuloLongo}</td><td>${brl0(m.valor)}</td></tr>`).join('')}</table>
+    </details>`
+    :'<p class="mut">Nenhum gasto nos últimos 6 meses.</p>'}
+  </div>`;
+  return topo+cat+mes;
+}
+// Escreve o valor ao lado da barra (o número fica legível sem passar o dedo).
+const ROTULOS_VALOR={id:'rotulosValor', afterDatasetsDraw(chart,args,opts){
+  const ctx=chart.ctx; ctx.save();
+  ctx.fillStyle=opts.cor||'#17241D';
+  ctx.font=`700 ${opts.tam||13}px Montserrat, sans-serif`;
+  const horiz=chart.options.indexAxis==='y';
+  chart.data.datasets.forEach((ds,i)=>{
+    chart.getDatasetMeta(i).data.forEach((el,j)=>{
+      const v=ds.data[j]; if(!v) return;
+      const t=opts.fmt?opts.fmt(v,j):String(v);
+      if(horiz){ ctx.textAlign='left'; ctx.textBaseline='middle'; ctx.fillText(t, el.x+8, el.y); }
+      else { ctx.textAlign='center'; ctx.textBaseline='bottom'; ctx.fillText(t, el.x, el.y-4); }
+    });
+  });
+  ctx.restore();
+}};
+let CHARTS_DIN={};
+function desenharGraficosDinheiro(d){
+  Object.values(CHARTS_DIN).forEach(c=>{ try{ c.destroy(); }catch(e){} });
+  CHARTS_DIN={};
+  if(!d || typeof Chart==='undefined') return;
+  const texto=corToken('--texto','#17241D'), cinza=corToken('--cinza','#6b6f68'), grade=corToken('--graf-grade','#e1e0d9');
+  const fonte={family:'Montserrat, sans-serif'};
+  const gs=$('din-graf-gs');
+  if(gs && d.temConta){
+    const falta=d.sobra<0;
+    const vals=[d.gastou, Math.abs(d.sobra)];
+    CHARTS_DIN.gs=new Chart(gs,{
+      type:'bar',
+      data:{labels:['Gastou', falta?'Prejuízo':'Lucro'],
+        datasets:[{data:vals, backgroundColor:[corToken('--verde','#112A1E'), falta?corToken('--vermelho','#b91c1c'):corToken('--dourado','#B08A33')],
+          borderRadius:4, borderSkipped:'start', barPercentage:.78, categoryPercentage:.9}]},
+      options:{indexAxis:'y', responsive:true, maintainAspectRatio:false, animation:false,
+        layout:{padding:{right:4}},
+        plugins:{legend:{display:false}, rotulosValor:{fmt:v=>brl0(v), cor:texto, tam:14},
+          tooltip:{callbacks:{label:c=>brl0(c.parsed.x)}}},
+        scales:{x:{display:false, beginAtZero:true, suggestedMax:Math.max(...vals,1)*1.75},
+          y:{grid:{display:false}, border:{display:false}, ticks:{color:texto, font:{...fonte, size:14, weight:'700'}}}}},
+      plugins:[ROTULOS_VALOR]
+    });
+  }
+  const cat=$('din-graf-cat');
+  if(cat && d.categorias.length){
+    const total=d.categorias.reduce((s,c)=>s+c.valor,0);
+    CHARTS_DIN.cat=new Chart(cat,{
+      type:'doughnut',
+      data:{labels:d.categorias.map(c=>c.nome),
+        datasets:[{data:d.categorias.map(c=>c.valor), backgroundColor:d.categorias.map(c=>corToken('--cat-'+c.chave,'#898781')),
+          borderColor:'#ffffff', borderWidth:2, hoverOffset:4}]},
+      options:{responsive:true, maintainAspectRatio:false, animation:false, cutout:'60%',
+        plugins:{legend:{display:false},
+          tooltip:{callbacks:{label:c=>`${c.label}: ${brl0(c.parsed)} (${pctTexto(c.parsed/total*100)})`}}}}
+    });
+  }
+  const mes=$('din-graf-mes');
+  if(mes && d.meses.some(m=>m.valor>0)){
+    const max=Math.max(...d.meses.map(m=>m.valor),1);
+    CHARTS_DIN.mes=new Chart(mes,{
+      type:'bar',
+      data:{labels:d.meses.map(m=>m.rotulo),
+        datasets:[{data:d.meses.map(m=>m.valor), backgroundColor:corToken('--verde-claro','#54705D'), borderRadius:4, borderSkipped:'start', barPercentage:.7}]},
+      options:{responsive:true, maintainAspectRatio:false, animation:false,
+        layout:{padding:{top:22}},
+        plugins:{legend:{display:false}, rotulosValor:{fmt:v=>milCurto(v), cor:texto, tam:11},
+          tooltip:{callbacks:{title:c=>d.meses[c[0].dataIndex].rotuloLongo, label:c=>brl0(c.parsed.y)}}},
+        scales:{y:{beginAtZero:true, suggestedMax:max*1.1, grid:{color:grade}, border:{display:false},
+            ticks:{color:cinza, font:{...fonte, size:11}, maxTicksLimit:4, callback:v=>brlCurto(v)}},
+          x:{grid:{display:false}, ticks:{color:texto, font:{...fonte, size:12}, maxRotation:0, autoSkip:false}}}},
+      plugins:[ROTULOS_VALOR]
+    });
+  }
+}
+
+// ---------- painel vazio: exemplo só de leitura (onboarding PR 1 + PR 2) ----------
 // Fazenda Santa Helena: números de assets/calc.js (exemploSantaHelena, com
 // teste em tests/calc.test.js). Nada é gravado. Funcionário nunca chega aqui
-// (renderDashboardEquipe). A versão com gráficos vem no PR 2.
+// (renderDashboardEquipe). Mesmos gráficos do painel real, rotulados EXEMPLO.
 function exemploPainelHTML(){
   const x=(window.CertoCalc && CertoCalc.exemploSantaHelena) ? CertoCalc.exemploSantaHelena() : null;
-  const cta=`<button class="btn" style="min-height:56px;font-size:18px" onclick="novoLote()">Criar meu lote</button>`;
+  const cta=id=>`<button class="btn" ${id?`id="${id}"`:''} style="min-height:56px;font-size:18px" onclick="novoLote()">Criar meu lote</button>`;
   const topo=`<div class="card center">
       <h3 style="color:var(--verde);font-size:20px;text-transform:none;letter-spacing:0">Em 2 minutos você vê quanto vale o seu lote hoje</h3>
       <p class="mut" style="margin:6px 0 14px;font-size:15px">Só o nome, quantas cabeças e o peso médio. Veja abaixo como fica.</p>
-      ${cta}
+      ${cta('btn-criar-lote')}
     </div>`;
+  DINHEIRO_EXEMPLO=dinheiroExemplo();
   if(!x) return topo;
   const e=x.dados;
-  const linhaCusto=(nome,valor)=>`<div class="row"><span class="k">${esc(nome)}</span><span class="v">${brl(valor)}</span></div>`;
-  return topo+`
+  return topo+`<p class="mut" style="margin:4px 2px 0;font-size:14px"><b>${esc(e.fazenda)}</b> · ${esc(e.lote)} · ${e.cabecas} cabeças Nelore a pasto</p>`
+    +painelDinheiroHTML(DINHEIRO_EXEMPLO)+`
     <div class="card exemplo-card" aria-label="Exemplo de demonstração, não são os seus dados">
       <div class="tarja-exemplo">EXEMPLO · números de demonstração, não são da sua fazenda</div>
-      <div class="nome" style="font-size:19px;margin:12px 0 2px">${esc(e.fazenda)}</div>
-      <p class="mut" style="font-size:14px">${esc(e.lote)} · ${e.cabecas} cabeças Nelore a pasto</p>
-      <p style="font-size:16px;line-height:1.5;margin:12px 0">Você já investiu <b>${brl(x.gastou)}</b>. Se vender hoje (@ ${brl(e.precoArroba)}, valor de exemplo), volta <b>${brl(x.valeHoje)}</b>. ${x.sobra<0?'Falta':'Sobra'} <b class="${x.sobra<0?'neg':'pos'}">${brl(Math.abs(x.sobra))}</b>.</p>
-      <div class="exemplo-trio">
-        <div class="dashboard-kpi"><div class="lbl">Gastou</div><div class="val">${brl(x.gastou)}</div></div>
-        <div class="dashboard-kpi"><div class="lbl">Vale hoje</div><div class="val">${brl(x.valeHoje)}</div></div>
-        <div class="dashboard-kpi"><div class="lbl">${x.sobra<0?'Falta':'Sobra'}</div><div class="val ${x.sobra<0?'neg':'pos'}">${brl(x.sobra)}</div></div>
-      </div>
-      <div class="section-title" style="margin-top:16px">Para onde foi o dinheiro</div>
-      ${linhaCusto('Compra do gado',e.compraTotal)}
-      ${e.custos.map(c=>linhaCusto(c.nome,c.valor)).join('')}
       <div class="section-title" style="margin-top:16px">Pesagens</div>
       <div class="row"><span class="k">1ª pesagem (entrada)</span><span class="v">${num(e.pesoEntrada,0)} kg</span></div>
       <div class="row"><span class="k">2ª pesagem, ${e.dias} dias depois</span><span class="v">${num(e.pesoAtual,0)} kg</span></div>
@@ -2977,7 +3280,7 @@ function exemploPainelHTML(){
       <div class="row"><span class="k">@ usada no exemplo</span><span class="v">${brl(e.precoArroba)} <span class="pill">exemplo</span></span></div>
       <p class="mut" style="margin:12px 0 0">Exemplo só para leitura. Nada aqui é gravado. No seu lote, a @ vem da cotação da sua praça, com data e fonte.</p>
     </div>
-    <div class="card center">${cta}
+    <div class="card center">${cta('')}
       <button class="btn ghost" style="width:100%;margin-top:8px" onclick="renderImportar()">Tenho vários lotes numa planilha</button>
     </div>`;
 }
@@ -2987,58 +3290,6 @@ function registrarExemploVisto(){
   if(lsGet(k)==='1') return;
   lsSet(k,'1');
   registrarEvento('exemplo_visto');
-}
-
-// ---------- checklist de ativação "Passo X de 4" (onboarding PR 1) ----------
-// Só dono, só com lote. Estado derivado da vw_lote_analise (sem tabela nova).
-// Dispensável neste aparelho; some quando os 4 passos estão feitos.
-// A 2ª pesagem mostra data prevista e nunca fica vermelha.
-function chaveChecklist(){ return `ca:checklist:v1:${APP_BASE}:${FAZENDA?.id||''}`; }
-function checklistAtivacaoHTML(lotes){
-  if(ehEquipe() || !FAZENDA?.id || !(lotes||[]).length || lsGet(chaveChecklist())==='dispensado') return '';
-  const ativos=lotes.filter(l=>l.ativo);
-  const base=ativos.length?ativos:lotes;
-  const temCusto=lotes.some(l=>Number(l.custo_periodo_total)>0);
-  const temPesagem2=lotes.some(l=>Number(l.dias_periodo)>0);
-  if(temCusto && temPesagem2) return '';
-  const loteCusto=base.find(l=>!(Number(l.custo_periodo_total)>0)) || base[0];
-  const lotePeso=base.find(l=>!(Number(l.dias_periodo)>0)) || base[0];
-  const entradas=base.map(l=>l.data_inicial).filter(Boolean).sort();
-  const prevista=entradas.length?addDias(String(entradas[0]).slice(0,10),30):null;
-  const quando=!prevista?'uns 30 dias depois da entrada'
-    :(prevista>hoje()?`prevista a partir de ${fmtData(prevista)}`:'já pode pesar de novo');
-  const passos=[
-    {n:1, ok:true, titulo:'Fazenda criada'},
-    {n:2, ok:true, titulo:'1º lote criado', libera:'libera o valor do lote hoje'},
-    {n:3, ok:temCusto, titulo:'Lançar um custo do lote', libera:'libera o custo por cabeça', lote:loteCusto?.lote_id},
-    {n:4, ok:temPesagem2, titulo:'Fazer a 2ª pesagem', libera:`libera o ganho por dia e o custo da @ · ${quando}`, lote:lotePeso?.lote_id},
-  ];
-  const atual=passos.find(p=>!p.ok).n;
-  const item=p=>{
-    const marca=`<span class="ck-marca ${p.ok?'ok':''}" aria-hidden="true">${p.ok?'✓':p.n}</span>`;
-    const texto=`<span class="ck-texto"><b>${p.titulo}</b>${p.libera?`<small>${p.libera}</small>`:''}</span>`;
-    if(p.ok || !p.lote) return `<li class="ck-item ${p.ok?'feito':''}">${marca}${texto}${p.ok?'<span class="sr-only">feito</span>':''}</li>`;
-    return `<li class="ck-item"><button type="button" class="ck-botao" onclick="checklistIr(${p.n},'${p.lote}')">${marca}${texto}<span class="ck-ir" aria-hidden="true">›</span></button></li>`;
-  };
-  return `<div class="card checklist-ativacao" role="region" aria-label="Primeiros passos">
-    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
-      <h3 style="margin:0">Passo ${atual} de 4</h3>
-      <button type="button" class="btn ghost mini" onclick="dispensarChecklist()">Dispensar</button>
-    </div>
-    <ol class="ck-lista">${passos.map(item).join('')}</ol>
-  </div>`;
-}
-async function checklistIr(passo,loteId){
-  registrarEvento('checklist_clique',{passo});
-  if(!loteId) return novoLote();
-  await renderLote(loteId);
-  if(passo===3) irParaCampo('card-custos','cus-valor');
-  else irParaCampo('card-pesagens','pes-peso');
-}
-function dispensarChecklist(){
-  lsSet(chaveChecklist(),'dispensado');
-  registrarEvento('checklist_clique',{acao:'dispensar'});
-  renderDashboard();
 }
 
 // Topo de "Meus lotes" e do Dashboard. Lucro só soma lotes com o valor da
@@ -3098,7 +3349,7 @@ async function renderLotes(){
         <div class="grid2" style="margin-top:12px">
           <div class="kpi"><div class="lbl">Custo da @ produzida</div><div class="val">${brl(l.custo_arroba_produzida)}</div></div>
           ${semCompra
-            ? `<div class="kpi"><div class="lbl">Vale hoje (lote)</div><div class="val">${brl(vh)}</div><div class="lbl" style="margin-top:3px">informe quanto pagou para ver o lucro</div></div>`
+            ? `<div class="kpi"><div class="lbl">Vale hoje (lote)</div><div class="val">${brl(vh)}</div><div class="lbl" style="margin-top:3px"><button type="button" class="din-link" onclick="event.stopPropagation();editarLote('${l.lote_id}',true)">Lucro: informe quanto pagou</button></div></div>`
             : `<div class="kpi"><div class="lbl">${lucro<0?'Prejuízo':'Lucro'} por cabeça</div><div class="val ${lucro<0?'neg':'pos'}">${brl(l.lucro_cab)}</div></div>`}
           <div class="kpi"><div class="lbl">@ usada</div><div class="val">${brl(l.preco_arroba_usado)}</div></div>
           <div class="kpi"><div class="lbl">GMD (ganho/dia)</div>
@@ -3195,52 +3446,48 @@ async function renderLote(id){
     </div>`;
   } else if(semCompra){
     // Sem "quanto pagou": lucro, prejuízo, margem e breakeven sairiam inflados
-    // (a compra entraria como R$ 0). Mostra o valor do lote hoje e pede a compra.
+    // (a compra entraria como R$ 0). Mostra o valor do lote hoje e, no lugar do
+    // lucro, só um link discreto para informar a compra.
     const vh=valorLoteHoje(v);
     html+=`
-    <div class="card hero">
+    <div class="card hero" id="lote-hero">
       <h3>Seu lote vale hoje</h3>
       <div class="big">${vh!=null?brl(vh):'Falta a cotação'}</div>
       <p style="opacity:.9;font-size:13px;margin-top:6px">${vh!=null
         ? `${v.qtd_animais} cab × ${num(v.arrobas_atuais_cab,2)} @ por cabeça · ${fonteArrobaTexto(v)}`
         : 'Não temos cotação da @ para a sua praça. Informe o preço da @ abaixo, em "Venda e lucro", para ver o valor.'}</p>
-    </div>
-    <div class="msg warn" style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
-      <span><strong>Informe quanto pagou pelo lote para ver o lucro.</strong> Sem esse valor, o app não calcula lucro nem preço mínimo de venda.</span>
-      <button class="btn mini" onclick="editarLote('${id}',true)">Informar quanto paguei</button>
+      <p style="font-size:14px;margin-top:10px;opacity:.95"><button type="button" class="din-link" onclick="editarLote('${id}',true)">Lucro: informe quanto pagou</button></p>
     </div>`;
   } else {
-    const prej=Number(v.lucro_lote_total)<0;
+    // Trio do lote (PR 2): Gastou / Vale hoje / Sobra, com os números da view.
+    const gastouL=gastouLote(v), vhL=valorLoteHoje(v);
+    const sobraL=vhL!=null?vhL-gastouL:null;
+    const prej=sobraL!=null?sobraL<0:Number(v.lucro_lote_total)<0;
     html+=`
-    <div class="card hero ${prej?'hero-prejuizo':''}">
-      <h3>${prej?'Prejuízo estimado do lote (todos os animais)':'Lucro estimado do lote (todos os animais)'}</h3>
-      <div class="big">${brl(v.lucro_lote_total)}</div>
-      <p style="opacity:.9;font-size:13px;margin-top:6px">${prej?'Prejuízo':'Lucro'} de ${brl(Math.abs(lucro))} por cabeça · margem ${brl(v.margem_por_arroba)}/@</p>
+    <div class="card hero ${prej?'hero-prejuizo':''}" id="lote-hero">
+      <h3>Dinheiro do lote (todos os animais)</h3>
+      ${vhL==null?`<p style="font-size:15px">Falta a cotação da @ para calcular quanto o lote vale hoje. Informe o preço da @ em "Venda e lucro".</p>`:`
+      <div class="din-trio">
+        <div class="din-bloco"><div class="lbl">Gastou</div><div class="val">${brl0(gastouL)}</div><small>compra + custos lançados</small></div>
+        <div class="din-bloco"><div class="lbl">Vale hoje</div><div class="val">${brl0(vhL)}</div><small>${v.qtd_animais} cab × ${num(v.arrobas_atuais_cab,2)} @</small></div>
+        <div class="din-bloco"><div class="lbl">${prej?'Falta (prejuízo)':'Sobra'}</div><div class="val ${prej?'falta':''}">${brl0(Math.abs(sobraL))}</div><small>${brl(Math.abs(lucro))} por cabeça</small></div>
+      </div>
+      <p style="opacity:.9;font-size:13px;margin-top:10px">${fonteArrobaTexto(v)}</p>`}
     </div>`;
   }
-
-  // Próximo passo: lote ativo ainda sem nenhum custo lançado.
-  if(!fechado && recemCriado){
-    html+=`<div class="msg ok proximo-passo" style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
-      <span><strong>Lote criado! Agora complete o lote.</strong> Comece pelas vacinas desta fase (logo abaixo, no Sanitário) e depois lance os custos e a pesagem.</span>
-      <button class="btn mini" onclick="irParaCampo('card-sanitario')">Ir para o Sanitário</button>
-    </div>`;
-  } else if(!fechado && !(cus||[]).length){
-    html+=`<div class="msg ok proximo-passo" style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
-      <span><strong>${recemCriado?'Lote criado! ':''}Próximo passo: lance um custo.</strong> Sal, ração, vacina, mão de obra: com os custos, o app mostra quanto custa cada cabeça.</span>
-      <button class="btn mini" onclick="irParaCampo('card-custos','cus-valor')">Lançar custo</button>
-    </div>`;
-  }
+  html+=fechado?'':reguaArrobaHTML(v,semCompra);
 
   const cardCustos=`
     <div class="card" id="card-custos">
       <h3>💵 Custos do período</h3>
+      ${slotTutorial('custos')}
       <p class="mut">Registre tudo que você gasta com esse lote. É o que define se ele está dando lucro de verdade.</p>
-      ${(cus||[]).map(c=>`<div class="list-item"><span>${fmtData(c.data)} · ${esc(c.categoria)}${autorDonoHTML(c)}</span>
+      ${(cus||[]).map(c=>`<div class="list-item"><span>${fmtData(c.data)} · ${esc((CATEGORIAS_DINHEIRO.find(x=>x.chave===c.categoria)||{}).nome||c.categoria)}${autorDonoHTML(c)}</span>
         <span><b>${brl(c.valor)}</b>
           <button class="btn ghost mini" title="Editar" onclick="editCusto('${id}','${c.id}','${c.data}',${esc(JSON.stringify(String(c.categoria??'')))},${Number(c.valor)})">✏️</button>
           <button class="btn ghost mini" title="Excluir" onclick="delCusto('${id}','${c.id}',this)">🗑️</button>
         </span></div>`).join('')||'<p class="mut">Sem custos.</p>'}
+      <div id="cus-form">
       <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
         <input id="cus-data" type="date" value="${hoje()}" style="flex:1;min-width:130px" />
         <select id="cus-cat" style="flex:1;min-width:130px">
@@ -3251,13 +3498,15 @@ async function renderLote(id){
         <input id="cus-valor" type="number" placeholder="R$ valor" style="flex:1;min-width:110px" />
         <button class="btn mini" id="cus-add" aria-label="Adicionar" onclick="addCusto('${id}')">+</button>
       </div>
-      <div class="mut" style="font-size:12px;margin-top:6px">Alimentação = ração/sal/pasto pago · Sanitário = vacina/remédio/veterinário · Mão de obra = quem cuida do lote · Operacional = combustível/manutenção · Fixo = custos que existem mesmo sem esse lote (rateados).</div>
       <div id="cus-msg"></div>
+      </div>
+      <div class="mut" style="font-size:12px;margin-top:6px">Alimentação = ração/sal/pasto pago · Sanitário = vacina/remédio/veterinário · Mão de obra = quem cuida do lote · Operacional = combustível/manutenção · Fixo = custos que existem mesmo sem esse lote (rateados).</div>
     </div>`;
 
   const cardPesagens=`
     <div class="card" id="card-pesagens">
       <h3>⚖️ Pesagens</h3>
+      ${slotTutorial('pesagem')}
       <p class="mut"><strong>O peso de entrada já conta como 1ª pesagem; a 2ª, daqui a uns 30 dias, libera o custo da @.</strong> Com duas pesagens o app calcula o ganho de peso por dia (GMD).</p>
       ${(pes||[]).length>1?'<div style="height:140px;margin-bottom:12px"><canvas id="chart-peso"></canvas></div>':''}
       ${(pes||[]).map(p=>`<div class="list-item"><span>${fmtData(p.data)}${autorDonoHTML(p)}</span>
@@ -3315,6 +3564,7 @@ async function renderLote(id){
 
     <div class="card" id="card-sanitario">
       <h3>💉 Sanitário</h3>
+      ${slotTutorial('sanitario')}
       <p class="mut">Registre vacina, vermífugo, exame ou tratamento. Preencha "próxima dose" para receber o aviso aqui antes de vencer.</p>
       ${guiaVacinacaoHTML(v.fase, recemCriado)}
       ${proximasSanitario(san).map(s=>`<div class="msg err">⚠ ${labelEvento(s.evento)}${s.produto?' · '+esc(s.produto):''} · próxima dose ${fmtData(s.proxima_data)}</div>`).join('')}
@@ -3323,6 +3573,7 @@ async function renderLote(id){
           <button class="btn ghost mini" title="Editar" onclick="editSanitario('${id}','${s.id}')">✏️</button>
           <button class="btn ghost mini" title="Excluir" onclick="delSanitario('${id}','${s.id}',this)">🗑️</button>
         </span></div>`).join('')||'<p class="mut">Sem eventos sanitários.</p>'}
+      <div id="san-form">
       <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
         <input id="san-data" type="date" value="${hoje()}" style="flex:1;min-width:130px" />
         <select id="san-evento" style="flex:1;min-width:130px">
@@ -3334,19 +3585,37 @@ async function renderLote(id){
         <input id="san-custo" type="number" placeholder="R$ custo (opc.)" style="flex:1;min-width:110px" />
         <button class="btn mini" id="san-add" aria-label="Adicionar" onclick="addSanitario('${id}')">+</button>
       </div>
-      
-      <div class="mut" style="font-size:12px;margin-top:6px">Vermífugo = contra verme · Exame = de rotina ou pré-venda · Tratamento = remédio para doença específica. "Próxima dose" fica vazio se o evento não se repete.</div>
+      <div class="mut" style="font-size:12px;margin-top:6px">O custo daqui já entra no custo do lote, não lance de novo em Custos.</div>
       <div id="san-msg"></div>
+      </div>
+      <div class="mut" style="font-size:12px;margin-top:4px">Vermífugo = contra verme · Exame = de rotina ou pré-venda · Tratamento = remédio para doença específica. "Próxima dose" fica vazio se o evento não se repete.</div>
     </div>
     <div style="height:30px"></div>`;
   body.innerHTML=html;
   renderGraficoPeso(pes);
 }
-// Leva até um cartão do lote e põe o cursor no campo (botões de próximo passo).
-function irParaCampo(cardId,campoId){
-  const c=$(cardId); if(!c) return;
-  c.scrollIntoView({behavior:'smooth',block:'start'});
-  const f=campoId && $(campoId); if(f) setTimeout(()=>{ try{ f.focus({preventScroll:true}); }catch(e){ f.focus(); } },350);
+// Régua da @ (PR 2): custo da @ produzida e preço de empate contra a @ de hoje.
+// Só aparece com dado: @ produzida pede custo + 2ª pesagem; empate pede a compra.
+function reguaArrobaHTML(v,semCompra){
+  const hojeA=v.preco_arroba_usado!=null?Number(v.preco_arroba_usado):null;
+  if(hojeA==null) return '';
+  const prod=v.custo_arroba_produzida!=null?Number(v.custo_arroba_produzida):null;
+  const emp=(!semCompra && Number(v.preco_breakeven)>0)?Number(v.preco_breakeven):null;
+  if(prod==null && emp==null) return '';
+  let h=`<div class="card" id="card-regua"><h3>Régua da @</h3>
+    <div class="row"><span class="k">@ de hoje <small class="mut">(${v.preco_arroba_praticado!=null?'seu preço':'Scot, '+fmtData(v.preco_arroba_referencia_data)})</small></span><span class="v">${brl(hojeA)}</span></div>`;
+  if(prod!=null) h+=`<div class="row"><span class="k">Custo de cada @ que o gado ganhou</span><span class="v ${prod>hojeA?'neg':''}">${brl(prod)}</span></div>`;
+  if(emp!=null) h+=`<div class="row"><span class="k">Preço de empate <small class="mut">(abaixo disso, prejuízo)</small></span><span class="v">${brl(emp)}</span></div>`;
+  if(prod!=null) h+=`<p class="regua-linha">${prod<=hojeA
+    ? `Cada @ nova custa <b>${brl(prod)}</b> e o mercado paga <b>${brl(hojeA)}</b>: a engorda está dando lucro.`
+    : `Cada @ nova custa <b class="neg">${brl(prod)}</b>, mais que os <b>${brl(hojeA)}</b> que o mercado paga: cada @ a mais sai no prejuízo.`}</p>`;
+  if(emp!=null){
+    const dif=Math.abs(hojeA-emp);
+    h+=`<p class="regua-linha">${hojeA>=emp
+      ? `A @ de hoje está <b class="pos">${brl(dif)} acima</b> do seu preço de empate.`
+      : `A @ de hoje está <b class="neg">${brl(dif)} abaixo</b> do seu preço de empate: vender hoje dá prejuízo.`}</p>`;
+  }
+  return h+'</div>';
 }
 
 // ---------- lucro honesto (onboarding PR 1) ----------
@@ -3405,6 +3674,7 @@ async function renderFecharLote(id,editar){
   const precoV = ed ? (l.preco_arroba_venda??'') : (v.preco_arroba_usado!=null?Number(v.preco_arroba_usado).toFixed(2):'');
   body.innerHTML=`<button class="back" onclick="renderLote('${id}')">← Voltar ao lote</button>
     <div class="nome" style="font-size:22px;margin:6px 0">${ed?'✏️ Corrigir venda':'✅ Registrar venda'}: ${esc(v.nome)}</div>
+    ${slotTutorial('venda')}
     <p class="mut">${ed?'Ajuste o que foi lançado errado. O lote continua vendido; o lucro realizado é recalculado.':'Preencha com os números REAIS da venda (nota do frigorífico). É isso que fecha o ciclo e mostra seu lucro de verdade.'}</p>
     <div class="card">
       <label for="fv-data">Data da venda</label>
@@ -3463,7 +3733,8 @@ async function addPesagem(id){
   if(EDIT_PES){ ({error}=await db.from('pesagem').update({data,peso_medio_kg:peso}).eq('id',EDIT_PES)); EDIT_PES=null; }
   else ({error}=await db.from('pesagem').insert({lote_id:id,data,peso_medio_kg:peso}));
   if(error) return msg('pes-msg',erroLancamento(error));
-  renderLote(id);
+  await renderLote(id);
+  tourGancho('pesagem');
 }
 function editPesagem(loteId,pesId,data,peso){
   EDIT_PES=pesId;
@@ -3489,7 +3760,8 @@ async function addCusto(id){
   if(EDIT_CUS){ ({error}=await db.from('custo').update({data,categoria:$('cus-cat').value,valor}).eq('id',EDIT_CUS)); EDIT_CUS=null; }
   else ({error}=await db.from('custo').insert({lote_id:id,data,categoria:$('cus-cat').value,valor}));
   if(error) return msg('cus-msg',erroLancamento(error));
-  renderLote(id);
+  await renderLote(id);
+  tourGancho('custo');
 }
 function editCusto(loteId,cusId,data,categoria,valor){
   EDIT_CUS=cusId;
@@ -3533,7 +3805,7 @@ const GUIA_VACINA = {
 };
 function guiaVacinacaoHTML(fase, aberto){
   const g = GUIA_VACINA[fase] || GUIA_VACINA.recria;
-  return `<details${aberto?' open':''} class="guia-vac" style="background:#F4EEDF;border-radius:8px;padding:10px 12px;margin:10px 0">
+  return `<details${aberto?' open':''} class="guia-vac" id="guia-vac" style="background:#F4EEDF;border-radius:8px;padding:10px 12px;margin:10px 0">
     <summary style="cursor:pointer;font-weight:700;color:#112A1E">📋 O que vacinar nesta fase: ${g.titulo}</summary>
     <div style="margin-top:8px">
       ${g.itens.map(i=>`<div style="padding:7px 0;border-bottom:1px solid #E6DFCE">
@@ -3554,6 +3826,7 @@ function guiaVacinacaoHTML(fase, aberto){
 function usarVacina(nome){
   const p=$('san-produto'); if(!p) return;
   $('san-evento').value='vacina'; p.value=nome;
+  if(TOUR.aberto){ tourGancho('usar-vacina'); return; }
   p.scrollIntoView({behavior:'smooth',block:'center'}); p.focus();
 }
 function addDias(dataStr,dias){ const d=new Date(dataStr+'T00:00:00'); d.setDate(d.getDate()+dias); return d.toISOString().slice(0,10); }
@@ -3574,7 +3847,8 @@ async function addSanitario(id){
   if(EDIT_SAN){ ({error}=await db.from('sanitario').update({data,evento,produto,proxima_data:proxima,custo}).eq('id',EDIT_SAN)); EDIT_SAN=null; }
   else ({error}=await db.from('sanitario').insert({lote_id:id,data,evento,produto,proxima_data:proxima,custo}));
   if(error) return msg('san-msg',erroLancamento(error));
-  renderLote(id);
+  await renderLote(id);
+  tourGancho('sanitario');
 }
 // Corrigir um evento sanitário (regra: tudo que foi lançado fica; errou, edita).
 // Mesmo padrão de pesagem/custo: preenche o formulário e o + vira ✓ salvar.
@@ -3648,6 +3922,7 @@ async function simularLote(id){
   const rotGen=(campo,txt)=>`<div class="msg warn sim-gen" id="sm-gen-${campo}" style="margin:6px 0 0;font-size:13px"><strong>Estimativa genérica, não é da sua fazenda.</strong> ${txt}</div>`;
   body.innerHTML=`<button class="back" onclick="renderLote('${id}')">← Voltar ao lote</button>
     <div class="nome" style="font-size:22px;margin:6px 0">🔮 Vender hoje ou segurar?</div>
+    ${slotTutorial('simulador')}
     <p class="mut">Simulação para <b>${esc(v.nome)}</b>, ${v.qtd_animais} cabeças. Ajuste os valores e veja o que rende mais.</p>
     <div class="card">
       <h3>Seus números (ajuste se quiser)</h3>
@@ -3785,14 +4060,18 @@ function novoLote(){
   if(ehEquipe()) return renderLotesEquipe(); // funcionário não vê plano, venda, simulador nem edita lote
   const body=$('app-body');
   body.innerHTML=`<button class="back" onclick="renderLotes()">← Voltar</button>
-    <div class="card"><h3>Novo lote</h3>
+    <div class="card" id="nl-card"><h3>Novo lote</h3>${slotTutorial('novo-lote')}
       <p class="mut">Lote é o grupo de animais que você acompanha junto. Não sabe um número exato? Estime, dá para ajustar depois em "Editar".</p>
+      <div id="nl-basicos">
       <label for="nl-nome">Nome do lote</label><input id="nl-nome" placeholder="Ex: Lote Nelore 02" autocomplete="off" />
       <label for="nl-qtd">Quantas cabeças?</label><input id="nl-qtd" type="number" inputmode="numeric" min="1" placeholder="40" />
       <label for="nl-peso">Peso médio de entrada (kg)</label><input id="nl-peso" type="number" inputmode="decimal" min="1" placeholder="360" />
       <div class="mut" style="font-size:12px;margin-top:2px">Peso vivo médio dos animais no dia da entrada. Pesou na balança ou fez uma estimativa visual.</div>
+      </div>
+      <div id="nl-compra-grupo">
       <label for="nl-compra">Quanto pagou pelo lote? (opcional, para ver o lucro)</label><input id="nl-compra" type="number" inputmode="decimal" min="0" placeholder="Ex: 148000" />
       <div class="mut" style="font-size:12px;margin-top:2px">O valor TOTAL pago por todos os animais do lote, não por cabeça. Sem ele, mostramos quanto o lote vale hoje.</div>
+      </div>
       <details class="mais-detalhes" style="margin-top:14px">
         <summary style="cursor:pointer;font-weight:700;color:var(--verde);min-height:44px;display:flex;align-items:center">Mais detalhes (fase, sistema, data, rendimento)</summary>
         <label for="nl-fase">Fase</label><select id="nl-fase"><option value="engorda">Engorda</option><option value="recria">Recria</option><option value="cria">Cria</option></select>
@@ -3805,27 +4084,30 @@ function novoLote(){
         <div class="mut" style="font-size:12px;margin-top:2px">Quanto do peso vivo vira carcaça no abate, usado para calcular as arrobas. Não sabe? Deixe 53%, é a média do mercado.</div>
       </details>
       <div id="nl-msg"></div>
-      <button class="btn" style="margin-top:16px" onclick="salvarLote()">Criar lote</button>
+      <button class="btn" id="nl-criar" style="margin-top:16px" onclick="salvarLote()">Criar lote</button>
       <button class="btn ghost" style="width:100%;margin-top:8px" onclick="renderImportar()">Tenho vários lotes numa planilha</button>
     </div>`;
-  setTimeout(()=>{ const n=$('nl-nome'); if(n) n.focus(); },0);
+  // No tutorial o foco fica no balão; fora dele, já no nome do lote.
+  if(TOUR.aberto) tourGancho('novo-lote');
+  else setTimeout(()=>{ const n=$('nl-nome'); if(n) n.focus(); },0);
 }
-// Lote recém-criado nesta sessão: o detalhe mostra a faixa de próximo passo
-// e, se o tour estiver aberto, o passo 3 ("seu lote vale R$ X hoje").
+// Lote recém-criado nesta sessão: o detalhe abre o guia de vacinas da fase.
 let LOTE_RECEM_CRIADO=null;
 async function salvarLote(){
   if(!podeEditar()) return;
+  // Falhou a validação: no tutorial, o balão aponta para o aviso em vermelho.
+  const falha=t=>{ msg('nl-msg',t); tourGancho('lote-erro'); };
   const nome=$('nl-nome').value.trim();
   const qtd=parseInt($('nl-qtd').value,10);
   const peso=parseFloat($('nl-peso').value);
   const compraRaw=$('nl-compra').value.trim();
   const compra=compraRaw===''?null:parseFloat(compraRaw);
   const rend=parseFloat($('nl-rend').value)||53;
-  if(!nome) return msg('nl-msg','Dê um nome ao lote.');
-  if(!(qtd>0)) return msg('nl-msg','Coloque quantas cabeças tem o lote.');
-  if(!(peso>0)) return msg('nl-msg','Coloque o peso médio de entrada, em kg. Pode ser uma estimativa.');
-  if(compra!=null && (isNaN(compra) || compra<0)) return msg('nl-msg','O valor pago precisa ser um número. Se não sabe agora, deixe em branco.');
-  if(rend<30 || rend>65) return msg('nl-msg','Rendimento fora do normal (30 a 65%). Não sabe? Deixe 53.');
+  if(!nome) return falha('Dê um nome ao lote.');
+  if(!(qtd>0)) return falha('Coloque quantas cabeças tem o lote.');
+  if(!(peso>0)) return falha('Coloque o peso médio de entrada, em kg. Pode ser uma estimativa.');
+  if(compra!=null && (isNaN(compra) || compra<0)) return falha('O valor pago precisa ser um número. Se não sabe agora, deixe em branco.');
+  if(rend<30 || rend>65) return falha('Rendimento fora do normal (30 a 65%). Não sabe? Deixe 53.');
   const {data:criado,error}=await db.from('lote').insert({
     fazenda_id:FAZENDA.id, nome, fase:$('nl-fase').value||'engorda', sistema:$('nl-sist').value||'pasto',
     qtd_animais:qtd, data_entrada:$('nl-data').value||hoje(),
@@ -3833,13 +4115,13 @@ async function salvarLote(){
     custo_compra_total:compra,
     rendimento_carcaca:rend/100
   }).select('id').single();
-  if(error){ if(tratarErroPlano(error,'nl-msg')) return; return msg('nl-msg',error.message); }
+  if(error){ if(tratarErroPlano(error,'nl-msg')){ if(TOUR.aberto) tourEncerrar(); return; } return falha(error.message); }
   await atualizarModoAcesso();
   if(!criado?.id) return renderLotes();
   LOTE_RECEM_CRIADO=criado.id;
   await renderLote(criado.id);
-  if(typeof TOUR!=='undefined' && TOUR.esperandoLote) tourDepoisDoLote(criado.id);
-  else irParaCampo('card-sanitario');
+  window.scrollTo(0,0);
+  tourGancho('lote-criado',{loteId:criado.id});
 }
 
 // ---------- importar lotes por planilha ----------
@@ -3999,11 +4281,26 @@ async function utmsParaFazenda(){
 // do toque: a fachada é local; o player youtube-nocookie.com só entra ao tocar.
 // youtubeId vazio = cartão "vídeo em breve" (sem quebrar nada).
 const TUTORIAIS = {
-  'boas-vindas': { youtubeId:'', titulo:'Do zero ao primeiro lote', seg:63, formato:'vertical' }
+  'boas-vindas': { youtubeId:'', titulo:'Do zero ao primeiro lote', seg:63, formato:'vertical' },
+  // Vídeo completo que abre o tutorial (passo "Antes de começar"); sem id, o tutorial começa direto.
+  'completo':    { youtubeId:'', titulo:'Como usar o Certo Agro', seg:180, formato:'vertical' },
+  // "Como preencher" de cada parte do lote: o slot só aparece quando o youtubeId existir.
+  'novo-lote':   { youtubeId:'', titulo:'Como criar o lote', seg:35, formato:'vertical' },
+  'custos':      { youtubeId:'', titulo:'Como lançar os custos', seg:40, formato:'vertical' },
+  'pesagem':     { youtubeId:'', titulo:'Como lançar a pesagem', seg:35, formato:'vertical' },
+  'sanitario':   { youtubeId:'', titulo:'Como lançar vacina e vermífugo', seg:40, formato:'vertical' },
+  'venda':       { youtubeId:'', titulo:'Como registrar a venda', seg:40, formato:'vertical' },
+  'simulador':   { youtubeId:'', titulo:'Como usar o simulador', seg:40, formato:'vertical' }
 };
+// Vídeo "como preencher" dentro de cada cartão. Sem vídeo publicado, não mostra nada.
+function slotTutorial(chave){
+  const t=TUTORIAIS[chave];
+  if(!t || !t.youtubeId) return '';
+  return `<div class="tut-slot" data-origem="tela" style="margin:6px 0 10px">${tutorialHTML(chave)}</div>`;
+}
 function tutorialHTML(chave){
   const t=TUTORIAIS[chave]; if(!t) return '';
-  const dur=t.seg?`${t.seg} s`:'';
+  const dur=t.seg?(t.seg>=90?`${Math.round(t.seg/60)} min`:`${t.seg} s`):'';
   if(!t.youtubeId) return `<div class="video-fachada video-embreve" role="note"><span class="video-play" aria-hidden="true">▶</span><span><b>${esc(t.titulo)}</b><small>Vídeo em breve${dur?` · ${dur}`:''}</small></span></div>`;
   return `<button type="button" class="video-fachada" data-tutorial="${esc(chave)}" onclick="tocarTutorial(this)" aria-label="Ver o vídeo ${esc(t.titulo)}${dur?`, ${dur}`:''}"><span class="video-play" aria-hidden="true">▶</span><span><b>${esc(t.titulo)}</b><small>Toque para ver${dur?` · ${dur}`:''}</small></span></button>`;
 }
@@ -4011,7 +4308,7 @@ function tocarTutorial(btn){
   const chave=btn?.dataset?.tutorial; const t=TUTORIAIS[chave];
   if(!t || !/^[A-Za-z0-9_-]{6,20}$/.test(t.youtubeId||'')) return;
   if(!navigator.onLine){ pwaToast('Sem conexão. O vídeo precisa de internet.'); return; }
-  registrarEvento('tutorial_aberto',{tutorial:chave, origem:TOUR.aberto?'tour':'ajuda'});
+  registrarEvento('tutorial_aberto',{tutorial:chave, origem:TOUR.aberto?'tour':(btn.closest('.tut-slot')?'tela':'ajuda')});
   const box=document.createElement('div');
   box.className='video-box'+(t.formato==='vertical'?' vertical':'');
   const f=document.createElement('iframe');
@@ -4024,138 +4321,280 @@ function tocarTutorial(btn){
   btn.replaceWith(box);
 }
 
-// Tour: só o dono, só na 1ª vez (por usuário, neste aparelho), abre ao sair da
-// tela de boas-vindas. (1) vídeo → (2) criar o lote mínimo → (3) "seu lote vale
-// R$ X hoje". Modal no padrão do convite do PWA: role=dialog + aria-modal, foco
-// preso, fundo inerte, Escape pula. Como é role=dialog, outroDialogoAberto()
-// segura o convite de instalar enquanto o tour estiver aberto.
-let TOUR={aberto:false, passo:0, esperandoLote:false, lote:null, foco:null, inertes:[]};
-function chaveTour(){ return `ca:tour:v1:${APP_BASE}:${USUARIO_ID||''}`; }
-function iniciarTour(origem){
+// ---------- tutorial interativo: mostra onde tocar (coach marks, 26/10/2026) ----------
+// Só o dono, só na 1ª vez (por usuário, neste aparelho), abre ao sair da tela de
+// boas-vindas; "Rever o tutorial" (Ajuda) reabre. A tela escurece, o alvo fica
+// aceso com borda dourada e um balão ancorado explica o passo. Passo de AÇÃO
+// avança quando a pessoa faz a ação de verdade (os ganchos ficam em novoLote,
+// salvarLote, addCusto, addPesagem, usarVacina e addSanitario); o alvo continua
+// clicável e 4 faixas transparentes seguram o toque no resto. O balão é
+// role=dialog, então outroDialogoAberto() segura o convite de instalar o app.
+// Escape pula. Funcionário (ehEquipe) nunca vê.
+const TOUR_TOTAL=7;
+const TOUR_PASSOS=[
+  {id:'abertura', n:0, alvo:'header.top', video:'completo', videoNoBalao:true, proximo:true, rotuloProximo:'Começar o passo a passo',
+    titulo:'Como usar o Certo Agro', texto:'Veja o vídeo com tudo, do lote ao painel. Depois eu te mostro onde tocar, passo a passo.'},
+  {id:'criar', n:1, alvo:'#btn-criar-lote', painel:true, video:'novo-lote', espera:'novo-lote',
+    titulo:'Seu primeiro lote', texto:'Toque aqui para criar seu primeiro lote.'},
+  {id:'campos', n:2, alvo:'#nl-basicos', video:'novo-lote', proximo:true,
+    titulo:'O básico do lote', texto:'Preencha o nome, quantas cabeças e o peso médio de entrada. Não sabe o número exato? Estime, dá para ajustar depois.'},
+  {id:'compra', n:2, alvo:'#nl-compra-grupo', proximo:true,
+    titulo:'Quanto pagou', texto:'Opcional: com ele o app mostra o lucro. Não sabe agora? Deixe em branco e informe depois.'},
+  {id:'criar-btn', n:2, alvo:'#nl-criar', espera:'lote-criado',
+    titulo:'Agora é só criar', texto:'Toque em <b>Criar lote</b>.'},
+  {id:'corrigir', n:2, alvo:'#nl-card', espera:'lote-criado', desvio:true,
+    titulo:'Falta um detalhe', texto:''},
+  {id:'valor', n:3, alvo:'#lote-hero', proximo:true, titulo:'', texto:''},
+  {id:'custo', n:4, alvo:'#cus-form', video:'custos', espera:'custo', pularPasso:'pesagem',
+    titulo:'Lance seu primeiro custo', texto:'Escolha a categoria, digite o valor e toque no <b>+</b>. Sal, ração, vacina, mão de obra: tudo que você gasta com o lote.'},
+  {id:'pesagem', n:5, alvo:'#card-pesagens', video:'pesagem', proximo:true, espera:'pesagem',
+    titulo:'Pesagem', texto:'O peso de entrada já é a 1ª pesagem. Daqui a uns 30 dias, lance a 2ª aqui: ela mostra o ganho por dia e o custo da sua @.'},
+  {id:'vacina-guia', n:6, alvo:'#guia-vac', video:'sanitario', espera:'usar-vacina', pularPasso:'painel',
+    titulo:'O que vacinar nesta fase', texto:'Este guia mostra as vacinas da fase do lote. Toque em <b>usar</b> na vacina que você aplicou.'},
+  {id:'vacina-add', n:6, alvo:'#san-form', video:'sanitario', espera:'sanitario', pularPasso:'painel',
+    titulo:'Lance a vacina', texto:'O nome já foi preenchido. Confira a data, coloque a próxima dose se tiver e toque no <b>+</b>.'},
+  {id:'painel', n:7, alvo:'#painel-dinheiro', painel:true, concluir:true,
+    titulo:'Seu dinheiro num lugar só', texto:'Aqui você vê quanto gastou e quanto vai sobrar.'},
+];
+let TOUR={aberto:false, i:-1, loteId:null, loteView:null, foco:null, raf:0, geom:'', seq:0, sumiu:0, mudando:false};
+function chaveTour(){ return `ca:tour:v2:${APP_BASE}:${USUARIO_ID||''}`; }
+function tourPasso(){ return TOUR_PASSOS[TOUR.i]||null; }
+async function iniciarTour(origem){
   if(ehEquipe() || !FAZENDA?.id) return;
   if(origem!=='ajuda' && lsGet(chaveTour())) return;
   lsSet(chaveTour(),'visto');
   if(PWA_MODAL_ABERTO) fecharConvite(false);
+  if(TOUR.aberto) tourEncerrar();
   registrarEvento('tour_inicio',{origem});
-  abrirTourPasso(1);
+  TOUR.loteId=null; TOUR.loteView=null;
+  // Já tem lote: começa no passo 3, com o lote mais recente (ativo, se houver).
+  const {data:lotes}=await db.from('vw_lote_analise').select('*').eq('fazenda_id',FAZENDA.id);
+  const lista=(lotes||[]).slice().sort((a,b)=>String(b.data_inicial||'').localeCompare(String(a.data_inicial||'')));
+  const alvo=lista.find(l=>l.ativo!==false) || null;
+  if(alvo){
+    TOUR.loteId=alvo.lote_id;
+    await renderLote(alvo.lote_id);
+    window.scrollTo(0,0);
+    TOUR.depoisAbertura='valor';
+  } else {
+    if(lista.length){ await renderDashboard(); }
+    TOUR.depoisAbertura='criar';
+  }
+  tourIr(TUTORIAIS.completo.youtubeId ? 'abertura' : TOUR.depoisAbertura);
 }
-function abrirTourPasso(n){
-  TOUR.passo=n;
-  desenharTour();
-  mostrarTour();
-  registrarEvento('tour_passo',{passo:n});
+// Espera o alvo aparecer na tela (as telas desenham depois de buscar no banco).
+function tourEsperarAlvo(sel,ms){
+  return new Promise(res=>{
+    const t0=Date.now();
+    (function olha(){
+      const el=document.querySelector(sel);
+      if(el && el.getClientRects().length) return res(el);
+      if(Date.now()-t0>ms) return res(null);
+      setTimeout(olha,80);
+    })();
+  });
 }
-function mostrarTour(){
-  const ov=$('tour-overlay');
+async function tourIr(id){
+  const i=TOUR_PASSOS.findIndex(p=>p.id===id);
+  if(i<0) return tourConcluir();
+  const seq=++TOUR.seq;
+  TOUR.i=i; TOUR.mudando=true;
+  const p=TOUR_PASSOS[i];
+  document.querySelectorAll('.coach-pulse').forEach(el=>el.classList.remove('coach-pulse'));
+  if(p.id==='painel'){ await renderDashboard(); window.scrollTo(0,0); }
+  else if(p.painel && viewAtual()!=='dash'){ await renderDashboard(); }
+  if(p.id==='valor' && TOUR.loteId){
+    const {data:v}=await db.from('vw_lote_analise').select('*').eq('lote_id',TOUR.loteId).single();
+    TOUR.loteView=v||null;
+  }
+  const el=await tourEsperarAlvo(p.alvo,5000);
+  if(seq!==TOUR.seq) return;               // outro passo começou no meio
+  TOUR.mudando=false; TOUR.sumiu=0;
+  if(!el){ return tourAvancar(); }          // tela sem esse alvo (ex.: lote vendido): segue
+  if(p.id==='vacina-guia'){
+    el.open=true;
+    const usar=el.querySelector('button'); if(usar) usar.classList.add('coach-pulse');
+  }
+  tourDesenharBalao(p);
+  tourMostrar();
+  tourRolarAte(el);
+  registrarEvento('tour_passo',{passo:p.n, etapa:p.id});
+}
+function tourTextos(p){
+  if(p.id==='valor'){
+    const v=TOUR.loteView, vh=v?valorLoteHoje(v):null;
+    if(vh==null) return {titulo:'Seu lote foi criado', texto:'Ainda não temos a cotação da @ da sua praça. Informe em "Venda e lucro" o preço que o frigorífico te paga e o valor aparece aqui.'};
+    if(v && loteSemCompra(v)) return {titulo:`Seu lote vale ${brl(vh)} hoje`, texto:'Este é quanto seu lote vale hoje, com a @ da sua praça. Quer ver o lucro? Informe quanto pagou, quando quiser.'};
+    return {titulo:'Quanto seu lote vale hoje', texto:'Este é quanto seu lote vale hoje, com a @ da sua praça, e quanto sobra depois do que você gastou.'};
+  }
+  if(p.id==='corrigir'){
+    // Repete o aviso no balão: no celular o balão pode cobrir a mensagem vermelha.
+    const aviso=($('nl-msg')?.textContent||'').trim();
+    return {titulo:p.titulo, texto:(aviso?`<b class="neg">${esc(aviso)}</b><br>`:'')+'Corrija e toque em <b>Criar lote</b>.'};
+  }
+  if(p.id==='painel'){
+    const c=$('painel-dinheiro');
+    if(c && c.dataset.conta==='0') return {titulo:p.titulo, texto:'Aqui você vê quanto gastou e quanto vai sobrar. Informe quanto pagou pelo lote e a conta aparece completa.'};
+  }
+  return {titulo:p.titulo, texto:p.texto};
+}
+function tourDesenharBalao(p){
+  const t=tourTextos(p);
+  $('coach-num').textContent=p.n ? `Passo ${p.n} de ${TOUR_TOTAL}` : 'Antes de começar';
+  $('coach-titulo').textContent=t.titulo;
+  $('coach-texto').innerHTML=`<p>${t.texto}</p>`;
+  $('coach-video').innerHTML='';
+  const temVideo=p.video && TUTORIAIS[p.video] && TUTORIAIS[p.video].youtubeId;
+  if(temVideo && p.videoNoBalao) $('coach-video').innerHTML=tutorialHTML(p.video);
+  const b=[];
+  if(temVideo && !p.videoNoBalao) b.push(`<button type="button" class="coach-video-btn" onclick="tourVideo()">▶ Ver vídeo</button>`);
+  if(p.pularPasso) b.push(`<button type="button" class="coach-sec" onclick="tourPularPasso()">Pular este passo</button>`);
+  if(p.proximo) b.push(`<button type="button" class="coach-pri" onclick="tourAvancar()">${p.rotuloProximo||'Próximo'}</button>`);
+  if(p.concluir) b.push(`<button type="button" class="coach-pri" onclick="tourConcluir()">Concluir</button>`);
+  if(!p.concluir) b.push(`<button type="button" class="coach-pular" onclick="tourPular()">Pular tutorial</button>`);
+  $('coach-acoes').innerHTML=b.join('');
+}
+function tourVideo(){
+  const p=tourPasso(); if(!p || !p.video) return;
+  const box=$('coach-video');
+  box.innerHTML=tutorialHTML(p.video);
+  const f=box.querySelector('button.video-fachada'); if(f) tocarTutorial(f);
+}
+function tourMostrar(){
+  const c=$('coach');
   if(!TOUR.aberto){
     TOUR.foco=document.activeElement;
-    ov.classList.remove('hidden');
+    c.classList.remove('hidden');
     TOUR.aberto=true;
-    document.body.style.overflow='hidden';
-    TOUR.inertes=[...document.body.children].filter(el=>el.id!=='tour-overlay' && el.id!=='pwa-toast' && el.tagName!=='SCRIPT' && !el.inert);
-    TOUR.inertes.forEach(el=>{ el.inert=true; });
+    TOUR.geom='';
+    cancelAnimationFrame(TOUR.raf);
+    const laco=()=>{ if(!TOUR.aberto) return; tourPosicionar(); TOUR.raf=requestAnimationFrame(laco); };
+    TOUR.raf=requestAnimationFrame(laco);
   }
-  $('tour-dialog').scrollTop=0;
-  $('tour-dialog').focus();
+  TOUR.geom='';
+  tourPosicionar();
+  try{ $('coach-balao').focus({preventScroll:true}); }catch(e){ $('coach-balao').focus(); }
 }
-function esconderTour(){
+// Põe o alvo logo abaixo do cabeçalho fixo, deixando espaço para o balão.
+function tourRolarAte(el){
+  const topoFixo=(document.querySelector('header.top')?.getBoundingClientRect().bottom)||0;
+  const r=el.getBoundingClientRect();
+  const alvoTopo=Math.max(topoFixo+16, r.height<window.innerHeight*0.45 ? window.innerHeight*0.22 : topoFixo+16);
+  const y=window.scrollY+r.top-alvoTopo;
+  const destino=Math.max(0,Math.min(y,document.documentElement.scrollHeight-window.innerHeight));
+  const suave=!window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  window.scrollTo({top:destino, behavior:suave?'smooth':'auto'});
+  // Rolagem suave interrompida (ou não suportada): garante a posição.
+  if(suave) setTimeout(()=>{ if(TOUR.aberto && Math.abs(window.scrollY-destino)>4) window.scrollTo({top:destino, behavior:'auto'}); },700);
+}
+function tourPosicionar(){
+  const p=tourPasso(); if(!p) return;
+  const el=document.querySelector(p.alvo);
+  // Alvo sumiu (a pessoa saiu da tela pelo próprio alvo, ex.: link "informe quanto
+  // pagou"): espera a tela redesenhar; se não voltar, encerra sem travar o app.
+  if(!el){
+    const carregando=/Carregando/.test(($('app-body')?.textContent||'').slice(0,60));
+    if(!TOUR.sumiu || carregando) TOUR.sumiu=Date.now();
+    else if(Date.now()-TOUR.sumiu>2500 && !TOUR.mudando){ TOUR.sumiu=0; tourPular(); }
+    return;
+  }
+  TOUR.sumiu=0;
+  const r=el.getBoundingClientRect();
+  const vw=document.documentElement.clientWidth, vh=window.innerHeight, pad=6;
+  const L=Math.max(2,r.left-pad), T=r.top-pad, R=Math.min(vw-2,r.right+pad), B=r.bottom+pad;
+  const bal=$('coach-balao');
+  const geom=[L,T,R,B,vw,vh,bal.offsetHeight].map(Math.round).join(',');
+  if(geom===TOUR.geom) return;
+  TOUR.geom=geom;
+  const px=n=>Math.round(n)+'px';
+  const spot=$('coach-spot');
+  Object.assign(spot.style,{left:px(L),top:px(T),width:px(R-L),height:px(B-T)});
+  // 4 faixas que seguram o toque fora do alvo
+  const set=(id,l,t,w,h)=>Object.assign($(id).style,{left:px(l),top:px(t),width:px(Math.max(0,w)),height:px(Math.max(0,h))});
+  set('coach-b1',0,0,vw,Math.max(0,T));
+  set('coach-b2',0,B,vw,vh-B);
+  set('coach-b3',0,T,L,B-T);
+  set('coach-b4',R,T,vw-R,B-T);
+  // Balão: embaixo do alvo, ou em cima, ou preso no rodapé da tela (alvo grande).
+  const bw=bal.offsetWidth, bh=bal.offsetHeight, m=12;
+  let top;
+  if(vh-B>=bh+m) top=B+m;
+  else if(T>=bh+m) top=T-m-bh;
+  else top=vh-bh-8;
+  top=Math.min(Math.max(8,top),Math.max(8,vh-bh-8));
+  const left=Math.min(Math.max(8,(L+R)/2-bw/2),Math.max(8,vw-bw-8));
+  Object.assign(bal.style,{left:px(left),top:px(top)});
+}
+// A ação real aconteceu (ou "Próximo").
+function tourGancho(nome,dados){
   if(!TOUR.aberto) return;
-  TOUR.aberto=false;
-  $('tour-overlay').classList.add('hidden');
-  $('tour-dialog').innerHTML='';
-  document.body.style.overflow='';
-  TOUR.inertes.forEach(el=>{ el.inert=false; }); TOUR.inertes=[];
-  const f=TOUR.foco; TOUR.foco=null;
-  if(f && f.focus && document.contains(f)){ try{ f.focus(); }catch(e){} }
-}
-function desenharTour(){
-  const d=$('tour-dialog');
-  const passos=`<p class="tour-passos">Passo ${TOUR.passo} de 3</p>`;
-  if(TOUR.passo===1){
-    d.innerHTML=`${passos}<h2 id="tour-titulo">Veja em 1 minuto como funciona</h2>
-      ${tutorialHTML('boas-vindas')}
-      <p>Você cria o lote com 3 informações e o app já mostra quanto ele vale hoje, pela cotação da @ da sua praça.</p>
-      <div class="pwa-acoes">
-        <button type="button" class="pwa-agora-nao" onclick="pularTour()">Pular</button>
-        <button type="button" class="pwa-ok" onclick="abrirTourPasso(2)">Próximo</button>
-      </div>`;
-  } else if(TOUR.passo===2){
-    d.innerHTML=`${passos}<h2 id="tour-titulo">Crie seu lote</h2>
-      <p>Só 3 coisas: <strong>nome do lote</strong>, <strong>quantas cabeças</strong> e o <strong>peso médio</strong> de entrada.</p>
-      <p class="mut">Quanto pagou pelo lote é opcional. Com ele, o app mostra também o lucro.</p>
-      <div class="pwa-acoes">
-        <button type="button" class="pwa-agora-nao" onclick="pularTour()">Pular</button>
-        <button type="button" class="pwa-ok" onclick="tourCriarLote()">Criar meu lote</button>
-      </div>`;
-  } else {
-    const v=TOUR.lote;
-    const vh=v?valorLoteHoje(v):null;
-    const semCompra=v?loteSemCompra(v):true;
-    const titulo=vh!=null?`Seu lote vale ${brl(vh)} hoje`:'Seu lote foi criado';
-    const detalhe=vh!=null
-      ? `<p>${v.qtd_animais} cabeças × ${num(v.arrobas_atuais_cab,2)} @ por cabeça.</p><p class="mut" style="font-size:15px">${fonteArrobaTexto(v)}</p>`
-      : `<p>Ainda não temos cotação da @ para a sua praça. Informe na tela do lote o preço que o frigorífico te paga e o valor aparece na hora.</p>`;
-    const compra=semCompra
-      ? `<div class="msg warn" style="font-size:15px"><strong>Informe quanto pagou para ver o lucro.</strong></div>`
-      : `<div class="msg ok" style="font-size:15px">Com o valor da compra, o lucro estimado já aparece na tela do lote.</div>`;
-    d.innerHTML=`${passos}<h2 id="tour-titulo">${titulo}</h2>${detalhe}${compra}
-      <p class="mut" style="font-size:15px">Agora complete o lote: comece pelas vacinas desta fase, depois os custos e a pesagem. Em uns 30 dias, a 2ª pesagem mostra o custo da sua @.</p>
-      <div class="pwa-acoes">
-        ${semCompra&&v?`<button type="button" class="pwa-agora-nao" onclick="tourInformarCompra()">Informar quanto paguei</button>`:''}
-        <button type="button" class="pwa-ok" onclick="concluirTour()">Completar o lote</button>
-      </div>`;
+  const p=tourPasso(); if(!p) return;
+  if(nome==='lote-erro'){
+    if(['campos','compra','criar-btn','corrigir'].includes(p.id)) tourIr('corrigir');
+    return;
   }
+  if(nome==='lote-criado'){ TOUR.loteId=dados?.loteId||TOUR.loteId; return tourIr('valor'); }
+  if(p.espera===nome) tourAvancar();
 }
-function tourCriarLote(){
-  TOUR.esperandoLote=true;
-  esconderTour();
-  novoLote();
+function tourAvancar(){
+  if(tourPasso()?.id==='abertura') return tourIr(TOUR.depoisAbertura||'criar');
+  let i=TOUR.i+1;
+  while(TOUR_PASSOS[i] && TOUR_PASSOS[i].desvio) i++;
+  const prox=TOUR_PASSOS[i];
+  if(!prox) return tourConcluir();
+  tourIr(prox.id);
 }
-// Chamado por salvarLote() depois de abrir o detalhe do lote recém-criado.
-async function tourDepoisDoLote(loteId){
-  if(!TOUR.esperandoLote) return;
-  TOUR.esperandoLote=false;
-  const {data:v}=await db.from('vw_lote_analise').select('*').eq('lote_id',loteId).single();
-  TOUR.lote=v||null;
-  abrirTourPasso(3);
+function tourPularPasso(){
+  const p=tourPasso(); if(!p) return;
+  registrarEvento('tour_passo',{passo:p.n, etapa:p.id, pulou:true});
+  tourIr(p.pularPasso);
 }
-function tourInformarCompra(){
-  const id=TOUR.lote?.lote_id;
-  TOUR.lote=null; // vai para "quanto paguei", não para o Sanitário
-  concluirTour();
-  if(id) editarLote(id,true);
+function tourConcluir(){
+  if(TOUR.aberto) registrarEvento('tour_concluido');
+  tourEncerrar();
 }
-function concluirTour(){
-  registrarEvento('tour_concluido');
-  const veioDoLote=TOUR.passo===3 && !!TOUR.lote;
-  TOUR.passo=0; TOUR.lote=null; TOUR.esperandoLote=false;
-  esconderTour();
-  // Lote acabou de nascer: segue para completar pelo Sanitário (guia da fase já aberto).
-  if(veioDoLote) setTimeout(()=>irParaCampo('card-sanitario'),150);
+function tourPular(){
+  const p=tourPasso();
+  registrarEvento('tour_pulado',{passo:p?p.n:0, etapa:p?p.id:''});
+  tourEncerrar();
 }
-function pularTour(){
-  registrarEvento('tour_pulado',{passo:TOUR.passo});
-  TOUR.passo=0; TOUR.lote=null; TOUR.esperandoLote=false;
-  esconderTour();
+function tourEncerrar(){
+  TOUR.seq++;
+  cancelAnimationFrame(TOUR.raf);
+  document.querySelectorAll('.coach-pulse').forEach(el=>el.classList.remove('coach-pulse'));
+  const estava=TOUR.aberto;
+  TOUR.aberto=false; TOUR.i=-1; TOUR.loteView=null; TOUR.mudando=false; TOUR.sumiu=0;
+  $('coach').classList.add('hidden');
+  $('coach-video').innerHTML='';
+  const f=TOUR.foco; TOUR.foco=null;
+  if(estava && f && f.focus && document.contains(f)){ try{ f.focus({preventScroll:true}); }catch(e){} }
 }
+// Toque fora do alvo: nada acontece, o foco volta para o balão.
+['coach-b1','coach-b2','coach-b3','coach-b4'].forEach(id=>{
+  const el=document.getElementById(id);
+  if(el) el.addEventListener('click',()=>{ try{ $('coach-balao').focus({preventScroll:true}); }catch(e){} });
+});
 document.addEventListener('keydown',(e)=>{
   if(!TOUR.aberto) return;
-  if(e.key==='Escape'){ e.preventDefault(); if(TOUR.passo===3) concluirTour(); else pularTour(); return; }
+  if(e.key==='Escape'){ e.preventDefault(); const p=tourPasso(); if(p && p.concluir) tourConcluir(); else tourPular(); return; }
   if(e.key!=='Tab') return;
-  const d=$('tour-dialog');
-  const foc=[...d.querySelectorAll('button,[href],input,select,textarea,iframe,[tabindex]:not([tabindex="-1"])')].filter(el=>!el.disabled);
+  // Tab circula só entre o balão e o alvo aceso.
+  const p=tourPasso(); const alvo=p && document.querySelector(p.alvo);
+  const sel='button,[href],input,select,textarea,iframe,summary,[tabindex]:not([tabindex="-1"])';
+  const foc=[...$('coach-balao').querySelectorAll(sel), ...(alvo?(alvo.matches(sel)?[alvo]:[...alvo.querySelectorAll(sel)]):[])]
+    .filter(el=>!el.disabled && el.getClientRects().length);
   if(!foc.length){ e.preventDefault(); return; }
-  const primeiro=foc[0], ultimo=foc[foc.length-1];
-  if(e.shiftKey && (document.activeElement===primeiro || document.activeElement===d)){ e.preventDefault(); ultimo.focus(); }
-  else if(!e.shiftKey && document.activeElement===ultimo){ e.preventDefault(); primeiro.focus(); }
-  else if(!d.contains(document.activeElement)){ e.preventDefault(); primeiro.focus(); }
+  const at=foc.indexOf(document.activeElement);
+  e.preventDefault();
+  const prox=at<0 ? 0 : (at+(e.shiftKey?-1:1)+foc.length)%foc.length;
+  foc[prox].focus();
 });
 // Cartão da Ajuda: lista os tutoriais e reabre o tour (só dono).
 function tutoriaisAjudaHTML(){
   if(ehEquipe()) return '';
   return `<div class="card" style="max-width:720px">
     <h3>Tutoriais</h3>
-    ${Object.keys(TUTORIAIS).map(tutorialHTML).join('')}
+    ${Object.keys(TUTORIAIS).filter(k=>k==='boas-vindas'||TUTORIAIS[k].youtubeId).map(tutorialHTML).join('')}
     <button type="button" class="btn sec" onclick="iniciarTour('ajuda')">Rever o tutorial</button>
   </div>`;
 }
