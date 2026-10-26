@@ -334,6 +334,7 @@
   .video-box{position:relative;width:100%;aspect-ratio:16/9;border-radius:14px;overflow:hidden;background:#000;margin:4px 0 12px}
   .video-box.vertical{aspect-ratio:9/16;max-height:62vh;width:auto;margin-left:auto;margin-right:auto}
   .video-box iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+  .coach-balao .video-box.vertical{max-height:46vh}
   /* Tutorial interativo (coach marks, 26/10/2026): escurece a tela, acende o
      alvo com borda dourada e ancora um balão ao lado. O alvo continua clicável;
      4 faixas transparentes em volta dele seguram o toque no resto da tela. */
@@ -4281,6 +4282,8 @@ async function utmsParaFazenda(){
 // youtubeId vazio = cartão "vídeo em breve" (sem quebrar nada).
 const TUTORIAIS = {
   'boas-vindas': { youtubeId:'', titulo:'Do zero ao primeiro lote', seg:63, formato:'vertical' },
+  // Vídeo completo que abre o tutorial (passo "Antes de começar"); sem id, o tutorial começa direto.
+  'completo':    { youtubeId:'', titulo:'Como usar o Certo Agro', seg:180, formato:'vertical' },
   // "Como preencher" de cada parte do lote: o slot só aparece quando o youtubeId existir.
   'novo-lote':   { youtubeId:'', titulo:'Como criar o lote', seg:35, formato:'vertical' },
   'custos':      { youtubeId:'', titulo:'Como lançar os custos', seg:40, formato:'vertical' },
@@ -4297,7 +4300,7 @@ function slotTutorial(chave){
 }
 function tutorialHTML(chave){
   const t=TUTORIAIS[chave]; if(!t) return '';
-  const dur=t.seg?`${t.seg} s`:'';
+  const dur=t.seg?(t.seg>=90?`${Math.round(t.seg/60)} min`:`${t.seg} s`):'';
   if(!t.youtubeId) return `<div class="video-fachada video-embreve" role="note"><span class="video-play" aria-hidden="true">▶</span><span><b>${esc(t.titulo)}</b><small>Vídeo em breve${dur?` · ${dur}`:''}</small></span></div>`;
   return `<button type="button" class="video-fachada" data-tutorial="${esc(chave)}" onclick="tocarTutorial(this)" aria-label="Ver o vídeo ${esc(t.titulo)}${dur?`, ${dur}`:''}"><span class="video-play" aria-hidden="true">▶</span><span><b>${esc(t.titulo)}</b><small>Toque para ver${dur?` · ${dur}`:''}</small></span></button>`;
 }
@@ -4329,6 +4332,8 @@ function tocarTutorial(btn){
 // Escape pula. Funcionário (ehEquipe) nunca vê.
 const TOUR_TOTAL=7;
 const TOUR_PASSOS=[
+  {id:'abertura', n:0, alvo:'header.top', video:'completo', videoNoBalao:true, proximo:true, rotuloProximo:'Começar o passo a passo',
+    titulo:'Como usar o Certo Agro', texto:'Veja o vídeo com tudo, do lote ao painel. Depois eu te mostro onde tocar, passo a passo.'},
   {id:'criar', n:1, alvo:'#btn-criar-lote', painel:true, video:'novo-lote', espera:'novo-lote',
     titulo:'Seu primeiro lote', texto:'Toque aqui para criar seu primeiro lote.'},
   {id:'campos', n:2, alvo:'#nl-basicos', video:'novo-lote', proximo:true,
@@ -4370,10 +4375,12 @@ async function iniciarTour(origem){
     TOUR.loteId=alvo.lote_id;
     await renderLote(alvo.lote_id);
     window.scrollTo(0,0);
-    return tourIr('valor');
+    TOUR.depoisAbertura='valor';
+  } else {
+    if(lista.length){ await renderDashboard(); }
+    TOUR.depoisAbertura='criar';
   }
-  if(lista.length){ await renderDashboard(); }
-  tourIr('criar');
+  tourIr(TUTORIAIS.completo.youtubeId ? 'abertura' : TOUR.depoisAbertura);
 }
 // Espera o alvo aparecer na tela (as telas desenham depois de buscar no banco).
 function tourEsperarAlvo(sel,ms){
@@ -4433,15 +4440,16 @@ function tourTextos(p){
 }
 function tourDesenharBalao(p){
   const t=tourTextos(p);
-  $('coach-num').textContent=`Passo ${p.n} de ${TOUR_TOTAL}`;
+  $('coach-num').textContent=p.n ? `Passo ${p.n} de ${TOUR_TOTAL}` : 'Antes de começar';
   $('coach-titulo').textContent=t.titulo;
   $('coach-texto').innerHTML=`<p>${t.texto}</p>`;
   $('coach-video').innerHTML='';
   const temVideo=p.video && TUTORIAIS[p.video] && TUTORIAIS[p.video].youtubeId;
+  if(temVideo && p.videoNoBalao) $('coach-video').innerHTML=tutorialHTML(p.video);
   const b=[];
-  if(temVideo) b.push(`<button type="button" class="coach-video-btn" onclick="tourVideo()">▶ Ver vídeo</button>`);
+  if(temVideo && !p.videoNoBalao) b.push(`<button type="button" class="coach-video-btn" onclick="tourVideo()">▶ Ver vídeo</button>`);
   if(p.pularPasso) b.push(`<button type="button" class="coach-sec" onclick="tourPularPasso()">Pular este passo</button>`);
-  if(p.proximo) b.push(`<button type="button" class="coach-pri" onclick="tourAvancar()">Próximo</button>`);
+  if(p.proximo) b.push(`<button type="button" class="coach-pri" onclick="tourAvancar()">${p.rotuloProximo||'Próximo'}</button>`);
   if(p.concluir) b.push(`<button type="button" class="coach-pri" onclick="tourConcluir()">Concluir</button>`);
   if(!p.concluir) b.push(`<button type="button" class="coach-pular" onclick="tourPular()">Pular tutorial</button>`);
   $('coach-acoes').innerHTML=b.join('');
@@ -4529,6 +4537,7 @@ function tourGancho(nome,dados){
   if(p.espera===nome) tourAvancar();
 }
 function tourAvancar(){
+  if(tourPasso()?.id==='abertura') return tourIr(TOUR.depoisAbertura||'criar');
   let i=TOUR.i+1;
   while(TOUR_PASSOS[i] && TOUR_PASSOS[i].desvio) i++;
   const prox=TOUR_PASSOS[i];
