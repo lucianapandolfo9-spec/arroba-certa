@@ -120,5 +120,21 @@ t('frescor: fim de semana nao conta', function () {
   assert.strictEqual(C.diasUteisEntre('2026-10-09', seg), 1);  // sexta -> segunda
 });
 
+// Exemplo do painel vazio (Fazenda Santa Helena): conferido a mao pela skill.
+// 402 x 0,53 / 15 = 14,204 @/cab; compra 3.700/cab; custos 4.840 no lote = 121/cab.
+t('exemplo Santa Helena: gastou, vale hoje e sobra batem com a formula', function () {
+  var x = C.exemploSantaHelena();
+  assert.ok(x);
+  perto(x.custosLancados, 4840);
+  perto(x.arrobasCab, 402 * 0.53 / 15, 1e-9);
+  perto(x.gastou, 148000 + 4840, 1e-6);                       // #4 x 40
+  perto(x.valeHoje, 40 * (402 * 0.53 / 15) * 320, 1e-6);     // 181.811,20
+  perto(Math.round(x.valeHoje * 100) / 100, 181811.2);
+  perto(x.sobra, x.valeHoje - x.gastou, 1e-6);                 // 28.971,20
+  perto(x.gmd, 0.7, 1e-9);                                     // #2 (402-360)/60
+  perto(x.custoArrobaProduzida, 121 / (42 * 0.53 / 15), 1e-9); // #5 = 81,54
+  perto(x.precoMinimo, 3821 / (402 * 0.53 / 15), 1e-9);        // #7 = 269,01
+});
+
 console.log('\n' + (total - falhas) + '/' + total + ' testes passaram');
 process.exit(falhas ? 1 : 0);
