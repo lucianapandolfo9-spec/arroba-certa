@@ -2965,7 +2965,7 @@ async function renderDashboard(){
     <div class="dashboard-kpi"><div class="lbl">Animais ativos</div><div class="val">${totalAnimais}</div></div>
     <div class="dashboard-kpi"><div class="lbl">Lotes ativos</div><div class="val">${ativos.length}</div></div>
     <div class="dashboard-kpi"><div class="lbl">Peso médio</div><div class="val">${num(pesoMedio,0)} kg</div></div>
-    <div class="dashboard-kpi"><div class="lbl">${lucroMedio!=null&&lucroMedio<0?'Prejuízo':'Lucro'} médio/cabeça</div>${lucroMedio==null
+    <div class="dashboard-kpi"><div class="lbl">${lucroMedio!=null&&lucroMedio<0?'Prejuízo':'Lucro'} médio/cabeça (gado na fazenda)</div>${lucroMedio==null
       ? '<div class="val" style="font-size:16px">falta a compra</div>'
       : `<div class="val ${lucroMedio<0?'neg':'pos'}">${brl(lucroMedio)}</div>`}</div>
   </div>`;
