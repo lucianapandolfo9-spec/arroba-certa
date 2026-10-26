@@ -2475,7 +2475,7 @@ async function renderAdmin(){
 // lote em 24 h + custo em 3 dias (decisão 13 do grill). A lista "Paradas" traz
 // o texto da régua (nota de Atendimento, seção 3b) pronto para o WhatsApp, que
 // a Luciana manda à mão. Condição: C = sem lote; A = lote e 2ª pesagem; B = lote
-// sem 2ª pesagem. Até o dia 2 usa o texto do D1; do dia 3 em diante, o do D3.
+// sem 2ª pesagem; D = tem lote sem custo. Até o dia 2 usa o texto do D1; do dia 3 em diante, o do D3.
 // Sem nome da pessoa no texto (regra: nome só quando o lead confirmar).
 const PASSO_PARADO_LABEL={sem_lote:'sem lote', sem_custo:'sem custo', sem_2a_pesagem:'sem 2ª pesagem', completo:'completo'};
 const REGUA_TEXTOS={
@@ -2483,10 +2483,13 @@ const REGUA_TEXTOS={
   D1_B:'Bom dia! Vi que você já lançou o lote, boa. Agora, se tiver a pesagem de algum animal, lança também que o sistema passa a mostrar o ganho de peso por dia. Se precisar, me chama.',
   D3_A:'Oi! Já deu pra ver o custo da sua arroba no seu lote? Esse é o número que mais muda a decisão de quando vender. Me conta o que achou, se quiser. 🐂',
   D3_B:'Oi! Falta só a pesagem pro sistema calcular o ganho de peso e o custo da arroba do seu lote. Se quiser, me manda os pesos por áudio que eu te mostro como lançar.',
+  D1_D:'Bom dia! Vi que você já criou o lote, boa. Agora lança um custo do mês (sal, ração ou mão de obra) que o sistema já mostra quanto cada cabeça está custando. Se precisar, me chama.',
+  D3_D:'Oi! Falta só lançar os custos do lote pro sistema mostrar se ele está dando lucro. Se preferir, me manda por áudio o que você gasta por mês que eu te mostro onde lançar.',
   D3_C:'Oi! Sem pressa. Se for mais fácil, a gente faz juntos: te ligo ou a gente troca áudio por aqui, e em 10 minutos o primeiro lote fica lançado. Prefere como?'
 };
 function condicaoRegua(c){
   if(c.passo_parado==='sem_lote' || !c.primeiro_lote_em) return 'C';
+  if(c.passo_parado==='sem_custo' || !c.primeiro_custo_em) return 'D';
   return c.segunda_pesagem_em ? 'A' : 'B';
 }
 function textoRegua(c){
@@ -3326,7 +3329,7 @@ async function renderLote(id){
         <input id="san-custo" type="number" placeholder="R$ custo (opc.)" style="flex:1;min-width:110px" />
         <button class="btn mini" id="san-add" aria-label="Adicionar" onclick="addSanitario('${id}')">+</button>
       </div>
-      <div class="mut" style="font-size:12px;margin-top:6px"><strong>Custo: esse valor já entra no custo do lote, não lance de novo em Custos.</strong></div>
+      
       <div class="mut" style="font-size:12px;margin-top:6px">Vermífugo = contra verme · Exame = de rotina ou pré-venda · Tratamento = remédio para doença específica. "Próxima dose" fica vazio se o evento não se repete.</div>
       <div id="san-msg"></div>
     </div>
@@ -3376,7 +3379,7 @@ async function salvarPreco(id){
   msg('preco-msg','Preço salvo! Recalculando…','ok'); renderLote(id);
 }
 let EDIT_PES=null, EDIT_CUS=null;
-const hoje = () => new Date().toISOString().slice(0,10);
+const hoje = () => { const d=new Date(); d.setMinutes(d.getMinutes()-d.getTimezoneOffset()); return d.toISOString().slice(0,10); }; // data local (antes era UTC: depois das 21h no Recife caía no dia seguinte)
 
 // ---------- fechar lote (registrar venda) ----------
 async function renderFecharLote(id,editar){
