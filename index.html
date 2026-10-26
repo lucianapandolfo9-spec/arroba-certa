@@ -4283,34 +4283,48 @@ async function utmsParaFazenda(){
 const TUTORIAIS = {
   'boas-vindas': { youtubeId:'', titulo:'Do zero ao primeiro lote', seg:63, formato:'vertical' },
   // Vídeo completo que abre o tutorial (passo "Antes de começar"); sem id, o tutorial começa direto.
-  'completo':    { youtubeId:'', titulo:'Como usar o Certo Agro', seg:180, formato:'vertical' },
+  'completo':    { youtubeId:'', arquivo:'assets/videos/T0-tutorial-completo', titulo:'Como usar o Certo Agro', seg:119, formato:'vertical' },
   // "Como preencher" de cada parte do lote: o slot só aparece quando o youtubeId existir.
-  'novo-lote':   { youtubeId:'', titulo:'Como criar o lote', seg:35, formato:'vertical' },
-  'custos':      { youtubeId:'', titulo:'Como lançar os custos', seg:40, formato:'vertical' },
-  'pesagem':     { youtubeId:'', titulo:'Como lançar a pesagem', seg:35, formato:'vertical' },
-  'sanitario':   { youtubeId:'', titulo:'Como lançar vacina e vermífugo', seg:40, formato:'vertical' },
-  'venda':       { youtubeId:'', titulo:'Como registrar a venda', seg:40, formato:'vertical' },
-  'simulador':   { youtubeId:'', titulo:'Como usar o simulador', seg:40, formato:'vertical' }
+  'novo-lote':  { youtubeId:'', arquivo:'assets/videos/T1-novo-lote', titulo:'Como criar o lote', seg:20, formato:'vertical' },
+  'custos':     { youtubeId:'', arquivo:'assets/videos/T2-custos', titulo:'Como lançar os custos', seg:22, formato:'vertical' },
+  'pesagem':    { youtubeId:'', arquivo:'assets/videos/T3-pesagem', titulo:'Como lançar a pesagem', seg:19, formato:'vertical' },
+  'sanitario':  { youtubeId:'', arquivo:'assets/videos/T4-sanitario', titulo:'Como lançar vacina e vermífugo', seg:17, formato:'vertical' },
+  'venda':      { youtubeId:'', arquivo:'assets/videos/T5-venda', titulo:'Como registrar a venda', seg:16, formato:'vertical' },
+  'simulador':  { youtubeId:'', arquivo:'assets/videos/T6-simulador', titulo:'Como usar o simulador', seg:20, formato:'vertical' }
 };
+// Vídeo disponível: YouTube (youtubeId) ou arquivo próprio em assets/videos (arquivo + .mp4/.jpg).
+function videoDisponivel(chave){ const t=TUTORIAIS[chave]; return !!(t && (t.youtubeId || t.arquivo)); }
 // Vídeo "como preencher" dentro de cada cartão. Sem vídeo publicado, não mostra nada.
 function slotTutorial(chave){
   const t=TUTORIAIS[chave];
-  if(!t || !t.youtubeId) return '';
+  if(!videoDisponivel(chave)) return '';
   return `<div class="tut-slot" data-origem="tela" style="margin:6px 0 10px">${tutorialHTML(chave)}</div>`;
 }
 function tutorialHTML(chave){
   const t=TUTORIAIS[chave]; if(!t) return '';
   const dur=t.seg?(t.seg>=90?`${Math.round(t.seg/60)} min`:`${t.seg} s`):'';
-  if(!t.youtubeId) return `<div class="video-fachada video-embreve" role="note"><span class="video-play" aria-hidden="true">▶</span><span><b>${esc(t.titulo)}</b><small>Vídeo em breve${dur?` · ${dur}`:''}</small></span></div>`;
+  if(!videoDisponivel(chave)) return `<div class="video-fachada video-embreve" role="note"><span class="video-play" aria-hidden="true">▶</span><span><b>${esc(t.titulo)}</b><small>Vídeo em breve${dur?` · ${dur}`:''}</small></span></div>`;
   return `<button type="button" class="video-fachada" data-tutorial="${esc(chave)}" onclick="tocarTutorial(this)" aria-label="Ver o vídeo ${esc(t.titulo)}${dur?`, ${dur}`:''}"><span class="video-play" aria-hidden="true">▶</span><span><b>${esc(t.titulo)}</b><small>Toque para ver${dur?` · ${dur}`:''}</small></span></button>`;
 }
 function tocarTutorial(btn){
   const chave=btn?.dataset?.tutorial; const t=TUTORIAIS[chave];
-  if(!t || !/^[A-Za-z0-9_-]{6,20}$/.test(t.youtubeId||'')) return;
+  const yt=/^[A-Za-z0-9_-]{6,20}$/.test(t?.youtubeId||'');
+  if(!t || (!yt && !t.arquivo)) return;
   if(!navigator.onLine){ pwaToast('Sem conexão. O vídeo precisa de internet.'); return; }
   registrarEvento('tutorial_aberto',{tutorial:chave, origem:TOUR.aberto?'tour':(btn.closest('.tut-slot')?'tela':'ajuda')});
   const box=document.createElement('div');
   box.className='video-box'+(t.formato==='vertical'?' vertical':'');
+  if(!yt){
+    // Arquivo próprio (sem terceiro): só baixa quando a pessoa toca.
+    const v=document.createElement('video');
+    v.src=t.arquivo+'.mp4'; v.poster=t.arquivo+'.jpg';
+    v.controls=true; v.autoplay=true; v.playsInline=true; v.preload='auto';
+    v.setAttribute('playsinline',''); v.title=t.titulo;
+    v.style.cssText='position:absolute;inset:0;width:100%;height:100%;background:#000';
+    box.appendChild(v); btn.replaceWith(box);
+    v.play().catch(()=>{});
+    return;
+  }
   const f=document.createElement('iframe');
   f.src=`https://www.youtube-nocookie.com/embed/${encodeURIComponent(t.youtubeId)}?autoplay=1&rel=0&playsinline=1`;
   f.title=t.titulo;
@@ -4357,7 +4371,7 @@ const TOUR_PASSOS=[
     titulo:'Seu dinheiro num lugar só', texto:'Aqui você vê quanto gastou e quanto vai sobrar.'},
 ];
 let TOUR={aberto:false, i:-1, loteId:null, loteView:null, foco:null, raf:0, geom:'', seq:0, sumiu:0, mudando:false};
-function chaveTour(){ return `ca:tour:v2:${APP_BASE}:${USUARIO_ID||''}`; }
+function chaveTour(){ return `ca:tour:v3:${APP_BASE}:${USUARIO_ID||''}`; }
 function tourPasso(){ return TOUR_PASSOS[TOUR.i]||null; }
 async function iniciarTour(origem){
   if(ehEquipe() || !FAZENDA?.id) return;
@@ -4380,7 +4394,7 @@ async function iniciarTour(origem){
     if(lista.length){ await renderDashboard(); }
     TOUR.depoisAbertura='criar';
   }
-  tourIr(TUTORIAIS.completo.youtubeId ? 'abertura' : TOUR.depoisAbertura);
+  tourIr(videoDisponivel('completo') ? 'abertura' : TOUR.depoisAbertura);
 }
 // Espera o alvo aparecer na tela (as telas desenham depois de buscar no banco).
 function tourEsperarAlvo(sel,ms){
@@ -4444,7 +4458,7 @@ function tourDesenharBalao(p){
   $('coach-titulo').textContent=t.titulo;
   $('coach-texto').innerHTML=`<p>${t.texto}</p>`;
   $('coach-video').innerHTML='';
-  const temVideo=p.video && TUTORIAIS[p.video] && TUTORIAIS[p.video].youtubeId;
+  const temVideo=p.video && videoDisponivel(p.video);
   if(temVideo && p.videoNoBalao) $('coach-video').innerHTML=tutorialHTML(p.video);
   const b=[];
   if(temVideo && !p.videoNoBalao) b.push(`<button type="button" class="coach-video-btn" onclick="tourVideo()">▶ Ver vídeo</button>`);
@@ -4594,7 +4608,7 @@ function tutoriaisAjudaHTML(){
   if(ehEquipe()) return '';
   return `<div class="card" style="max-width:720px">
     <h3>Tutoriais</h3>
-    ${Object.keys(TUTORIAIS).filter(k=>k==='boas-vindas'||TUTORIAIS[k].youtubeId).map(tutorialHTML).join('')}
+    ${Object.keys(TUTORIAIS).filter(videoDisponivel).map(tutorialHTML).join('')}
     <button type="button" class="btn sec" onclick="iniciarTour('ajuda')">Rever o tutorial</button>
   </div>`;
 }
