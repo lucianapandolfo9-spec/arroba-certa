@@ -332,6 +332,19 @@
   .ck-texto small{display:block;color:var(--cinza);font-size:13px;margin-top:2px}
   .ck-item.feito .ck-texto b{color:var(--cinza)}
   .ck-ir{font-size:24px;color:var(--verde);font-weight:800}
+  .video-fachada{display:flex;align-items:center;gap:14px;width:100%;min-height:96px;border-radius:14px;padding:16px;
+    background:linear-gradient(135deg,var(--verde),var(--verde-claro));color:#fff;border:none;text-align:left;font:inherit;margin:4px 0 12px}
+  button.video-fachada{cursor:pointer}
+  .video-fachada b{display:block;font-size:17px}
+  .video-fachada small{display:block;font-size:14px;opacity:.9;margin-top:2px}
+  .video-embreve{background:var(--verde-suave);color:var(--verde);border:1.5px dashed var(--verde-claro)}
+  .video-play{flex:0 0 52px;height:52px;border-radius:50%;background:rgba(255,255,255,.92);color:var(--verde);
+    display:flex;align-items:center;justify-content:center;font-size:22px;padding-left:4px}
+  .video-embreve .video-play{background:#fff}
+  .video-box{position:relative;width:100%;aspect-ratio:16/9;border-radius:14px;overflow:hidden;background:#000;margin:4px 0 12px}
+  .video-box.vertical{aspect-ratio:9/16;max-height:62vh;width:auto;margin-left:auto;margin-right:auto}
+  .video-box iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+  .tour-passos{font-size:14px;font-weight:700;color:var(--dourado);margin:0 0 6px;letter-spacing:.3px}
   .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 </style>
 </head>
@@ -511,6 +524,10 @@
 </div>
 <div id="pwa-update" class="pwa-update hidden" role="region" aria-label="Atualização disponível"></div>
 <div id="pwa-toast" class="pwa-toast hidden" role="status" aria-live="polite"></div>
+<!-- Tour de 3 passos do dono (onboarding PR 1) — preenchido por desenharTour() -->
+<div id="tour-overlay" class="pwa-overlay hidden">
+  <div id="tour-dialog" class="pwa-dialog" role="dialog" aria-modal="true" aria-labelledby="tour-titulo" tabindex="-1"></div>
+</div>
 <!-- Trocar de fazenda (multi-fazenda) — preenchido por abrirSeletorFazenda() -->
 <div id="faz-overlay" class="pwa-overlay hidden" onclick="if(event.target===this)fecharSeletorFazenda()">
   <div id="faz-dialog" class="pwa-dialog" role="dialog" aria-modal="true" aria-labelledby="faz-titulo" tabindex="-1"></div>
@@ -669,6 +686,7 @@ function traduzErro(m){
 }
 async function logout(){
   BOOT_ULTIMO_USER_ID=null;
+  if(TOUR.aberto){ TOUR.passo=0; TOUR.esperandoLote=false; esconderTour(); }
   // Celular compartilhado: não deixa a lista de fazendas do anterior na memória.
   // (A última fazenda aberta fica guardada por usuário no aparelho — ver lembrarFazenda.)
   fecharSeletorFazenda();
@@ -1909,6 +1927,8 @@ function fecharBoasVindas(){
   screen('scr-app');
   loadTicker();
   renderDashboard();
+  // Tour de 3 passos (só dono, só 1ª vez). Abre por cima do painel.
+  iniciarTour('boas-vindas');
 }
 function verPlanosDoBoasVindas(){
   renderSeletorFazenda();
@@ -3870,6 +3890,168 @@ async function utmsParaFazenda(){
   return o;
 }
 
+// ---------- tutoriais (vídeos) e tour de 3 passos (onboarding PR 1) ----------
+// Vídeos no YouTube público (decisão 10 do grill). Nada do Google carrega antes
+// do toque: a fachada é local; o player youtube-nocookie.com só entra ao tocar.
+// youtubeId vazio = cartão "vídeo em breve" (sem quebrar nada).
+const TUTORIAIS = {
+  'boas-vindas': { youtubeId:'', titulo:'Do zero ao primeiro lote', seg:63, formato:'vertical' }
+};
+function tutorialHTML(chave){
+  const t=TUTORIAIS[chave]; if(!t) return '';
+  const dur=t.seg?`${t.seg} s`:'';
+  if(!t.youtubeId) return `<div class="video-fachada video-embreve" role="note"><span class="video-play" aria-hidden="true">▶</span><span><b>${esc(t.titulo)}</b><small>Vídeo em breve${dur?` · ${dur}`:''}</small></span></div>`;
+  return `<button type="button" class="video-fachada" data-tutorial="${esc(chave)}" onclick="tocarTutorial(this)" aria-label="Ver o vídeo ${esc(t.titulo)}${dur?`, ${dur}`:''}"><span class="video-play" aria-hidden="true">▶</span><span><b>${esc(t.titulo)}</b><small>Toque para ver${dur?` · ${dur}`:''}</small></span></button>`;
+}
+function tocarTutorial(btn){
+  const chave=btn?.dataset?.tutorial; const t=TUTORIAIS[chave];
+  if(!t || !/^[A-Za-z0-9_-]{6,20}$/.test(t.youtubeId||'')) return;
+  if(!navigator.onLine){ pwaToast('Sem conexão. O vídeo precisa de internet.'); return; }
+  registrarEvento('tutorial_aberto',{tutorial:chave, origem:TOUR.aberto?'tour':'ajuda'});
+  const box=document.createElement('div');
+  box.className='video-box'+(t.formato==='vertical'?' vertical':'');
+  const f=document.createElement('iframe');
+  f.src=`https://www.youtube-nocookie.com/embed/${encodeURIComponent(t.youtubeId)}?autoplay=1&rel=0&playsinline=1`;
+  f.title=t.titulo;
+  f.allow='autoplay; encrypted-media; picture-in-picture; fullscreen';
+  f.allowFullscreen=true;
+  f.referrerPolicy='strict-origin-when-cross-origin';
+  box.appendChild(f);
+  btn.replaceWith(box);
+}
+
+// Tour: só o dono, só na 1ª vez (por usuário, neste aparelho), abre ao sair da
+// tela de boas-vindas. (1) vídeo → (2) criar o lote mínimo → (3) "seu lote vale
+// R$ X hoje". Modal no padrão do convite do PWA: role=dialog + aria-modal, foco
+// preso, fundo inerte, Escape pula. Como é role=dialog, outroDialogoAberto()
+// segura o convite de instalar enquanto o tour estiver aberto.
+let TOUR={aberto:false, passo:0, esperandoLote:false, lote:null, foco:null, inertes:[]};
+function chaveTour(){ return `ca:tour:v1:${APP_BASE}:${USUARIO_ID||''}`; }
+function iniciarTour(origem){
+  if(ehEquipe() || !FAZENDA?.id) return;
+  if(origem!=='ajuda' && lsGet(chaveTour())) return;
+  lsSet(chaveTour(),'visto');
+  if(PWA_MODAL_ABERTO) fecharConvite(false);
+  registrarEvento('tour_inicio',{origem});
+  abrirTourPasso(1);
+}
+function abrirTourPasso(n){
+  TOUR.passo=n;
+  desenharTour();
+  mostrarTour();
+  registrarEvento('tour_passo',{passo:n});
+}
+function mostrarTour(){
+  const ov=$('tour-overlay');
+  if(!TOUR.aberto){
+    TOUR.foco=document.activeElement;
+    ov.classList.remove('hidden');
+    TOUR.aberto=true;
+    document.body.style.overflow='hidden';
+    TOUR.inertes=[...document.body.children].filter(el=>el.id!=='tour-overlay' && el.id!=='pwa-toast' && el.tagName!=='SCRIPT' && !el.inert);
+    TOUR.inertes.forEach(el=>{ el.inert=true; });
+  }
+  $('tour-dialog').scrollTop=0;
+  $('tour-dialog').focus();
+}
+function esconderTour(){
+  if(!TOUR.aberto) return;
+  TOUR.aberto=false;
+  $('tour-overlay').classList.add('hidden');
+  $('tour-dialog').innerHTML='';
+  document.body.style.overflow='';
+  TOUR.inertes.forEach(el=>{ el.inert=false; }); TOUR.inertes=[];
+  const f=TOUR.foco; TOUR.foco=null;
+  if(f && f.focus && document.contains(f)){ try{ f.focus(); }catch(e){} }
+}
+function desenharTour(){
+  const d=$('tour-dialog');
+  const passos=`<p class="tour-passos">Passo ${TOUR.passo} de 3</p>`;
+  if(TOUR.passo===1){
+    d.innerHTML=`${passos}<h2 id="tour-titulo">Veja em 1 minuto como funciona</h2>
+      ${tutorialHTML('boas-vindas')}
+      <p>Você cria o lote com 3 informações e o app já mostra quanto ele vale hoje, pela cotação da @ da sua praça.</p>
+      <div class="pwa-acoes">
+        <button type="button" class="pwa-agora-nao" onclick="pularTour()">Pular</button>
+        <button type="button" class="pwa-ok" onclick="abrirTourPasso(2)">Próximo</button>
+      </div>`;
+  } else if(TOUR.passo===2){
+    d.innerHTML=`${passos}<h2 id="tour-titulo">Crie seu lote</h2>
+      <p>Só 3 coisas: <strong>nome do lote</strong>, <strong>quantas cabeças</strong> e o <strong>peso médio</strong> de entrada.</p>
+      <p class="mut">Quanto pagou pelo lote é opcional. Com ele, o app mostra também o lucro.</p>
+      <div class="pwa-acoes">
+        <button type="button" class="pwa-agora-nao" onclick="pularTour()">Pular</button>
+        <button type="button" class="pwa-ok" onclick="tourCriarLote()">Criar meu lote</button>
+      </div>`;
+  } else {
+    const v=TOUR.lote;
+    const vh=v?valorLoteHoje(v):null;
+    const semCompra=v?loteSemCompra(v):true;
+    const titulo=vh!=null?`Seu lote vale ${brl(vh)} hoje`:'Seu lote foi criado';
+    const detalhe=vh!=null
+      ? `<p>${v.qtd_animais} cabeças × ${num(v.arrobas_atuais_cab,2)} @ por cabeça.</p><p class="mut" style="font-size:15px">${fonteArrobaTexto(v)}</p>`
+      : `<p>Ainda não temos cotação da @ para a sua praça. Informe na tela do lote o preço que o frigorífico te paga e o valor aparece na hora.</p>`;
+    const compra=semCompra
+      ? `<div class="msg warn" style="font-size:15px"><strong>Informe quanto pagou para ver o lucro.</strong></div>`
+      : `<div class="msg ok" style="font-size:15px">Com o valor da compra, o lucro estimado já aparece na tela do lote.</div>`;
+    d.innerHTML=`${passos}<h2 id="tour-titulo">${titulo}</h2>${detalhe}${compra}
+      <p class="mut" style="font-size:15px">Próximo passo: lance um custo do lote. Em uns 30 dias, a 2ª pesagem mostra o custo da sua @.</p>
+      <div class="pwa-acoes">
+        ${semCompra&&v?`<button type="button" class="pwa-agora-nao" onclick="tourInformarCompra()">Informar quanto paguei</button>`:''}
+        <button type="button" class="pwa-ok" onclick="concluirTour()">Entendi</button>
+      </div>`;
+  }
+}
+function tourCriarLote(){
+  TOUR.esperandoLote=true;
+  esconderTour();
+  novoLote();
+}
+// Chamado por salvarLote() depois de abrir o detalhe do lote recém-criado.
+async function tourDepoisDoLote(loteId){
+  if(!TOUR.esperandoLote) return;
+  TOUR.esperandoLote=false;
+  const {data:v}=await db.from('vw_lote_analise').select('*').eq('lote_id',loteId).single();
+  TOUR.lote=v||null;
+  abrirTourPasso(3);
+}
+function tourInformarCompra(){
+  const id=TOUR.lote?.lote_id;
+  concluirTour();
+  if(id) editarLote(id,true);
+}
+function concluirTour(){
+  registrarEvento('tour_concluido');
+  TOUR.passo=0; TOUR.lote=null; TOUR.esperandoLote=false;
+  esconderTour();
+}
+function pularTour(){
+  registrarEvento('tour_pulado',{passo:TOUR.passo});
+  TOUR.passo=0; TOUR.lote=null; TOUR.esperandoLote=false;
+  esconderTour();
+}
+document.addEventListener('keydown',(e)=>{
+  if(!TOUR.aberto) return;
+  if(e.key==='Escape'){ e.preventDefault(); if(TOUR.passo===3) concluirTour(); else pularTour(); return; }
+  if(e.key!=='Tab') return;
+  const d=$('tour-dialog');
+  const foc=[...d.querySelectorAll('button,[href],input,select,textarea,iframe,[tabindex]:not([tabindex="-1"])')].filter(el=>!el.disabled);
+  if(!foc.length){ e.preventDefault(); return; }
+  const primeiro=foc[0], ultimo=foc[foc.length-1];
+  if(e.shiftKey && (document.activeElement===primeiro || document.activeElement===d)){ e.preventDefault(); ultimo.focus(); }
+  else if(!e.shiftKey && document.activeElement===ultimo){ e.preventDefault(); primeiro.focus(); }
+  else if(!d.contains(document.activeElement)){ e.preventDefault(); primeiro.focus(); }
+});
+// Cartão da Ajuda: lista os tutoriais e reabre o tour (só dono).
+function tutoriaisAjudaHTML(){
+  if(ehEquipe()) return '';
+  return `<div class="card" style="max-width:720px">
+    <h3>Tutoriais</h3>
+    ${Object.keys(TUTORIAIS).map(tutorialHTML).join('')}
+    <button type="button" class="btn sec" onclick="iniciarTour('ajuda')">Rever o tutorial</button>
+  </div>`;
+}
+
 // ---------- ajuda / suporte (chat IA) ----------
 // WhatsApp humano pro botão "Falar com a gente" — escalação de último caso.
 // A constante WHATSAPP_SUPORTE agora mora no bloco de config, no topo.
@@ -3881,6 +4063,7 @@ function renderAjuda(){
   $('app-body').innerHTML = `
     <div class="nome" style="font-size:20px;margin:10px 0 4px">💬 Perguntas & Suporte</div>
     <p class="mut" style="margin-bottom:14px">Tira dúvida sobre o app ou sobre pecuária de corte com nosso assistente. Resposta na hora, a qualquer hora.</p>
+    ${tutoriaisAjudaHTML()}
     <div class="card" style="max-width:720px">
       <div id="chat-box" class="chat-box"></div>
       <div style="display:flex;gap:8px;margin-top:12px">
