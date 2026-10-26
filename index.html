@@ -3224,8 +3224,12 @@ async function renderLote(id){
   // Próximo passo: lote ativo ainda sem nenhum custo lançado.
   if(!fechado && recemCriado){
     html+=`<div class="msg ok proximo-passo" style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
-      <span><strong>Lote criado! Agora complete o lote.</strong> Comece pelas vacinas desta fase (logo abaixo, no Sanitário) e depois lance os custos e a pesagem.</span>
-      <button class="btn mini" onclick="irParaCampo('card-sanitario')">Ir para o Sanitário</button>
+      <span><strong>Lote criado! Agora complete o lote em 3 passos.</strong> Toque em cada um, na ordem.</span>
+      <span style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn mini" onclick="irParaCampo('card-custos','cus-valor')">1. Custos</button>
+        <button class="btn mini" onclick="irParaCampo('card-pesagens')">2. Pesagem</button>
+        <button class="btn mini" onclick="irParaCampo('card-sanitario')">3. Sanitário</button>
+      </span>
     </div>`;
   } else if(!fechado && !(cus||[]).length){
     html+=`<div class="msg ok proximo-passo" style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
@@ -3846,7 +3850,7 @@ async function salvarLote(){
   LOTE_RECEM_CRIADO=criado.id;
   await renderLote(criado.id);
   if(typeof TOUR!=='undefined' && TOUR.esperandoLote) tourDepoisDoLote(criado.id);
-  else irParaCampo('card-sanitario');
+  else window.scrollTo(0,0);
 }
 
 // ---------- importar lotes por planilha ----------
@@ -4119,7 +4123,7 @@ function desenharTour(){
       ? `<div class="msg warn" style="font-size:15px"><strong>Informe quanto pagou para ver o lucro.</strong></div>`
       : `<div class="msg ok" style="font-size:15px">Com o valor da compra, o lucro estimado já aparece na tela do lote.</div>`;
     d.innerHTML=`${passos}<h2 id="tour-titulo">${titulo}</h2>${detalhe}${compra}
-      <p class="mut" style="font-size:15px">Agora complete o lote: comece pelas vacinas desta fase, depois os custos e a pesagem. Em uns 30 dias, a 2ª pesagem mostra o custo da sua @.</p>
+      <p class="mut" style="font-size:15px">Agora complete o lote em 3 passos: custos, pesagem e vacinas. Em uns 30 dias, a 2ª pesagem mostra o custo da sua @.</p>
       <div class="pwa-acoes">
         ${semCompra&&v?`<button type="button" class="pwa-agora-nao" onclick="tourInformarCompra()">Informar quanto paguei</button>`:''}
         <button type="button" class="pwa-ok" onclick="concluirTour()">Completar o lote</button>
@@ -4147,11 +4151,8 @@ function tourInformarCompra(){
 }
 function concluirTour(){
   registrarEvento('tour_concluido');
-  const veioDoLote=TOUR.passo===3 && !!TOUR.lote;
   TOUR.passo=0; TOUR.lote=null; TOUR.esperandoLote=false;
   esconderTour();
-  // Lote acabou de nascer: segue para completar pelo Sanitário (guia da fase já aberto).
-  if(veioDoLote) setTimeout(()=>irParaCampo('card-sanitario'),150);
 }
 function pularTour(){
   registrarEvento('tour_pulado',{passo:TOUR.passo});
