@@ -524,7 +524,7 @@
 </div>
 <div id="pwa-update" class="pwa-update hidden" role="region" aria-label="Atualização disponível"></div>
 <div id="pwa-toast" class="pwa-toast hidden" role="status" aria-live="polite"></div>
-<!-- Tour de 3 passos do dono (onboarding PR 1) — preenchido por desenharTour() -->
+<!-- Tour de 3 passos do dono (onboarding PR 1): preenchido por desenharTour() -->
 <div id="tour-overlay" class="pwa-overlay hidden">
   <div id="tour-dialog" class="pwa-dialog" role="dialog" aria-modal="true" aria-labelledby="tour-titulo" tabindex="-1"></div>
 </div>
@@ -2545,11 +2545,11 @@ async function renderAdminAtivacao(){
         <div class="kpi"><div class="lbl">Dias desde o cadastro</div><div class="val">${Number(c.dias_desde_cadastro)||0}</div></div>
         <div class="kpi"><div class="lbl">Origem</div><div class="val" style="font-size:14px">${origem}</div></div>
         <div class="kpi"><div class="lbl">Último acesso</div><div class="val" style="font-size:14px">${c.ultimo_acesso_em?fmtDataHora(c.ultimo_acesso_em):'nunca registrado'}</div></div>
-        <div class="kpi"><div class="lbl">Assinatura</div><div class="val" style="font-size:14px">${esc(c.status_assinatura)||'—'}</div></div>
+        <div class="kpi"><div class="lbl">Assinatura</div><div class="val" style="font-size:14px">${esc(c.status_assinatura)||'sem dado'}</div></div>
       </div>
       <p class="mut" style="margin-top:8px">E-mail D1: ${c.aviso_d1_em?fmtDataHora(c.aviso_d1_em):'não enviado'} · E-mail D3: ${c.aviso_d3_em?fmtDataHora(c.aviso_d3_em):'não enviado'}</p>
       <label for="regua-${i}">Mensagem (${r.chave.replace('_',', condição ')}), dá para ajustar antes de mandar</label>
-      <textarea id="regua-${i}" rows="4" data-regua="${i}" style="width:100%">${esc(r.texto)}</textarea>
+      <textarea id="regua-${i}" rows="4" data-regua="${i}" style="width:100%;font:inherit;font-size:15px;padding:10px;border-radius:10px;border:1px solid var(--linha)">${esc(r.texto)}</textarea>
       ${tel
         ? `<a class="btn" id="regua-link-${i}" href="${esc(href)}" target="_blank" rel="noopener" style="display:block;text-align:center;text-decoration:none;margin-top:10px">Abrir no WhatsApp</a>`
         : '<div class="msg warn">Telefone ausente ou inválido. Não dá para abrir o WhatsApp.</div>'}
@@ -2929,7 +2929,7 @@ async function renderDashboard(){
         ${(vacinasProx||[]).map(s=>`<div class="msg err"><b>${esc(s.lote?.nome||'Lote')}</b><br>${labelEvento(s.evento)}${s.produto?' · '+esc(s.produto):''} vence ${fmtData(s.proxima_data)}</div>`).join('')}
         ${(!alertas.length && !(vacinasProx||[]).length)?'<div class="msg ok">Nenhum alerta crítico nos lotes ativos.</div>':''}
         ${ranking.length?`<div class="row"><span class="k">Melhor resultado/cabeça</span><span class="v ${Number(ranking[0].lucro_cab)<0?'neg':'pos'}">${brl(ranking[0].lucro_cab)}</span></div>`:''}
-        <div class="row"><span class="k">Preço médio da @ usada</span><span class="v">${comPreco.length?brl(precoMedio):'—'}</span></div>
+        <div class="row"><span class="k">Preço médio da @ usada</span><span class="v">${comPreco.length?brl(precoMedio):'sem preço'}</span></div>
       </div>
     </div>`;
   }
@@ -2944,7 +2944,7 @@ function exemploPainelHTML(){
   const x=(window.CertoCalc && CertoCalc.exemploSantaHelena) ? CertoCalc.exemploSantaHelena() : null;
   const cta=`<button class="btn" style="min-height:56px;font-size:18px" onclick="novoLote()">Criar meu lote</button>`;
   const topo=`<div class="card center">
-      <h3 style="color:var(--verde);font-size:20px">Em 2 minutos você vê quanto vale o seu lote hoje</h3>
+      <h3 style="color:var(--verde);font-size:20px;text-transform:none;letter-spacing:0">Em 2 minutos você vê quanto vale o seu lote hoje</h3>
       <p class="mut" style="margin:6px 0 14px;font-size:15px">Só o nome, quantas cabeças e o peso médio. Veja abaixo como fica.</p>
       ${cta}
     </div>`;
@@ -3155,7 +3155,7 @@ async function renderLote(id){
   const dataRef = v.preco_arroba_referencia_data;
   const refData = usandoReferencia && dataRef ? ` <span class="mut" style="font-size:12px">de ${fmtData(dataRef)}</span>` : '';
   const avisoCotacao = (usandoReferencia && cotacaoVelha(dataRef))
-    ? `<div class="msg err" style="margin:8px 0">A cotação de referência não é atualizada desde <strong>${fmtData(dataRef)}</strong>. Os números abaixo estão calculados em cima desse preço — confirme a @ com seu frigorífico antes de decidir a venda.</div>`
+    ? `<div class="msg err" style="margin:8px 0">A cotação de referência não é atualizada desde <strong>${fmtData(dataRef)}</strong>. Os números abaixo estão calculados em cima desse preço. Confirme a @ com seu frigorífico antes de decidir a venda.</div>`
     : '';
 
   SAN_LOTE={}; (san||[]).forEach(s=>{ SAN_LOTE[s.id]=s; });
@@ -3526,7 +3526,7 @@ const GUIA_VACINA = {
 function guiaVacinacaoHTML(fase){
   const g = GUIA_VACINA[fase] || GUIA_VACINA.recria;
   return `<details class="guia-vac" style="background:#F4EEDF;border-radius:8px;padding:10px 12px;margin:10px 0">
-    <summary style="cursor:pointer;font-weight:700;color:#112A1E">📋 O que vacinar nesta fase — ${g.titulo}</summary>
+    <summary style="cursor:pointer;font-weight:700;color:#112A1E">📋 O que vacinar nesta fase: ${g.titulo}</summary>
     <div style="margin-top:8px">
       ${g.itens.map(i=>`<div style="padding:7px 0;border-bottom:1px solid #E6DFCE">
         <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
@@ -3640,7 +3640,7 @@ async function simularLote(id){
   const rotGen=(campo,txt)=>`<div class="msg warn sim-gen" id="sm-gen-${campo}" style="margin:6px 0 0;font-size:13px"><strong>Estimativa genérica, não é da sua fazenda.</strong> ${txt}</div>`;
   body.innerHTML=`<button class="back" onclick="renderLote('${id}')">← Voltar ao lote</button>
     <div class="nome" style="font-size:22px;margin:6px 0">🔮 Vender hoje ou segurar?</div>
-    <p class="mut">Simulação pra <b>${esc(v.nome)}</b> — ${v.qtd_animais} cabeças. Ajuste os valores e veja o que rende mais.</p>
+    <p class="mut">Simulação para <b>${esc(v.nome)}</b>, ${v.qtd_animais} cabeças. Ajuste os valores e veja o que rende mais.</p>
     <div class="card">
       <h3>Seus números (ajuste se quiser)</h3>
       <label>Segurar por quantos dias?</label>
@@ -3654,7 +3654,7 @@ async function simularLote(id){
       <input id="sm-custo" type="number" step="0.01" value="${custoDia.toFixed(2)}" oninput="simGenAtualizar()" />
       ${custoGen?rotGen('custo','Este lote ainda não tem custo lançado com período. Lance os custos para o app usar o seu número.'):''}
       <div class="mut" style="font-size:12px;margin-top:2px">Ração + mão de obra + tudo que você gasta por dia, dividido pelo número de cabeças. Com custos lançados, já vem calculado pelo histórico do lote; ajuste se achar que vai mudar.</div>
-      <label>Ganho de peso por dia — GMD (kg)</label>
+      <label>Ganho de peso por dia, GMD (kg)</label>
       <input id="sm-gmd" type="number" step="0.01" value="${gmd.toFixed(2)}" oninput="simGenAtualizar()" />
       ${gmdGen?rotGen('gmd','Sem a 2ª pesagem o app não sabe o ganho real deste lote.'):''}
       <div class="mut" style="font-size:12px;margin-top:2px">Quanto o animal engorda por dia, em média. Referência: 0,4-0,8 no pasto, 0,8-1,2 no semiconfinamento, 1,0-1,6 no confinamento.</div>
