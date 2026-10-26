@@ -121,8 +121,54 @@
     return diasUteisEntre(dataISO, hoje) <= LIMITE_DIAS_UTEIS;
   }
 
+  // Fazenda Santa Helena: o EXEMPLO do painel vazio do app (so leitura, nunca
+  // vai ao banco). Numeros fixos e passados pela MESMA formula da calculadora:
+  // 40 Nelore a pasto, entrada 360 kg, 2a pesagem 60 dias depois com 402 kg,
+  // compra declarada (R$ 3.700 por cabeca) e tres custos lancados. A @ e fixa
+  // e sempre rotulada "exemplo" na tela (nao e cotacao do dia).
+  var EXEMPLO_SANTA_HELENA = {
+    fazenda: 'Fazenda Santa Helena (exemplo)',
+    lote: 'Lote Nelore 01',
+    cabecas: 40,
+    pesoEntrada: 360,
+    pesoAtual: 402,
+    dias: 60,
+    compraTotal: 148000,
+    precoArroba: 320,
+    rendimento: 0.53,
+    custos: [
+      { nome: 'Sal mineral e suplemento', valor: 2400 },
+      { nome: 'Mão de obra', valor: 1800 },
+      { nome: 'Vacina e vermífugo', valor: 640 }
+    ]
+  };
+  function exemploSantaHelena() {
+    var e = EXEMPLO_SANTA_HELENA;
+    var custosLancados = e.custos.reduce(function (s, c) { return s + c.valor; }, 0);
+    var r = calcular({
+      pesoEntrada: e.pesoEntrada, pesoSaida: e.pesoAtual, dias: e.dias,
+      custoDia: custosLancados / e.cabecas / e.dias,
+      custoCompra: e.compraTotal / e.cabecas,
+      precoArroba: e.precoArroba, rendimento: e.rendimento
+    });
+    if (!r.ok) return null;
+    return {
+      dados: e,
+      custosLancados: custosLancados,
+      gastou: r.custoCabeca * e.cabecas,       // compra + custos do periodo
+      valeHoje: r.receita * e.cabecas,         // arrobas atuais x @ x cabecas
+      sobra: r.margem * e.cabecas,
+      gmd: r.gmd,
+      arrobasCab: r.arrobas,
+      custoArrobaProduzida: r.custoArrobaProduzida,
+      precoMinimo: r.precoMinimo
+    };
+  }
+
   var api = {
     ARROBA_KG: ARROBA_KG,
+    EXEMPLO_SANTA_HELENA: EXEMPLO_SANTA_HELENA,
+    exemploSantaHelena: exemploSantaHelena,
     MENSAGENS: MSG,
     parseNumero: parseNumero,
     calcular: calcular,
