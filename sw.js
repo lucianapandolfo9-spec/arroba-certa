@@ -49,7 +49,7 @@ const CAMINHOS_FORA_DO_APP = ['/pecuaria/', '/lp/', '/landing/', '/pecuaria-de-l
 
 // Versiona o cache. Subir uma versão nova aqui é o gatilho pra `activate`
 // limpar o cache velho.
-const CACHE_VERSION = 'certo-agro-v10'; // v10: tutorial interativo (coach marks) + painel Dinheiro da fazenda (gráficos) · v8: onboarding PR 1 (tour, lote mínimo, exemplo, checklist, lucro honesto; calc.js no casco) · v7: equipe por convite de e-mail (multi-fazenda entrega 2) · v6: várias fazendas por conta + seletor (multi-fazenda entrega 1) · v5: trial de 15 dias (12/10/2026) · v4: convite PWA, atualização por clique, base derivada do escopo
+const CACHE_VERSION = 'certo-agro-v11'; // v10: tutorial interativo (coach marks) + painel Dinheiro da fazenda (gráficos) · v8: onboarding PR 1 (tour, lote mínimo, exemplo, checklist, lucro honesto; calc.js no casco) · v7: equipe por convite de e-mail (multi-fazenda entrega 2) · v6: várias fazendas por conta + seletor (multi-fazenda entrega 1) · v5: trial de 15 dias (12/10/2026) · v4: convite PWA, atualização por clique, base derivada do escopo
 
 // O casco: só isto entra no cache. Nada daqui fala com Supabase/n8n.
 const CASCO = [
@@ -139,6 +139,9 @@ self.addEventListener('fetch', (event) => {
   // 🔴 Ver comentário de NUNCA_INTERCEPTAR acima. `return` sem chamar
   // `respondWith()` = o browser lida com a requisição direto na rede.
   if (ehProibido(url)) return;
+
+  // Vídeos dos tutoriais: direto na rede (o navegador pede por partes; não cachear).
+  if (url.pathname.includes('/assets/videos/')) return;
 
   // Fora da origem do próprio app (fontes, CDN do supabase-js, SDK do Mercado
   // Pago): não intercepta. Biblioteca de terceiro gerencia o cache dela.
