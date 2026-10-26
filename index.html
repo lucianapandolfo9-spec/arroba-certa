@@ -1506,6 +1506,7 @@ async function renderLoteEquipe(id){
 
     <div class="card">
       <h3>⚖️ Pesagens</h3>
+      ${slotTutorial('pesagem')}
       ${(pes||[]).length>1?'<div style="height:140px;margin-bottom:12px"><canvas id="chart-peso"></canvas></div>':''}
       ${(pes||[]).map(p=>`<div class="list-item"><span>${fmtData(p.data)}${autorHTML(p)}</span>
         <span><b>${num(p.peso_medio_kg,0)} kg</b>
@@ -1543,6 +1544,7 @@ async function renderLoteEquipe(id){
 
     <div class="card">
       <h3>💉 Sanitário</h3>
+      ${slotTutorial('sanitario')}
       ${lerSo?'':guiaVacinacaoHTML(v.fase)}
       ${proximasSanitario(san).map(s=>`<div class="msg err">⚠ ${labelEvento(s.evento)}${s.produto?' — '+esc(s.produto):''} — próxima dose ${fmtData(s.proxima_data)}</div>`).join('')}
       ${(san||[]).map(s=>`<div class="list-item"><span>${fmtData(s.data)} · ${labelEvento(s.evento)}${s.produto?' — '+esc(s.produto):''}${s.proxima_data?' <span class="mut">(próx.: '+fmtData(s.proxima_data)+')</span>':''}${autorHTML(s)}</span>
@@ -3235,6 +3237,7 @@ async function renderLote(id){
   const cardCustos=`
     <div class="card" id="card-custos">
       <h3>💵 Custos do período</h3>
+      ${slotTutorial('custos')}
       <p class="mut">Registre tudo que você gasta com esse lote. É o que define se ele está dando lucro de verdade.</p>
       ${(cus||[]).map(c=>`<div class="list-item"><span>${fmtData(c.data)} · ${esc(c.categoria)}${autorDonoHTML(c)}</span>
         <span><b>${brl(c.valor)}</b>
@@ -3258,6 +3261,7 @@ async function renderLote(id){
   const cardPesagens=`
     <div class="card" id="card-pesagens">
       <h3>⚖️ Pesagens</h3>
+      ${slotTutorial('pesagem')}
       <p class="mut"><strong>O peso de entrada já conta como 1ª pesagem; a 2ª, daqui a uns 30 dias, libera o custo da @.</strong> Com duas pesagens o app calcula o ganho de peso por dia (GMD).</p>
       ${(pes||[]).length>1?'<div style="height:140px;margin-bottom:12px"><canvas id="chart-peso"></canvas></div>':''}
       ${(pes||[]).map(p=>`<div class="list-item"><span>${fmtData(p.data)}${autorDonoHTML(p)}</span>
@@ -3315,6 +3319,7 @@ async function renderLote(id){
 
     <div class="card" id="card-sanitario">
       <h3>💉 Sanitário</h3>
+      ${slotTutorial('sanitario')}
       <p class="mut">Registre vacina, vermífugo, exame ou tratamento. Preencha "próxima dose" para receber o aviso aqui antes de vencer.</p>
       ${guiaVacinacaoHTML(v.fase, recemCriado)}
       ${proximasSanitario(san).map(s=>`<div class="msg err">⚠ ${labelEvento(s.evento)}${s.produto?' · '+esc(s.produto):''} · próxima dose ${fmtData(s.proxima_data)}</div>`).join('')}
@@ -3405,6 +3410,7 @@ async function renderFecharLote(id,editar){
   const precoV = ed ? (l.preco_arroba_venda??'') : (v.preco_arroba_usado!=null?Number(v.preco_arroba_usado).toFixed(2):'');
   body.innerHTML=`<button class="back" onclick="renderLote('${id}')">← Voltar ao lote</button>
     <div class="nome" style="font-size:22px;margin:6px 0">${ed?'✏️ Corrigir venda':'✅ Registrar venda'}: ${esc(v.nome)}</div>
+    ${slotTutorial('venda')}
     <p class="mut">${ed?'Ajuste o que foi lançado errado. O lote continua vendido; o lucro realizado é recalculado.':'Preencha com os números REAIS da venda (nota do frigorífico). É isso que fecha o ciclo e mostra seu lucro de verdade.'}</p>
     <div class="card">
       <label for="fv-data">Data da venda</label>
@@ -3648,6 +3654,7 @@ async function simularLote(id){
   const rotGen=(campo,txt)=>`<div class="msg warn sim-gen" id="sm-gen-${campo}" style="margin:6px 0 0;font-size:13px"><strong>Estimativa genérica, não é da sua fazenda.</strong> ${txt}</div>`;
   body.innerHTML=`<button class="back" onclick="renderLote('${id}')">← Voltar ao lote</button>
     <div class="nome" style="font-size:22px;margin:6px 0">🔮 Vender hoje ou segurar?</div>
+    ${slotTutorial('simulador')}
     <p class="mut">Simulação para <b>${esc(v.nome)}</b>, ${v.qtd_animais} cabeças. Ajuste os valores e veja o que rende mais.</p>
     <div class="card">
       <h3>Seus números (ajuste se quiser)</h3>
@@ -3785,7 +3792,7 @@ function novoLote(){
   if(ehEquipe()) return renderLotesEquipe(); // funcionário não vê plano, venda, simulador nem edita lote
   const body=$('app-body');
   body.innerHTML=`<button class="back" onclick="renderLotes()">← Voltar</button>
-    <div class="card"><h3>Novo lote</h3>
+    <div class="card"><h3>Novo lote</h3>${slotTutorial('novo-lote')}
       <p class="mut">Lote é o grupo de animais que você acompanha junto. Não sabe um número exato? Estime, dá para ajustar depois em "Editar".</p>
       <label for="nl-nome">Nome do lote</label><input id="nl-nome" placeholder="Ex: Lote Nelore 02" autocomplete="off" />
       <label for="nl-qtd">Quantas cabeças?</label><input id="nl-qtd" type="number" inputmode="numeric" min="1" placeholder="40" />
@@ -3999,8 +4006,21 @@ async function utmsParaFazenda(){
 // do toque: a fachada é local; o player youtube-nocookie.com só entra ao tocar.
 // youtubeId vazio = cartão "vídeo em breve" (sem quebrar nada).
 const TUTORIAIS = {
-  'boas-vindas': { youtubeId:'', titulo:'Do zero ao primeiro lote', seg:63, formato:'vertical' }
+  'boas-vindas': { youtubeId:'', titulo:'Do zero ao primeiro lote', seg:63, formato:'vertical' },
+  // "Como preencher" de cada parte do lote: o slot só aparece quando o youtubeId existir.
+  'novo-lote':   { youtubeId:'', titulo:'Como criar o lote', seg:35, formato:'vertical' },
+  'custos':      { youtubeId:'', titulo:'Como lançar os custos', seg:40, formato:'vertical' },
+  'pesagem':     { youtubeId:'', titulo:'Como lançar a pesagem', seg:35, formato:'vertical' },
+  'sanitario':   { youtubeId:'', titulo:'Como lançar vacina e vermífugo', seg:40, formato:'vertical' },
+  'venda':       { youtubeId:'', titulo:'Como registrar a venda', seg:40, formato:'vertical' },
+  'simulador':   { youtubeId:'', titulo:'Como usar o simulador', seg:40, formato:'vertical' }
 };
+// Vídeo "como preencher" dentro de cada cartão. Sem vídeo publicado, não mostra nada.
+function slotTutorial(chave){
+  const t=TUTORIAIS[chave];
+  if(!t || !t.youtubeId) return '';
+  return `<div class="tut-slot" data-origem="tela" style="margin:6px 0 10px">${tutorialHTML(chave)}</div>`;
+}
 function tutorialHTML(chave){
   const t=TUTORIAIS[chave]; if(!t) return '';
   const dur=t.seg?`${t.seg} s`:'';
@@ -4011,7 +4031,7 @@ function tocarTutorial(btn){
   const chave=btn?.dataset?.tutorial; const t=TUTORIAIS[chave];
   if(!t || !/^[A-Za-z0-9_-]{6,20}$/.test(t.youtubeId||'')) return;
   if(!navigator.onLine){ pwaToast('Sem conexão. O vídeo precisa de internet.'); return; }
-  registrarEvento('tutorial_aberto',{tutorial:chave, origem:TOUR.aberto?'tour':'ajuda'});
+  registrarEvento('tutorial_aberto',{tutorial:chave, origem:TOUR.aberto?'tour':(btn.closest('.tut-slot')?'tela':'ajuda')});
   const box=document.createElement('div');
   box.className='video-box'+(t.formato==='vertical'?' vertical':'');
   const f=document.createElement('iframe');
@@ -4155,7 +4175,7 @@ function tutoriaisAjudaHTML(){
   if(ehEquipe()) return '';
   return `<div class="card" style="max-width:720px">
     <h3>Tutoriais</h3>
-    ${Object.keys(TUTORIAIS).map(tutorialHTML).join('')}
+    ${Object.keys(TUTORIAIS).filter(k=>k==='boas-vindas'||TUTORIAIS[k].youtubeId).map(tutorialHTML).join('')}
     <button type="button" class="btn sec" onclick="iniciarTour('ajuda')">Rever o tutorial</button>
   </div>`;
 }
