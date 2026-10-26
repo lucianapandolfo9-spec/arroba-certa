@@ -3220,7 +3220,12 @@ async function renderLote(id){
   }
 
   // Próximo passo: lote ativo ainda sem nenhum custo lançado.
-  if(!fechado && !(cus||[]).length){
+  if(!fechado && recemCriado){
+    html+=`<div class="msg ok proximo-passo" style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+      <span><strong>Lote criado! Agora complete o lote.</strong> Comece pelas vacinas desta fase (logo abaixo, no Sanitário) e depois lance os custos e a pesagem.</span>
+      <button class="btn mini" onclick="irParaCampo('card-sanitario')">Ir para o Sanitário</button>
+    </div>`;
+  } else if(!fechado && !(cus||[]).length){
     html+=`<div class="msg ok proximo-passo" style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
       <span><strong>${recemCriado?'Lote criado! ':''}Próximo passo: lance um custo.</strong> Sal, ração, vacina, mão de obra: com os custos, o app mostra quanto custa cada cabeça.</span>
       <button class="btn mini" onclick="irParaCampo('card-custos','cus-valor')">Lançar custo</button>
@@ -3311,7 +3316,7 @@ async function renderLote(id){
     <div class="card" id="card-sanitario">
       <h3>💉 Sanitário</h3>
       <p class="mut">Registre vacina, vermífugo, exame ou tratamento. Preencha "próxima dose" para receber o aviso aqui antes de vencer.</p>
-      ${guiaVacinacaoHTML(v.fase)}
+      ${guiaVacinacaoHTML(v.fase, recemCriado)}
       ${proximasSanitario(san).map(s=>`<div class="msg err">⚠ ${labelEvento(s.evento)}${s.produto?' · '+esc(s.produto):''} · próxima dose ${fmtData(s.proxima_data)}</div>`).join('')}
       ${(san||[]).map(s=>`<div class="list-item"><span>${fmtData(s.data)} · ${labelEvento(s.evento)}${s.produto?' · '+esc(s.produto):''}${s.proxima_data?' <span class="mut">(próx.: '+fmtData(s.proxima_data)+')</span>':''}${autorDonoHTML(s)}</span>
         <span><b>${s.custo!=null?brl(s.custo):''}</b>
@@ -3526,9 +3531,9 @@ const GUIA_VACINA = {
     {n:'Botulismo', q:'Anual, onde há deficiência de fósforo / gado roendo osso (osteofagia).', ob:false},
   ], nota:'Na terminação o foco é não perder campanha oficial e evitar qualquer bloqueio sanitário pra venda.' },
 };
-function guiaVacinacaoHTML(fase){
+function guiaVacinacaoHTML(fase, aberto){
   const g = GUIA_VACINA[fase] || GUIA_VACINA.recria;
-  return `<details class="guia-vac" style="background:#F4EEDF;border-radius:8px;padding:10px 12px;margin:10px 0">
+  return `<details${aberto?' open':''} class="guia-vac" style="background:#F4EEDF;border-radius:8px;padding:10px 12px;margin:10px 0">
     <summary style="cursor:pointer;font-weight:700;color:#112A1E">📋 O que vacinar nesta fase: ${g.titulo}</summary>
     <div style="margin-top:8px">
       ${g.itens.map(i=>`<div style="padding:7px 0;border-bottom:1px solid #E6DFCE">
@@ -3833,7 +3838,8 @@ async function salvarLote(){
   if(!criado?.id) return renderLotes();
   LOTE_RECEM_CRIADO=criado.id;
   await renderLote(criado.id);
-  if(typeof tourDepoisDoLote==='function') tourDepoisDoLote(criado.id);
+  if(typeof TOUR!=='undefined' && TOUR.esperandoLote) tourDepoisDoLote(criado.id);
+  else irParaCampo('card-sanitario');
 }
 
 // ---------- importar lotes por planilha ----------
@@ -4093,10 +4099,10 @@ function desenharTour(){
       ? `<div class="msg warn" style="font-size:15px"><strong>Informe quanto pagou para ver o lucro.</strong></div>`
       : `<div class="msg ok" style="font-size:15px">Com o valor da compra, o lucro estimado já aparece na tela do lote.</div>`;
     d.innerHTML=`${passos}<h2 id="tour-titulo">${titulo}</h2>${detalhe}${compra}
-      <p class="mut" style="font-size:15px">Próximo passo: lance um custo do lote. Em uns 30 dias, a 2ª pesagem mostra o custo da sua @.</p>
+      <p class="mut" style="font-size:15px">Agora complete o lote: comece pelas vacinas desta fase, depois os custos e a pesagem. Em uns 30 dias, a 2ª pesagem mostra o custo da sua @.</p>
       <div class="pwa-acoes">
         ${semCompra&&v?`<button type="button" class="pwa-agora-nao" onclick="tourInformarCompra()">Informar quanto paguei</button>`:''}
-        <button type="button" class="pwa-ok" onclick="concluirTour()">Entendi</button>
+        <button type="button" class="pwa-ok" onclick="concluirTour()">Completar o lote</button>
       </div>`;
   }
 }
@@ -4115,13 +4121,17 @@ async function tourDepoisDoLote(loteId){
 }
 function tourInformarCompra(){
   const id=TOUR.lote?.lote_id;
+  TOUR.lote=null; // vai para "quanto paguei", não para o Sanitário
   concluirTour();
   if(id) editarLote(id,true);
 }
 function concluirTour(){
   registrarEvento('tour_concluido');
+  const veioDoLote=TOUR.passo===3 && !!TOUR.lote;
   TOUR.passo=0; TOUR.lote=null; TOUR.esperandoLote=false;
   esconderTour();
+  // Lote acabou de nascer: segue para completar pelo Sanitário (guia da fase já aberto).
+  if(veioDoLote) setTimeout(()=>irParaCampo('card-sanitario'),150);
 }
 function pularTour(){
   registrarEvento('tour_pulado',{passo:TOUR.passo});
