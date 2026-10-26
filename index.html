@@ -859,7 +859,12 @@ async function bootReal(){
   loadTicker();
   // Quem volta do Mercado Pago cai em "Minha conta", olhando o plano — não no
   // Dashboard, senão paga e não vê confirmação nenhuma.
-  if(voltouDoPagamento) renderConta(); else renderDashboard();
+  if(voltouDoPagamento) renderConta();
+  else {
+    await renderDashboard();
+    // Tutorial para todo dono (novo ou antigo), uma vez por aparelho; "Pular" encerra.
+    setTimeout(()=>{ if(viewAtual()==='dash' && !MODO_LEITURA) iniciarTour('primeiro-acesso'); },900); // conta só leitura não lança nada: sem tutorial automático
+  }
 }
 
 // Plano da CONTA visto a partir da fazenda aberta. O banco (limite_uso_fazenda)
@@ -4347,7 +4352,7 @@ const TOUR_PASSOS=[
     titulo:'Seu dinheiro num lugar só', texto:'Aqui você vê quanto gastou e quanto vai sobrar.'},
 ];
 let TOUR={aberto:false, i:-1, loteId:null, loteView:null, foco:null, raf:0, geom:'', seq:0, sumiu:0, mudando:false};
-function chaveTour(){ return `ca:tour:v1:${APP_BASE}:${USUARIO_ID||''}`; }
+function chaveTour(){ return `ca:tour:v2:${APP_BASE}:${USUARIO_ID||''}`; }
 function tourPasso(){ return TOUR_PASSOS[TOUR.i]||null; }
 async function iniciarTour(origem){
   if(ehEquipe() || !FAZENDA?.id) return;
