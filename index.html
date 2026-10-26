@@ -761,6 +761,7 @@ async function bootReal(){
   }
   renderSeletorFazenda();
   screen('scr-app');
+  registrarAcesso();
   renderBannerConvite(CONVITE_RESULTADO);
   loadTicker();
   // Quem volta do Mercado Pago cai em "Minha conta", olhando o plano — não no
@@ -1846,14 +1847,23 @@ async function criarFazenda(){
   if(!nome) return msg('faz-msg','Dê um nome pra fazenda.');
   const tel=$('f-tel').value.trim();
   if(!telefoneValido(tel)) return msg('faz-msg','Coloca seu WhatsApp com o DDD — é por ali que a gente fala com você.');
-  const {error}=await db.from('fazenda').insert({
+  const dadosFazenda={
     nome, estado:$('f-uf').value.trim().toUpperCase()||null,
     praca_referencia:$('f-praca').value.trim().toUpperCase()||null,
     area_ha:parseFloat($('f-area').value)||null,
     // Vai como a pessoa digitou: quem normaliza é o banco
     // (crm.normaliza_telefone). Máscara no JS atrapalha quem digita no celular.
     telefone:tel
-  });
+  };
+  // Origem do cadastro (onboarding PR 1): vale para login Google E e-mail,
+  // porque é gravada na fazenda e não no signUp. Sem UTM guardado, não manda
+  // as chaves. Se o banco ainda não tiver as colunas utm_*, o insert falha
+  // inteiro (nada gravado) e repetimos sem elas: a fazenda nunca deixa de nascer.
+  const utm=await utmsParaFazenda();
+  let {error}=await db.from('fazenda').insert({...dadosFazenda, ...utm});
+  if(error && Object.keys(utm).length && /utm_/i.test(String(error.message||''))){
+    ({error}=await db.from('fazenda').insert(dadosFazenda));
+  }
   if(error) return msg('faz-msg',error.message);
   if(window.CertoTrack) CertoTrack.track('StartTrial');
   FAZENDA_RECEM_CRIADA=true;
@@ -2719,6 +2729,7 @@ async function salvarLeadTriagem(id){
 
 // ---------- dashboard ----------
 async function renderDashboard(){
+  registrarAcesso();
   if(ehEquipe()) return renderDashboardEquipe();
   setNav('dash');
   const body=$('app-body'); body.innerHTML='<p class="mut center" style="padding:30px">Carregando…</p>';
@@ -3512,6 +3523,49 @@ async function confirmarImportacao(){
   PARSED_LOTES=null;
   await atualizarModoAcesso();
   renderLotes();
+}
+
+// ---------- medição de ativação (onboarding PR 1, 26/10/2026) ----------
+// Tabela evento_produto: o app só INSERE (dono e equipe da fazenda, RLS no
+// banco). Fire-and-forget: nunca espera, nunca bloqueia, nunca mostra erro.
+// É dado de uso do próprio serviço, sem pixel nem terceiro.
+const EVENTOS_PRODUTO=['acesso','tour_inicio','tour_passo','tour_concluido','tour_pulado','tutorial_aberto','exemplo_visto','checklist_clique'];
+function registrarEvento(nome, dados){
+  try{
+    if(!FAZENDA?.id || !EVENTOS_PRODUTO.includes(nome) || !navigator.onLine) return;
+    const linha={fazenda_id:FAZENDA.id, nome};
+    if(dados && typeof dados==='object') linha.dados=dados;
+    // O builder do Supabase só dispara a requisição no then().
+    db.from('evento_produto').insert(linha).then(()=>{},()=>{});
+  }catch(e){}
+}
+function dataLocalISO(){
+  const d=new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+// "acesso": no máximo 1 por dia por fazenda neste aparelho (marcador local).
+function registrarAcesso(){
+  try{
+    if(!FAZENDA?.id || !navigator.onLine) return;
+    const k=`ca:acesso:v1:${APP_BASE}:${USUARIO_ID||''}:${FAZENDA.id}`;
+    const dia=dataLocalISO();
+    if(lsGet(k)===dia) return;
+    lsSet(k,dia);
+    registrarEvento('acesso');
+  }catch(e){}
+}
+// UTMs que vão para a fazenda. 1º o que a /lp/ guardou neste aparelho
+// (CertoTrack); se não houver, o que o signUp por e-mail gravou no usuário.
+const CAMPOS_UTM_FAZENDA=['utm_source','utm_medium','utm_campaign','utm_content','utm_term'];
+async function utmsParaFazenda(){
+  let fonte={};
+  try{ fonte=(window.CertoTrack && CertoTrack.utmsCadastro) ? (CertoTrack.utmsCadastro()||{}) : {}; }catch(e){ fonte={}; }
+  if(!CAMPOS_UTM_FAZENDA.some(c=>fonte[c])){
+    try{ const {data}=await db.auth.getSession(); fonte=data?.session?.user?.user_metadata||{}; }catch(e){ fonte={}; }
+  }
+  const o={};
+  CAMPOS_UTM_FAZENDA.forEach(c=>{ const v=fonte[c]; if(v!=null && String(v).trim()) o[c]=String(v).trim().slice(0,200); });
+  return o;
 }
 
 // ---------- ajuda / suporte (chat IA) ----------
