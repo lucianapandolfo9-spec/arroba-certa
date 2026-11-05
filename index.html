@@ -522,7 +522,7 @@
   <p class="mut">Vamos criar sua fazenda pra começar.</p></div>
   <div class="card">
     <label>Nome da fazenda</label><input id="f-nome" placeholder="Ex: Fazenda Boa Esperança" />
-    <label>Estado (UF)</label><input id="f-uf" placeholder="MS" maxlength="2" style="text-transform:uppercase" />
+    <label>Estado (UF)</label><input id="f-uf" placeholder="MS" maxlength="2" style="text-transform:uppercase" oninput="sugerirPraca('f-uf','f-praca')" />
     <label>Praça de referência da @</label>
     <select id="f-praca">
       <option value="SP">SP</option>
@@ -531,8 +531,10 @@
       <option value="MG">MG</option>
       <option value="MT">MT</option>
       <option value="RJ">RJ</option>
+      <option value="PA">PA</option>
+      <option value="AL">AL (mais perto de PE)</option>
     </select>
-    <div class="mut" style="font-size:12px;margin-top:2px">Nossa fonte (Scot Consultoria) publica só essas praças. Fora delas, escolha a mais próxima — mas atenção: aí o número é referência de OUTRO estado, e a @ varia bastante entre eles. Quem manda no seu cálculo é o preço real que você negocia, que dá pra informar em cada lote.</div>
+    <div class="mut" style="font-size:12px;margin-top:2px">Nossa fonte (Scot Consultoria) publica só essas praças. Em Pernambuco e vizinhos, use AL (é a praça mais perto). Fora delas, escolha a mais próxima, mas atenção: aí o número é referência de OUTRO estado, e a @ varia bastante entre eles. Quem manda no seu cálculo é o preço real que você negocia, que dá pra informar em cada lote.</div>
     <label>Área (hectares)</label><input id="f-area" type="number" placeholder="500" />
     <label>WhatsApp</label><input id="f-tel" type="tel" inputmode="tel" placeholder="(81) 99192-3030" />
     <div class="mut" style="font-size:12px;margin-top:2px">É por aqui que a gente fala com você. Com o DDD, do jeito que você escreve.</div>
@@ -630,6 +632,19 @@ const DIAS_TRIAL = 15; // espelho de public.assinatura_em_modo_leitura (banco): 
 // ⚠️ Número único — trocar aqui troca em todo lugar. Não chumbar de novo.
 const WHATSAPP_SUPORTE = '5581991923030';
 const MS_DIA = 24*60*60*1000;
+// Praças com cotação diária (Scot Consultoria). PA e AL entraram em 05/11/2026.
+// A Scot não publica Pernambuco: AL é a praça mais perto, mostrada como referência.
+const PRACAS = [['SP','SP'],['MS','MS'],['GO','GO'],['MG','MG'],['MT','MT'],['RJ','RJ'],['PA','PA'],['AL','AL (mais perto de PE)']];
+const PRACA_DO_ESTADO = {PE:'AL', PB:'AL', RN:'AL', SE:'AL', AL:'AL', PA:'PA'};
+function pracaNome(p){ const x=PRACAS.find(r=>r[0]===p); return x?x[1]:p; }
+function pracaOptionsHTML(sel){ return PRACAS.map(([v,t])=>`<option value="${v}" ${v===sel?'selected':''}>${t}</option>`).join(''); }
+// Ao digitar o estado, já sugere a praça certa (o produtor pode trocar).
+function sugerirPraca(ufId, pracaId){
+  const uf=($(ufId)?.value||'').trim().toUpperCase(), sel=$(pracaId);
+  if(!sel||uf.length<2) return;
+  const alvo = PRACA_DO_ESTADO[uf] || (PRACAS.some(r=>r[0]===uf)?uf:null);
+  if(alvo) sel.value=alvo;
+}
 // ⚠️ ONDE O APP MORA. Única constante de caminho do PWA: start_url/scope do
 // manifest.json são relativos ('./'), o service worker deriva a base do escopo
 // em que foi registrado, e as chaves de localStorage usam esta base. Se o app
@@ -1052,7 +1067,6 @@ function mensagemErroFazenda(error){
 function renderNovaFazenda(){
   if(ehEquipe()) return novaFazendaPropria();
   setNav('conta');
-  const pracas=['SP','MS','GO','MG','MT','RJ'];
   const titulo='<div class="nome" style="font-size:20px;margin:10px 0 4px">🏡 Cadastrar outra fazenda</div>';
   if(MODO_LEITURA){
     $('app-body').innerHTML=`${titulo}
@@ -1071,9 +1085,9 @@ function renderNovaFazenda(){
     <p class="mut" style="margin-bottom:14px;font-size:15px">Cada fazenda tem os seus lotes e a sua praça da @. Depois é só trocar de fazenda no topo da tela.</p>
     <div class="card" style="max-width:560px">
       <label for="nf-nome">Nome da fazenda</label><input id="nf-nome" placeholder="Ex: Sítio Santa Rita" maxlength="80" />
-      <label for="nf-uf">Estado (UF)</label><input id="nf-uf" maxlength="2" style="text-transform:uppercase" value="${esc(FAZENDA?.estado||'')}" />
+      <label for="nf-uf">Estado (UF)</label><input id="nf-uf" maxlength="2" style="text-transform:uppercase" oninput="sugerirPraca('nf-uf','nf-praca')" value=""${esc(FAZENDA?.estado||'')}" />
       <label for="nf-praca">Praça de referência da @</label>
-      <select id="nf-praca">${pracas.map(p=>`<option value="${p}" ${p===FAZENDA?.praca_referencia?'selected':''}>${p}</option>`).join('')}</select>
+      <select id="nf-praca">${pracaOptionsHTML(FAZENDA?.praca_referencia)}</select>
       <div class="mut" style="font-size:12px;margin-top:2px">Nossa fonte (Scot Consultoria) publica só essas praças. Fora delas, escolha a mais próxima.</div>
       <label for="nf-area">Área em hectares (se quiser)</label><input id="nf-area" type="number" inputmode="decimal" />
       <div class="msg ok" style="display:block;margin-top:16px;font-size:14px">
@@ -1921,7 +1935,7 @@ function renderCotacoes(){
     const hist=porPraca[p], atual=hist[0];
     html+=`<div class="card">
       <div style="display:flex;justify-content:space-between;align-items:baseline">
-        <h3 style="margin-bottom:0">${p}</h3><span class="mut" style="font-size:12px">${fmtData(atual.data)}</span>
+        <h3 style="margin-bottom:0">${esc(pracaNome(p))}</h3><span class="mut" style="font-size:12px">${fmtData(atual.data)}</span>
       </div>
       <div class="big" style="margin:6px 0">${brl(atual.valor_rs)}<span style="font-size:14px;font-weight:600;color:var(--cinza)">/@</span></div>
       ${hist.length>1?`<div style="height:90px;margin:8px 0"><canvas id="chart-${p}"></canvas></div>`:''}
@@ -1935,7 +1949,7 @@ function renderCotacoes(){
       <label>Preço do boi magro/reposição (R$/cabeça)</label>
       <input id="rt-magro" type="number" placeholder="Ex: 2800" />
       <label>Praça de referência</label>
-      <select id="rt-praca">${pracas.map(p=>`<option value="${p}" ${p===FAZENDA?.praca_referencia?'selected':''}>${p}</option>`).join('')}</select>
+      <select id="rt-praca">${pracas.map(p=>`<option value="${p}" ${p===FAZENDA?.praca_referencia?'selected':''}>${esc(pracaNome(p))}</option>`).join('')}</select>
       <button class="btn mini" style="margin-top:10px" onclick="calcularRelacaoTroca()">Calcular</button>
       <div id="rt-result" style="margin-top:10px"></div>
     </div>`;
@@ -2083,7 +2097,6 @@ async function renderConta(){
     carregarEquipeDono()
   ]);
   PLANOS_PAGAMENTO = planos || [];
-  const pracas = ['SP','MS','GO','MG','MT','RJ'];
   // Fazenda extra (sem plano próprio): o WhatsApp de contato é o da conta
   // (fica na principal) — aqui não pede de novo. Plano mostrado = o da conta.
   const extra = FAZENDA_COBRANCA_ID && FAZENDA_COBRANCA_ID!==f.id;
@@ -2096,9 +2109,9 @@ async function renderConta(){
     <p class="mut" style="margin-bottom:14px">${variasAtivas?`Dados da <strong>${esc(f.nome)}</strong>, a fazenda aberta agora. `:''}Dados-base da fazenda usados nas cotações, análises e cálculos do sistema. Preencheu errado? Corrige aqui.</p>
     <div class="card" style="max-width:560px">
       <label>Nome da fazenda</label><input id="c-nome" value="${esc(f.nome)}" />
-      <label>Estado (UF)</label><input id="c-uf" value="${esc(f.estado||'')}" maxlength="2" style="text-transform:uppercase" />
+      <label>Estado (UF)</label><input id="c-uf" value="${esc(f.estado||'')}" maxlength="2" style="text-transform:uppercase" oninput="sugerirPraca('c-uf','c-praca')" />
       <label>Praça de referência da @</label>
-      <select id="c-praca">${pracas.map(p=>`<option value="${p}" ${f.praca_referencia===p?'selected':''}>${p}</option>`).join('')}</select>
+      <select id="c-praca">${pracaOptionsHTML(f.praca_referencia)}</select>
       <label>Área (hectares)</label><input id="c-area" type="number" value="${f.area_ha??''}" />
       ${extra?'':`<label>WhatsApp</label><input id="c-tel" type="tel" inputmode="tel" placeholder="(81) 99192-3030" value="${esc(f.telefone||'')}" />
       <div class="mut" style="font-size:12px;margin-top:2px">É por aqui que a gente fala com você. Com o DDD, do jeito que você escreve.</div>`}

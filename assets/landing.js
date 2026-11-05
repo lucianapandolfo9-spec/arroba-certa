@@ -110,8 +110,11 @@
   // ---------- cotacao ao vivo (RPC publica cotacao_publica, so leitura, chave anon) ----------
   var COT_URL = 'https://zctczffncbtgpmnyxfup.supabase.co/rest/v1/rpc/cotacao_publica';
   var COT_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpjdGN6ZmZuY2J0Z3Btbnl4ZnVwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA3MjcwMzgsImV4cCI6MjEwNjMwMzAzOH0.83Cg-lkjP3o7uPpcazf9M1BfzkyqOu7pUVAZOyRsO6Y';
-  var COT_CACHE = 'ca:cot:v1', COT_TTL_MS = 5 * 60 * 1000;
-  var ORDEM = ['MG', 'GO', 'MS', 'SP'];
+  var COT_CACHE = 'ca:cot:v2', COT_TTL_MS = 5 * 60 * 1000;
+  // PA e AL entraram em 05/11/2026. A Scot não publica Pernambuco: AL é a praça mais perto.
+  var ORDEM = ['MG', 'GO', 'MS', 'SP', 'PA', 'AL'];
+  var NOME_PRACA = { AL: 'AL (ref. PE)' };
+  function nomePraca(p) { return NOME_PRACA[p] || p; }
 
   function buscarCotacao() {
     try {
@@ -156,14 +159,14 @@
     ul.textContent = '';
     validas.forEach(function (r) {
       var li = document.createElement('li');
-      var b = document.createElement('b'); b.textContent = r.praca;
+      var b = document.createElement('b'); b.textContent = nomePraca(r.praca);
       var s = document.createElement('span'); s.textContent = brl(Number(r.valor_rs));
       li.appendChild(b); li.appendChild(s); ul.appendChild(li);
     });
     ul.hidden = false;
     var d = String(data).slice(0, 10).split('-');
     var dataBr = d[2] + '/' + d[1] + '/' + d[0];
-    $('cot-fonte').textContent = 'Cotação de ' + dataBr + ' · ' + (validas[0].fonte || 'Scot Consultoria') + '. MG · GO · MS · SP.';
+    $('cot-fonte').textContent = 'Cotação de ' + dataBr + ' · ' + (validas[0].fonte || 'Scot Consultoria') + '. Média das praças de cada estado. AL é a referência mais perto de PE.';
 
     // Pre-preenche a @ do calculo: media das praças, com atalho para cada uma.
     var soma = 0;
@@ -180,8 +183,8 @@
     validas.forEach(function (r) {
       var bt = document.createElement('button');
       bt.type = 'button'; bt.className = 'chip'; bt.setAttribute('aria-pressed', 'false');
-      bt.textContent = 'Usar ' + r.praca;
-      bt.addEventListener('click', function () { usar(Number(r.valor_rs), 'Praça ' + r.praca, bt); });
+      bt.textContent = 'Usar ' + nomePraca(r.praca);
+      bt.addEventListener('click', function () { usar(Number(r.valor_rs), 'Praça ' + nomePraca(r.praca), bt); });
       chips.appendChild(bt);
     });
     chips.hidden = false;
