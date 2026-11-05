@@ -89,7 +89,7 @@
       var ul=document.getElementById('cot-lista');
       rows.forEach(function(r){
         var li=document.createElement('li');
-        var b=document.createElement('b');b.textContent=r.praca;
+        var b=document.createElement('b');b.textContent=(r.praca==='AL'?'AL (ref. PE)':r.praca);
         var v=document.createElement('span');
         v.textContent='R$ '+Number(r.valor_rs).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
         li.appendChild(b);li.appendChild(v);ul.appendChild(li);
