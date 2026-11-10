@@ -438,9 +438,10 @@
   details.vm[open]>summary::after{content:"−"}
   details.vm>summary small{display:block;font-size:14px;font-weight:600;color:var(--cinza);margin-top:2px}
   details.vm .vm-corpo{padding-top:4px}
-  /* Cabeçalho: cotação em uma linha só (a praça da fazenda) */
-  .ticker-wrap{white-space:normal;text-align:center;padding:8px 12px}
-  .ticker-item{font-size:15px;padding:0 4px}
+  /* Cabeçalho: todas as praças passando, a da fazenda primeiro */
+  .ticker-wrap{padding:8px 0}
+  .ticker-item{font-size:15px;padding:0 18px}
+  .ticker-item.minha{color:#f3d98b}
   .ticker-item .dt{opacity:.8;font-weight:600;font-size:13px}
   .nav button{font-size:14px}
   @media(max-width:672px){.nav button{font-size:13px;padding:12px 2px}}
@@ -1962,14 +1963,20 @@ function cotacaoDaPraca(praca){
 }
 function renderLinhaCotacao(){
   const track=$('ticker-track'); if(!track || !COTACOES_TODAS) return;
-  track.classList.remove('anim'); track.style.animationDuration='';
-  const praca=FAZENDA?.praca_referencia||null;
-  const c=cotacaoDaPraca(praca);
-  if(!praca){ track.innerHTML='<span class="ticker-item">Escolha a praça da sua fazenda em Conta para ver a @ aqui.</span>'; return; }
-  if(!c){ track.innerHTML=`<span class="ticker-item">Sem cotação da @ para ${esc(praca)} agora. Toque para ver as outras praças.</span>`; return; }
-  const velha=cotacaoVelha(c.data);
-  track.innerHTML=`<span class="ticker-item">@ em ${esc(praca)}: ${brl(c.valor_rs)} <span class="dt">em ${fmtData(c.data).slice(0,5)}</span></span>`
-    +(velha?`<span class="ticker-item" style="color:#fecaca">⚠ parada desde ${fmtData(c.data)}. Confira com seu frigorífico.</span>`:'');
+  // 09/11/2026 (noite): voltam a passar todas as praças coletadas; a da fazenda
+  // aberta vem primeiro e em destaque. Preço sempre com a data ao lado.
+  const minha=FAZENDA?.praca_referencia||null;
+  const vistas=new Set(), ultimas=[];
+  for(const c of COTACOES_TODAS){ if(!vistas.has(c.praca)){ vistas.add(c.praca); ultimas.push(c); } } // lista vem da mais nova para a mais velha
+  ultimas.sort((a,b)=>(a.praca===minha?-1:b.praca===minha?1:a.praca.localeCompare(b.praca)));
+  if(!ultimas.length){ track.classList.remove('anim'); track.textContent='Cotação da @ indisponível no momento.'; return; }
+  const item=c=>`<span class="ticker-item${c.praca===minha?' minha':''}"><span class="uf">${esc(c.praca)}</span>${brl(c.valor_rs)} <span class="dt">em ${fmtData(c.data).slice(0,5)}</span></span>`;
+  const velha=cotacaoVelha(ultimas[0].data);
+  const linha=ultimas.map(item).join('')
+    +(velha?`<span class="ticker-item" style="color:#fecaca">⚠ preço parado desde ${fmtData(ultimas[0].data)}. Confira com seu frigorífico.</span>`:'');
+  track.innerHTML=linha+linha; // duas vezes: a animação anda metade e recomeça sem salto
+  track.style.animationDuration=Math.max(24, ultimas.length*5)+'s';
+  track.classList.add('anim');
 }
 // "Ver mais" abriu: gráfico desenhado com a caixa fechada nasce sem tamanho.
 function vmAbriu(det){
@@ -2010,8 +2017,8 @@ function renderCotacoes(){
   const porPraca={};
   for(const c of COTACOES_TODAS){ (porPraca[c.praca]=porPraca[c.praca]||[]).push(c); }
   const pracas=Object.keys(porPraca).sort();
-  // App simples (09/11/2026): na frente só a praça da fazenda. As outras praças
-  // e a conta de troca (boi magro x boi gordo) ficam em "Ver mais".
+  // Todas as praças na frente (a da fazenda primeiro, maior). Só a conta de
+  // troca (boi magro x boi gordo) fica em "Ver mais".
   const minha=FAZENDA?.praca_referencia||null;
   const cartaoPraca=(p,grande)=>{
     const hist=porPraca[p], atual=hist[0];
@@ -2029,14 +2036,14 @@ function renderCotacoes(){
   if(!pracas.length){ html+='<div class="card center"><p class="mut">Ainda não temos o preço da @.</p></div>'; }
   const temMinha=minha && porPraca[minha];
   if(temMinha) html+=cartaoPraca(minha,true);
-  else if(pracas.length) html+=`<div class="card"><p style="font-size:17px">${minha?`Não temos o preço da @ para <b>${esc(minha)}</b> agora.`:'Sua fazenda ainda não tem praça escolhida.'} Veja as outras praças em "Ver mais", ou troque a praça em Conta.</p></div>`;
+  else if(pracas.length) html+=`<div class="card"><p style="font-size:17px">${minha?`Não temos o preço da @ para <b>${esc(minha)}</b> agora.`:'Sua fazenda ainda não tem praça escolhida.'} Veja as outras praças abaixo, ou troque a praça em Conta.</p></div>`;
   html+=`<p class="mut" style="margin:4px 2px 0">Fonte: Scot Consultoria, preço à vista, dias úteis. É o preço do mercado. Na conta do seu lote vale o preço que você combinar com o frigorífico.</p>`;
   const outras=pracas.filter(p=>!(temMinha && p===minha));
+  if(outras.length) html+=`<div class="section-title">${temMinha?'Outras praças':'Todas as praças'}</div><div class="quote-grid">${outras.map(p=>cartaoPraca(p,false)).join('')}</div>`;
   if(pracas.length){
     html+=`<details class="vm" ontoggle="vmAbriu(this)">
-      <summary><span>Ver mais<small>Outras praças e conta de troca</small></span></summary>
+      <summary><span>Ver mais<small>Conta de troca: boi magro x boi gordo</small></span></summary>
       <div class="vm-corpo">
-      ${outras.length?`<div class="section-title">Outras praças</div><div class="quote-grid">${outras.map(p=>cartaoPraca(p,false)).join('')}</div>`:''}
       <div class="section-title">Conta de troca: é hora de comprar boi magro?</div>
       <div class="card" style="max-width:520px">
         <p class="mut" style="margin-bottom:10px">Mostra quantas arrobas de boi gordo pagam 1 boi magro hoje.</p>
