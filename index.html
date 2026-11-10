@@ -3325,8 +3325,7 @@ function painelDinheiroPartes(d){
   </div>`;
 
   const resumo=`<div class="card${ex?' exemplo-card':''}" id="din-resumo">
-    <h3>A conta em uma frase</h3>
-    <p class="din-frase">${d.frase}</p>
+    <h3>Gastou e ${falta?'faltou':'sobrou'}</h3>
     ${d.temConta?`<div class="din-graf" style="height:118px"><canvas id="din-graf-gs" role="img" aria-label="Gastou ${brl0(d.gastou)}; ${falta?'prejuízo':'lucro'} ${brl0(Math.abs(d.sobra))}"></canvas></div>`:''}
   </div>`;
   return {topo,cat,mes,resumo};
