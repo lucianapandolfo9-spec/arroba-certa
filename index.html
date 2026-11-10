@@ -3816,41 +3816,6 @@ async function renderLote(id){
   const totalGastos=(cus||[]).reduce((s,c)=>s+(Number(c.valor)||0),0);
   const vencendo=proximasSanitario(san);
 
-  const cardCustos=`
-    <div class="card" id="card-custos">
-      <h3>💵 Gastos lançados</h3>
-      ${(cus||[]).length?`<p class="mut" style="margin-bottom:6px">${brl(totalGastos)} em ${(cus||[]).length} ${(cus||[]).length===1?'lançamento':'lançamentos'}.</p>`:''}
-      ${(cus||[]).map(c=>`<div class="list-item"><span>${fmtData(c.data)} · ${esc((CATEGORIAS_DINHEIRO.find(x=>x.chave===c.categoria)||{}).nome||c.categoria)}${autorDonoHTML(c)}</span>
-        <span style="text-align:right"><b>${brl(c.valor)}</b><br>
-          <button class="btn ghost mini" onclick="editCusto('${id}','${c.id}','${c.data}',${esc(JSON.stringify(String(c.categoria??'')))},${Number(c.valor)})">Corrigir</button>
-          <button class="btn ghost mini" onclick="delCusto('${id}','${c.id}',this)">Apagar</button>
-        </span></div>`).join('')||'<p class="mut">Nenhum gasto lançado. Toque em "Gastei" quando gastar com o lote.</p>'}
-      ${fechado?`<button class="btn sec" style="margin-top:12px" onclick="abrirAcaoLote('cus',true)">Lançar um gasto deste lote</button>`:''}
-    </div>`;
-
-  const cardPesagens=`
-    <div class="card" id="card-pesagens">
-      <h3>⚖️ Pesagens</h3>
-      ${(pes||[]).length>1?'<div style="height:160px;margin:10px 0 12px"><canvas id="chart-peso"></canvas></div>':''}
-      ${(pes||[]).map(p=>`<div class="list-item"><span>${fmtData(p.data)}${autorDonoHTML(p)}</span>
-        <span style="text-align:right"><b>${num(p.peso_medio_kg,0)} kg</b><br>
-          <button class="btn ghost mini" onclick="editPesagem('${id}','${p.id}','${p.data}',${p.peso_medio_kg})">Corrigir</button>
-          <button class="btn ghost mini" onclick="delPesagem('${id}','${p.id}',this)">Apagar</button>
-        </span></div>`).join('')||`<p class="mut">${lote.peso_entrada_medio_kg!=null?`Chegada: ${num(lote.peso_entrada_medio_kg,0)} kg em ${fmtData(lote.data_entrada)}. Nenhuma pesagem depois disso ainda.`:'Nenhuma pesagem ainda.'}</p>`}
-      ${fechado?`<button class="btn sec" style="margin-top:12px" onclick="abrirAcaoLote('pes',true)">Lançar um peso deste lote</button>`:''}
-    </div>`;
-
-  const cardSanitario=`
-    <div class="card" id="card-sanitario">
-      <h3>💉 Vacinas e remédios lançados</h3>
-      ${vencendo.map(s=>`<div class="msg err">⚠ ${labelEvento(s.evento)}${s.produto?' · '+esc(s.produto):''} · próxima dose ${fmtData(s.proxima_data)}</div>`).join('')}
-      ${(san||[]).map(s=>`<div class="list-item"><span>${fmtData(s.data)} · ${labelEvento(s.evento)}${s.produto?' · '+esc(s.produto):''}${s.proxima_data?' <span class="mut">(próxima: '+fmtData(s.proxima_data)+')</span>':''}${autorDonoHTML(s)}${sanExtraHTML(s)}</span>
-        <span style="text-align:right"><b>${s.custo!=null?brl(s.custo):''}</b><br>
-          <button class="btn ghost mini" onclick="editSanitario('${id}','${s.id}')">Corrigir</button>
-          <button class="btn ghost mini" onclick="delSanitario('${id}','${s.id}',this)">Apagar</button>
-        </span></div>`).join('')||'<p class="mut">Nada anotado ainda. Toque em "Sanitário" quando vacinar ou medicar o lote.</p>'}
-      ${fechado?`<button class="btn sec" style="margin-top:12px" onclick="abrirAcaoLote('san',true)">Lançar vacina ou remédio deste lote</button>`:''}
-    </div>`;
   const formSanitario=`
     <div class="card acao-form hidden" id="acao-san">
       <h3>💉 Sanitário</h3>
@@ -3859,28 +3824,49 @@ async function renderLote(id){
       <button class="btn ghost" style="width:100%;margin-top:6px" onclick="fecharAcaoLote()">Cancelar</button>
     </div>`;
 
-  const cardPeso=`
-    <div class="card">
-      <h3>📊 Peso e ganho</h3>
-      <div class="row"><span class="k">Peso de cada animal hoje</span><span class="v">${num(v.peso_atual_kg,0)} kg</span></div>
-      <div class="row"><span class="k">Arrobas por cabeça</span><span class="v">${num(v.arrobas_atuais_cab,2)} @</span></div>
-      <div class="row"><span class="k">Ganho de peso por dia</span><span class="v ${v.gmd>3?'neg':''}">${v.gmd!=null?num(v.gmd,2)+' kg':'<span class="mut" style="font-size:14px">aparece na 2ª pesagem</span>'}</span></div>
-      ${v.gmd>3?'<div class="msg err">⚠ Ganho alto demais para ser verdade. Confira os pesos e as datas.</div>':''}
-      ${prodA!=null?`<div class="row"><span class="k">Custo de cada @ que o gado ganhou</span><span class="v">${brl(prodA)}</span></div>`:''}
-      <p class="mut" style="margin-top:10px">${num(v.peso_inicial_kg,0)} kg → ${num(v.peso_atual_kg,0)} kg em ${v.dias_periodo??0} dias</p>
-    </div>`;
-
   const nGastos=(cus||[]).length, nPes=(pes||[]).length, nSan=(san||[]).length;
-  // Lote vendido mantém as três listas (cada uma tem o botão de lançar depois da venda).
-  const listas=[
-    (fechado||nSan)?cardSanitario:'',
-    (fechado||nGastos)?cardCustos:'',
-    (fechado||nPes)?cardPesagens:'',
-    (!fechado && v.gmd!=null)?cardPeso:''
-  ].join('');
+  // Relatório do lote (10/11/2026): um resumo curto e UMA lista por data com tudo
+  // o que foi lançado (peso, gasto, sanitário), do mais novo para o mais antigo.
+  const catNome=c=>esc((CATEGORIAS_DINHEIRO.find(x=>x.chave===c.categoria)||{}).nome||c.categoria);
+  const linhas=[
+    ...(pes||[]).map(p=>({d:p.data, h:`<div class="list-item"><span>${fmtData(p.data)} · ⚖️ Pesagem${autorDonoHTML(p)}</span>
+        <span style="text-align:right"><b>${num(p.peso_medio_kg,0)} kg</b><br>
+          <button class="btn ghost mini" onclick="editPesagem('${id}','${p.id}','${p.data}',${p.peso_medio_kg})">Corrigir</button>
+          <button class="btn ghost mini" onclick="delPesagem('${id}','${p.id}',this)">Apagar</button>
+        </span></div>`})),
+    ...(cus||[]).map(c=>({d:c.data, h:`<div class="list-item"><span>${fmtData(c.data)} · 💵 ${catNome(c)}${autorDonoHTML(c)}</span>
+        <span style="text-align:right"><b>${brl(c.valor)}</b><br>
+          <button class="btn ghost mini" onclick="editCusto('${id}','${c.id}','${c.data}',${esc(JSON.stringify(String(c.categoria??'')))},${Number(c.valor)})">Corrigir</button>
+          <button class="btn ghost mini" onclick="delCusto('${id}','${c.id}',this)">Apagar</button>
+        </span></div>`})),
+    ...(san||[]).map(x=>({d:x.data, h:`<div class="list-item"><span>${fmtData(x.data)} · ${labelEvento(x.evento)}${x.produto?' · '+esc(x.produto):''}${x.proxima_data?' <span class="mut">(próxima: '+fmtData(x.proxima_data)+')</span>':''}${autorDonoHTML(x)}${sanExtraHTML(x)}</span>
+        <span style="text-align:right"><b>${x.custo!=null?brl(x.custo):''}</b><br>
+          <button class="btn ghost mini" onclick="editSanitario('${id}','${x.id}')">Corrigir</button>
+          <button class="btn ghost mini" onclick="delSanitario('${id}','${x.id}',this)">Apagar</button>
+        </span></div>`}))
+  ].sort((x,y)=>String(y.d).localeCompare(String(x.d)));
+  const totalSan=(san||[]).reduce((t,x)=>t+(Number(x.custo)||0),0);
+  const temLanc=linhas.length>0;
+  const listas=(temLanc||fechado)?`
+    <div class="card" id="card-relatorio">
+      <h3>📋 Relatório do lote</h3>
+      ${vencendo.map(x=>`<div class="msg err">⚠ ${labelEvento(x.evento)}${x.produto?' · '+esc(x.produto):''} · próxima dose ${fmtData(x.proxima_data)}</div>`).join('')}
+      ${nPes?`<div class="row"><span class="k">Peso de cada animal</span><span class="v">${num(v.peso_inicial_kg,0)} kg → ${num(v.peso_atual_kg,0)} kg</span></div>`:''}
+      ${v.gmd!=null?`<div class="row"><span class="k">Ganho de peso por dia</span><span class="v ${v.gmd>3?'neg':''}">${num(v.gmd,2)} kg</span></div>`:''}
+      ${v.gmd>3?'<div class="msg err">⚠ Ganho alto demais para ser verdade. Confira os pesos e as datas.</div>':''}
+      ${(nGastos||totalSan)?`<div class="row"><span class="k">Gastos lançados</span><span class="v">${brl(totalGastos+totalSan)}</span></div>`:''}
+      ${prodA!=null?`<div class="row"><span class="k">Custo de cada @ que o gado ganhou</span><span class="v">${brl(prodA)}</span></div>`:''}
+      ${nPes>1?'<div style="height:160px;margin:12px 0"><canvas id="chart-peso"></canvas></div>':''}
+      ${temLanc?`<p class="mut" style="margin:12px 0 2px">Tudo o que foi lançado, do mais novo para o mais antigo:</p>${linhas.map(l=>l.h).join('')}`:'<p class="mut">Nada lançado neste lote.</p>'}
+      ${fechado?`<div style="display:grid;gap:8px;margin-top:12px">
+        <button class="btn sec" onclick="abrirAcaoLote('pes',true)">Lançar um peso deste lote</button>
+        <button class="btn sec" onclick="abrirAcaoLote('cus',true)">Lançar um gasto deste lote</button>
+        <button class="btn sec" onclick="abrirAcaoLote('san',true)">Lançar vacina ou remédio deste lote</button>
+      </div>`:''}
+    </div>`:'';
   html+=formSanitario;
   html+=`<details class="vm" id="lote-mais" ontoggle="vmAbriu(this)">
-      <summary><span>Ver mais${vencendo.length?` <span class="pill warn" style="margin-left:6px">${vencendo.length===1?'1 vacina vencendo':vencendo.length+' vacinas vencendo'}</span>`:''}<small>O que você já lançou neste lote</small></span></summary>
+      <summary><span>Ver mais${vencendo.length?` <span class="pill warn" style="margin-left:6px">${vencendo.length===1?'1 vacina vencendo':vencendo.length+' vacinas vencendo'}</span>`:''}<small>Relatório: tudo o que você já lançou neste lote</small></span></summary>
       <div class="vm-corpo">
         ${dadosVenda}
         ${listas||'<p class="mut" style="padding:6px 2px 10px">Nada lançado ainda. O que você lançar em Pesei, Gastei e Sanitário aparece aqui.</p>'}
