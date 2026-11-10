@@ -49,7 +49,7 @@ const CAMINHOS_FORA_DO_APP = ['/pecuaria/', '/lp/', '/landing/', '/pecuaria-de-l
 
 // Versiona o cache. Subir uma versão nova aqui é o gatilho pra `activate`
 // limpar o cache velho.
-const CACHE_VERSION = 'certo-agro-v14'; // v14: cotação passando todas as praças · v13: app simples (Início com trio + pizza, Pesei/Gastei/Vendi, "Ver mais", tutorial só a pedido) · v12: praças PA e AL (ref. PE) · v10: tutorial interativo (coach marks) + painel Dinheiro da fazenda (gráficos) · v8: onboarding PR 1 (tour, lote mínimo, exemplo, checklist, lucro honesto; calc.js no casco) · v7: equipe por convite de e-mail (multi-fazenda entrega 2) · v6: várias fazendas por conta + seletor (multi-fazenda entrega 1) · v5: trial de 15 dias (12/10/2026) · v4: convite PWA, atualização por clique, base derivada do escopo
+const CACHE_VERSION = 'certo-agro-v15'; // v15: botão Vacinei na frente do lote · v14: cotação passando todas as praças · v13: app simples (Início com trio + pizza, Pesei/Gastei/Vendi, "Ver mais", tutorial só a pedido) · v12: praças PA e AL (ref. PE) · v10: tutorial interativo (coach marks) + painel Dinheiro da fazenda (gráficos) · v8: onboarding PR 1 (tour, lote mínimo, exemplo, checklist, lucro honesto; calc.js no casco) · v7: equipe por convite de e-mail (multi-fazenda entrega 2) · v6: várias fazendas por conta + seletor (multi-fazenda entrega 1) · v5: trial de 15 dias (12/10/2026) · v4: convite PWA, atualização por clique, base derivada do escopo
 
 // O casco: só isto entra no cache. Nada daqui fala com Supabase/n8n.
 const CASCO = [

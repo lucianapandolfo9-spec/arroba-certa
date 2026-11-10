@@ -421,6 +421,7 @@
   .acoes3 button .ico{font-size:26px;line-height:1}
   .acoes3 button.on{background:var(--dourado)}
   .acoes3 button.vendi{background:var(--verde-suave);color:var(--verde);border:2px solid var(--verde)}
+  .acoes3.acoes4{grid-template-columns:repeat(2,minmax(0,1fr))}
   @media(max-width:360px){.acoes3 button{font-size:17px}}
   .acao-form{border:2px solid var(--verde)}
   .frase-arroba{font-size:19px;line-height:1.4;font-weight:700;margin-top:14px}
@@ -3676,9 +3677,10 @@ async function renderLote(id){
 
   // --- os três botões e os formulários que eles abrem ---
   if(!fechado){
-    html+=`<div class="acoes3" id="lote-acoes">
+    html+=`<div class="acoes3 acoes4" id="lote-acoes">
       <button type="button" id="btn-acao-pes" onclick="abrirAcaoLote('pes')"><span class="ico" aria-hidden="true">⚖️</span>Pesei</button>
       <button type="button" id="btn-acao-cus" onclick="abrirAcaoLote('cus')"><span class="ico" aria-hidden="true">💵</span>Gastei</button>
+      <button type="button" id="btn-acao-san" onclick="abrirAcaoLote('san')"><span class="ico" aria-hidden="true">💉</span>Vacinei</button>
       <button type="button" class="vendi" id="btn-acao-vendi" onclick="renderFecharLote('${id}')"><span class="ico" aria-hidden="true">✅</span>Vendi</button>
     </div>`;
   }
@@ -3711,7 +3713,7 @@ async function renderLote(id){
       <button class="btn btn-grande" id="cus-add" style="margin-top:16px" onclick="addCusto('${id}')">Salvar gasto</button>
       </div>
       <button class="btn ghost" style="width:100%;margin-top:6px" onclick="fecharAcaoLote()">Cancelar</button>
-      <div class="ajuda">Vacina com data da próxima dose? Lance em "Ver mais", em Vacinas e remédios. Lance em um lugar só, para não contar duas vezes.</div>
+      <div class="ajuda">Vacina ou remédio? Use o botão Vacinei: ele guarda a próxima dose e o custo. Lance em um lugar só, para não contar duas vezes.</div>
     </div>`;
 
   // --- "Ver mais": tudo o que saiu da frente ---
@@ -3747,16 +3749,21 @@ async function renderLote(id){
 
   const cardSanitario=`
     <div class="card" id="card-sanitario">
-      <h3>💉 Vacinas e remédios</h3>
-      ${slotTutorial('sanitario')}
-      <p class="mut">Anote vacina, vermífugo, exame ou tratamento. Se tiver próxima dose, coloque a data: o app avisa antes de vencer.</p>
-      ${guiaVacinacaoHTML(v.fase, recemCriado)}
+      <h3>💉 Vacinas e remédios lançados</h3>
       ${vencendo.map(s=>`<div class="msg err">⚠ ${labelEvento(s.evento)}${s.produto?' · '+esc(s.produto):''} · próxima dose ${fmtData(s.proxima_data)}</div>`).join('')}
       ${(san||[]).map(s=>`<div class="list-item"><span>${fmtData(s.data)} · ${labelEvento(s.evento)}${s.produto?' · '+esc(s.produto):''}${s.proxima_data?' <span class="mut">(próxima: '+fmtData(s.proxima_data)+')</span>':''}${autorDonoHTML(s)}</span>
         <span style="text-align:right"><b>${s.custo!=null?brl(s.custo):''}</b><br>
           <button class="btn ghost mini" onclick="editSanitario('${id}','${s.id}')">Corrigir</button>
           <button class="btn ghost mini" onclick="delSanitario('${id}','${s.id}',this)">Apagar</button>
-        </span></div>`).join('')||'<p class="mut">Nada anotado ainda.</p>'}
+        </span></div>`).join('')||'<p class="mut">Nada anotado ainda. Toque em "Vacinei" quando vacinar ou medicar o lote.</p>'}
+      ${fechado?`<button class="btn sec" style="margin-top:12px" onclick="abrirAcaoLote('san',true)">Lançar vacina ou remédio deste lote</button>`:''}
+    </div>`;
+  const formSanitario=`
+    <div class="card acao-form hidden" id="acao-san">
+      <h3>💉 Vacinei ou dei remédio</h3>
+      ${slotTutorial('sanitario')}
+      <p class="mut">Anote vacina, vermífugo, exame ou tratamento. Se tiver próxima dose, coloque a data: o app avisa antes de vencer.</p>
+      ${guiaVacinacaoHTML(v.fase, recemCriado)}
       <div id="san-form" style="margin-top:6px">
         <label for="san-evento">O que foi feito?</label>
         <select id="san-evento">
@@ -3773,8 +3780,9 @@ async function renderLote(id){
         <input id="san-custo" type="number" inputmode="decimal" placeholder="Ex: 320" />
         <div class="ajuda">Este valor já entra no gasto do lote. Não lance de novo em "Gastei".</div>
         <div id="san-msg"></div>
-        <button class="btn" id="san-add" style="margin-top:14px" onclick="addSanitario('${id}')">Salvar</button>
+        <button class="btn btn-grande" id="san-add" style="margin-top:16px" onclick="addSanitario('${id}')">Salvar</button>
       </div>
+      <button class="btn ghost" style="width:100%;margin-top:6px" onclick="fecharAcaoLote()">Cancelar</button>
     </div>`;
 
   const cardContas=`
@@ -3805,6 +3813,7 @@ async function renderLote(id){
     </div>`;
 
   const nGastos=(cus||[]).length, nPes=(pes||[]).length;
+  html+=formSanitario;
   html+=`<details class="vm" id="lote-mais" ontoggle="vmAbriu(this)">
       <summary><span>Ver mais${vencendo.length?` <span class="pill warn" style="margin-left:6px">${vencendo.length===1?'1 vacina vencendo':vencendo.length+' vacinas vencendo'}</span>`:''}<small>Vacinas, gastos e pesagens lançados, contas${fechado?'':' e simulador'}</small></span></summary>
       <div class="vm-corpo">
@@ -3829,22 +3838,23 @@ function abrirAcaoLote(qual,manter){
   const alvo=$('acao-'+qual); if(!alvo) return null;
   const jaAberto=!alvo.classList.contains('hidden');
   if(jaAberto && !manter){ fecharAcaoLote(); return null; }
-  ['pes','cus'].forEach(k=>{
+  ['pes','cus','san'].forEach(k=>{
     $('acao-'+k)?.classList.toggle('hidden',k!==qual);
     $('btn-acao-'+k)?.classList.toggle('on',k===qual);
   });
   // No tutorial quem rola a tela e segura o foco é o balão.
   if(!TOUR.aberto){
     alvo.scrollIntoView({behavior:'smooth',block:'center'});
-    const campo=$(qual==='pes'?'pes-peso':'cus-valor');
+    const campo=$(qual==='pes'?'pes-peso':qual==='san'?'san-produto':'cus-valor');
     if(campo) setTimeout(()=>{ try{ campo.focus({preventScroll:true}); }catch(e){} },60);
   }
   return alvo;
 }
 function fecharAcaoLote(){
-  ['pes','cus'].forEach(k=>{ $('acao-'+k)?.classList.add('hidden'); $('btn-acao-'+k)?.classList.remove('on'); });
+  ['pes','cus','san'].forEach(k=>{ $('acao-'+k)?.classList.add('hidden'); $('btn-acao-'+k)?.classList.remove('on'); });
   // Cancelou no meio de uma correção: o formulário volta a ser de lançamento novo.
   if(EDIT_PES){ EDIT_PES=null; if($('pes-add')) $('pes-add').textContent='Salvar peso'; if($('pes-peso')) $('pes-peso').value=''; if($('pes-msg')) $('pes-msg').innerHTML=''; }
+  if(EDIT_SAN){ EDIT_SAN=null; if($('san-add')) $('san-add').textContent='Salvar'; if($('san-msg')) $('san-msg').innerHTML=''; }
   if(EDIT_CUS){ EDIT_CUS=null; if($('cus-add')) $('cus-add').textContent='Salvar gasto'; if($('cus-valor')) $('cus-valor').value=''; if($('cus-msg')) $('cus-msg').innerHTML=''; }
 }
 // Abre o "Ver mais" do lote e leva até um campo dele (ex.: o preço da @).
@@ -4118,6 +4128,7 @@ async function addSanitario(id){
 // O texto do produto vem do cache SAN_LOTE (nunca dentro do onclick).
 function editSanitario(loteId,sanId){
   const s=SAN_LOTE[sanId]; if(!s) return;
+  abrirAcaoLote('san',true);
   EDIT_SAN=sanId;
   $('san-data').value=s.data||hoje(); $('san-evento').value=s.evento||'vacina';
   $('san-produto').value=s.produto||''; $('san-proxima').value=s.proxima_data||'';
@@ -4628,9 +4639,9 @@ const TOUR_PASSOS=[
     titulo:'Gastou com o lote? Toque em Gastei', texto:'O botão <b>Gastei</b> abre isto aqui. Digite o valor, escolha com o quê e toque em <b>Salvar gasto</b>. Sal, ração, vacina, mão de obra: tudo que você gasta com o lote.'},
   {id:'pesagem', n:5, alvo:'#acao-pes', abre:'pes', video:'pesagem', proximo:true, espera:'pesagem',
     titulo:'Pesou o gado? Toque em Pesei', texto:'O peso da chegada já conta como a 1ª pesagem. Daqui a uns 30 dias, toque em <b>Pesei</b> e lance o peso novo: o app mostra quanto o gado ganha por dia e quanto custa a sua @.'},
-  {id:'vacina-guia', n:6, alvo:'#guia-vac', abre:'mais', video:'sanitario', espera:'usar-vacina', pularPasso:'painel',
-    titulo:'O que vacinar nesta fase', texto:'As vacinas ficam em <b>Ver mais</b>. Este guia mostra as da fase do lote. Toque em <b>usar</b> na vacina que você aplicou.'},
-  {id:'vacina-add', n:6, alvo:'#san-form', abre:'mais', video:'sanitario', espera:'sanitario', pularPasso:'painel',
+  {id:'vacina-guia', n:6, alvo:'#guia-vac', abre:'san', video:'sanitario', espera:'usar-vacina', pularPasso:'painel',
+    titulo:'O que vacinar nesta fase', texto:'O botão <b>Vacinei</b> abre isto aqui. Este guia mostra as vacinas da fase do lote. Toque em <b>usar</b> na vacina que você aplicou.'},
+  {id:'vacina-add', n:6, alvo:'#san-form', abre:'san', video:'sanitario', espera:'sanitario', pularPasso:'painel',
     titulo:'Anote a vacina', texto:'O nome já foi preenchido. Confira o dia, coloque a próxima dose se tiver e toque em <b>Salvar</b>.'},
   {id:'painel', n:7, alvo:'#painel-dinheiro', painel:true, concluir:true,
     titulo:'Seu dinheiro num lugar só', texto:'Aqui você vê quanto gastou e quanto vai sobrar.'},
