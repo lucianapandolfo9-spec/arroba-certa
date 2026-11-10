@@ -4623,17 +4623,25 @@ async function carregarComprasFazenda(fid, forcar){
 }
 async function carregarCompras(){
   const fid=FAZENDA.id;
-  const [lot,cus,cf]=await Promise.all([
+  const [lot,cus,cf,vw,sn]=await Promise.all([
     db.from('lote').select('id,nome,data_saida').eq('fazenda_id',fid).order('nome'),
     db.from('custo').select('id,lote_id,data,categoria,descricao,valor,criado_em, lote:lote_id!inner(fazenda_id)').eq('lote.fazenda_id',fid),
     carregarComprasFazenda(fid,true),
+    db.from('vw_lote_analise').select('lote_id,qtd_animais,custo_compra_cab,data_inicial').eq('fazenda_id',fid),
+    db.from('sanitario').select('id,lote_id,data,evento,produto,custo,criado_em, lote:lote_id!inner(fazenda_id)').eq('lote.fazenda_id',fid).gt('custo',0),
   ]);
   if(fid!==FAZENDA?.id) return false; // trocou de fazenda no meio
-  COMPRAS_ERRO=!!(lot.error || cus.error || cf===null);
+  COMPRAS_ERRO=!!(lot.error || cus.error || cf===null || vw.error || sn.error);
   COMPRAS_LOTES=lot.data||[];
   const linha=(c,origem)=>({id:c.id, origem, lote_id:origem==='lote'?c.lote_id:null, data:c.data, categoria:c.categoria,
     descricao:c.descricao||null, valor:Number(c.valor)||0, criado_em:c.criado_em||'', k:origem+':'+c.id});
-  COMPRAS=[...(cf||[]).map(c=>linha(c,'fazenda')), ...((cus.data)||[]).map(c=>linha(c,'lote'))]
+  // Para a tela bater com o Início e com cada lote: o que foi pago pelo gado (cadastro
+  // do lote) e o custo lançado no botão Sanitário entram na lista, só para leitura.
+  const gado=((vw.data)||[]).filter(l=>compraLote(l)>0).map(l=>({id:l.lote_id, origem:'gado', lote_id:l.lote_id, data:l.data_inicial||'', categoria:'compra',
+    descricao:`${Number(l.qtd_animais)||0} cabeças`, valor:compraLote(l), criado_em:'', k:'gado:'+l.lote_id}));
+  const sanit=((sn.data)||[]).map(x=>({id:x.id, origem:'san', lote_id:x.lote_id, data:x.data, categoria:'sanitario',
+    descricao:[labelEvento(x.evento).replace(/^\S+\s/,''), x.produto].filter(Boolean).join(' · ')||null, valor:Number(x.custo)||0, criado_em:x.criado_em||'', k:'san:'+x.id}));
+  COMPRAS=[...(cf||[]).map(c=>linha(c,'fazenda')), ...((cus.data)||[]).map(c=>linha(c,'lote')), ...gado, ...sanit]
     .sort((a,b)=>String(b.data).localeCompare(String(a.data)) || String(b.criado_em).localeCompare(String(a.criado_em)));
   COMPRA_MAP={}; COMPRAS.forEach(c=>{ COMPRA_MAP[c.k]=c; });
   return true;
@@ -4654,12 +4662,13 @@ function compraEtiquetaHTML(c){
   return `<span class="pill">🐂 ${esc(l?l.nome:'Lote')}${l&&l.data_saida?' (vendido)':''}</span>`;
 }
 function compraHTML(c, lerSo){
-  const cat=compraCat(c.categoria);
+  const cat=c.origem==='gado'?{nome:'Compra do gado'}:compraCat(c.categoria);
+  const fixo=c.origem==='gado'||c.origem==='san'; // muda dentro do lote, não aqui
   return `<div class="compra" data-origem="${c.origem}">
-      <div class="cp-topo"><span>${fmtData(c.data)} · ${cat.nome}</span><b>${brl(c.valor)}</b></div>
+      <div class="cp-topo"><span>${c.data?fmtData(c.data)+' · ':''}${cat.nome}${c.origem==='san'?' (Sanitário)':''}</span><b>${brl(c.valor)}</b></div>
       ${c.descricao?`<div class="cp-desc">${esc(c.descricao)}</div>`:''}
       <div class="cp-pe">${compraEtiquetaHTML(c)}
-        ${lerSo?'':`<span class="cp-mexer">
+        ${fixo?`<span class="cp-mexer"><button type="button" class="btn ghost mini" data-l="${esc(c.lote_id)}" onclick="renderLote(this.dataset.l)">Abrir o lote</button></span>`:lerSo?'':`<span class="cp-mexer">
           <button type="button" class="btn ghost mini" data-k="${esc(c.k)}" onclick="abrirFormCompra(this.dataset.k)">Corrigir</button>
           <button type="button" class="btn ghost mini" data-k="${esc(c.k)}" onclick="apagarCompra(this.dataset.k,this)">Apagar</button>
         </span>`}
@@ -4674,7 +4683,7 @@ function comprasListaHTML(){
   if(COMPRAS_MES && !meses.includes(COMPRAS_MES)) COMPRAS_MES='';
   const lista=COMPRAS_MES?COMPRAS.filter(c=>String(c.data).slice(0,7)===COMPRAS_MES):COMPRAS;
   const soma=f=>lista.filter(f).reduce((s,c)=>s+c.valor,0);
-  const total=soma(()=>true), lotes=soma(c=>c.origem==='lote'), faz=soma(c=>c.origem==='fazenda');
+  const total=soma(()=>true), lotes=soma(c=>c.origem!=='fazenda'), faz=soma(c=>c.origem==='fazenda');
   if(!COMPRAS.length){
     return `<div class="card vazio" id="compras-vazio"><h2>Nenhuma compra lançada</h2>
         <p>Comprou sal, ração, remédio, diesel? Lance aqui. Se quiser, diga para qual lote foi.</p></div>`;
@@ -4685,10 +4694,10 @@ function comprasListaHTML(){
         ${meses.map(m=>`<option value="${m}"${m===COMPRAS_MES?' selected':''}>${nomesMes[Number(m.slice(5,7))-1]||''} de ${m.slice(0,4)}</option>`).join('')}
       </select>`:'';
   return `<div class="card" id="compras-resumo">
-      <h3>Quanto comprou${COMPRAS_MES?' no mês':''}</h3>
+      <h3>Quanto gastou${COMPRAS_MES?' no mês':''}</h3>
       ${filtro}
       <div class="din-trio" style="margin-top:10px">
-        <div class="din-bloco"><div class="lbl">Total comprado</div><div class="val" id="cp-total">${brl0(total)}</div></div>
+        <div class="din-bloco"><div class="lbl">Total gasto</div><div class="val" id="cp-total">${brl0(total)}</div></div>
         <div class="din-bloco"><div class="lbl">Foi para lotes</div><div class="val" id="cp-lotes">${brl0(lotes)}</div></div>
         <div class="din-bloco"><div class="lbl">Fazenda toda</div><div class="val" id="cp-faz">${brl0(faz)}</div></div>
       </div>
@@ -4696,7 +4705,7 @@ function comprasListaHTML(){
     <div class="card" id="compras-lista">
       <h3>O que já foi comprado</h3>
       ${lista.map(c=>compraHTML(c,lerSo)).join('')}
-      <p class="din-nota">O que você pagou pelo gado e o custo lançado no botão Sanitário ficam dentro de cada lote e não aparecem nesta lista.</p>
+      <p class="din-nota">Aqui está tudo: o que você lançou em Compras, o que lançou em Gastei e em Sanitário dentro de cada lote, e o que pagou pelo gado. Compra do gado e Sanitário se corrigem dentro do lote.</p>
     </div>`;
 }
 function comprasFiltrarMes(v){
@@ -4735,7 +4744,7 @@ async function renderCompras(){
       <label for="compra-desc">O que foi? (se quiser)</label>
       <input id="compra-desc" maxlength="200" autocomplete="off" placeholder="Ex: 20 sacos de sal" />
       <div class="toque-perg" id="compra-dest-rot">Foi para algum lote?</div>
-      <p class="mut" style="margin:-4px 0 8px">Não precisa dizer. Se foi para a fazenda inteira, deixe em Fazenda toda.</p>
+      <p class="mut" style="margin:-4px 0 8px">Não precisa dizer. Se foi para a fazenda inteira, deixe em Fazenda toda. Marcou o lote errado? Toque nele de novo para desmarcar.</p>
       <div class="toque-lista" id="compra-dest" role="group" aria-labelledby="compra-dest-rot"></div>
       <div id="compra-msg"></div>
       <button type="button" class="btn btn-grande" id="compra-salvar" style="margin-top:16px" onclick="salvarCompra()">Salvar compra</button>
@@ -4767,6 +4776,8 @@ function compraEscolherCat(v){
   document.querySelectorAll('#compra-form [data-cat]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.cat===v)));
 }
 function compraEscolherDestino(v){
+  // Tocou de novo no lote já marcado: desmarca e a compra volta para a fazenda toda.
+  if(v && v===COMPRA_FORM.dest) v = COMPRAS_FAZ_OK===true ? '' : null;
   COMPRA_FORM.dest=v;
   document.querySelectorAll('#compra-dest [data-dest]').forEach(b=>b.setAttribute('aria-pressed',String(v!==null && b.dataset.dest===v)));
 }
@@ -4774,6 +4785,7 @@ function abrirFormCompra(k){
   if(!podeEditar()) return;
   const f=$('compra-form'); if(!f) return;
   const c=k?COMPRA_MAP[k]:null;
+  if(c && (c.origem==='gado'||c.origem==='san')) return; // só leitura nesta tela
   EDIT_COMPRA=c?c.k:null;
   $('compra-form-titulo').textContent=c?'🛒 Corrigir compra':'🛒 Nova compra';
   $('compra-valor').value=c?c.valor:''; $('compra-data').value=c?c.data:hoje(); $('compra-desc').value=c?(c.descricao||''):'';
@@ -4824,7 +4836,7 @@ async function salvarCompra(){
 }
 async function apagarCompra(k,btn){
   if(!podeEditar()) return;
-  const c=COMPRA_MAP[k]; if(!c) return;
+  const c=COMPRA_MAP[k]; if(!c || c.origem==='gado' || c.origem==='san') return;
   if(btn.dataset.arm!=='1'){ btn.dataset.arm='1'; btn.textContent='Toque de novo para apagar'; btn.style.color='var(--vermelho)'; return; }
   btn.disabled=true;
   const {error}=await db.from(c.origem==='fazenda'?'compra_fazenda':'custo').delete().eq('id',c.id);
