@@ -3694,13 +3694,15 @@ async function renderLote(id){
   // Na frente: resumo (Gastou / Vale hoje / Sobra), a frase da @ quando já existe
   // a 2ª pesagem, e quatro botões grandes: Pesei, Gastei, Sanitário, Vendi. Cada
   // botão abre o seu formulário (antes os formulários ficavam sempre abertos).
-  // Históricos, gráfico, contas por cabeça e simulador ficam em "Ver mais".
+  // "Ver mais" guarda só o que foi lançado (10/11/2026): cada lista aparece
+  // quando tem lançamento. Preço da @, régua contra o mercado e simulador ficam
+  // na tela de venda (botão Vendi).
   // Os números são os mesmos da vw_lote_analise; nada de conta nova aqui.
   const hojeA=v.preco_arroba_usado!=null?Number(v.preco_arroba_usado):null;
   const prodA=v.custo_arroba_produzida!=null?Number(v.custo_arroba_produzida):null;
   const fraseA=(!fechado && hojeA!=null && prodA!=null)
     ? `<p class="frase-arroba">Sua @ custa ${brl(prodA)}. O mercado paga ${brl(hojeA)}.</p>` : '';
-  const botaoPreco=`<button type="button" class="btn sec" style="margin-top:12px" onclick="abrirMaisLote('pl-preco')">Dizer o preço da @</button>`;
+  const botaoPreco=`<button type="button" class="btn sec" style="margin-top:12px" onclick="renderFecharLote('${id}',false,'pl-preco')">Dizer o preço da @</button>`;
 
   let html=`<button class="back" onclick="renderLotes()">← Voltar</button>
     <div style="display:flex;justify-content:space-between;align-items:center;margin:6px 0;gap:10px">
@@ -3813,8 +3815,6 @@ async function renderLote(id){
   // --- "Ver mais": tudo o que saiu da frente ---
   const totalGastos=(cus||[]).reduce((s,c)=>s+(Number(c.valor)||0),0);
   const vencendo=proximasSanitario(san);
-  const reguaTemEmpate=hojeA!=null && !semCompra && Number(v.preco_breakeven)>0;
-  const reguaTemProd=hojeA!=null && prodA!=null;
 
   const cardCustos=`
     <div class="card" id="card-custos">
@@ -3831,7 +3831,6 @@ async function renderLote(id){
   const cardPesagens=`
     <div class="card" id="card-pesagens">
       <h3>⚖️ Pesagens</h3>
-      <p class="mut">O peso da chegada já conta como a 1ª pesagem. Com a 2ª, uns 30 dias depois, o app mostra quanto o gado ganha por dia e quanto custa a sua @.</p>
       ${(pes||[]).length>1?'<div style="height:160px;margin:10px 0 12px"><canvas id="chart-peso"></canvas></div>':''}
       ${(pes||[]).map(p=>`<div class="list-item"><span>${fmtData(p.data)}${autorDonoHTML(p)}</span>
         <span style="text-align:right"><b>${num(p.peso_medio_kg,0)} kg</b><br>
@@ -3860,22 +3859,6 @@ async function renderLote(id){
       <button class="btn ghost" style="width:100%;margin-top:6px" onclick="fecharAcaoLote()">Cancelar</button>
     </div>`;
 
-  const cardContas=`
-    <div class="card" id="card-contas">
-      <h3>💰 A conta por cabeça ${fechado?'<span class="pill" style="margin-left:6px">conta de antes da venda</span>':''}</h3>
-      <div class="row"><span class="k">Preço da @ na conta <span class="pill" style="margin-left:6px">${v.preco_arroba_praticado!=null?'seu preço':(v.preco_arroba_referencia!=null?'preço do mercado':'sem preço')}</span>${refData}</span><span class="v">${hojeA!=null?brl(hojeA):'falta'}</span></div>
-      ${v.receita_cab!=null?`<div class="row"><span class="k">Vende por, cada cabeça</span><span class="v">${brl(v.receita_cab)}</span></div>`:''}
-      ${semCompra
-        ? `<div class="row"><span class="k">Sobra e preço de empate</span><span class="v mut" style="font-size:14px">aparecem quando você disser quanto pagou</span></div>`
-        : `<div class="row"><span class="k">Gastou, cada cabeça</span><span class="v">${brl(v.custo_cab_total)}</span></div>
-      ${v.lucro_cab!=null?`<div class="row"><span class="k">${lucro<0?'Falta':'Sobra'}, cada cabeça</span><span class="v ${lucro<0?'neg':'pos'}">${brl(Math.abs(lucro))}</span></div>`:''}
-      ${!reguaTemEmpate && v.preco_breakeven!=null?`<div class="row"><span class="k">Preço de empate <small class="mut">(abaixo disso, prejuízo)</small></span><span class="v">${brl(v.preco_breakeven)}</span></div>`:''}`}
-      ${fechado?'':`<label for="pl-preco">O frigorífico paga outro preço? Coloque aqui (R$ por @)</label>
-      <input id="pl-preco" type="number" inputmode="decimal" step="0.01" placeholder="${v.preco_arroba_referencia!=null?`em branco = preço do mercado (${brl(v.preco_arroba_referencia)})`:'preço da @ em reais'}" value="${v.preco_arroba_praticado??''}" />
-      <button class="btn" style="margin-top:12px" onclick="salvarPreco('${id}')">Salvar preço</button>
-      <div id="preco-msg"></div>`}
-    </div>`;
-
   const cardPeso=`
     <div class="card">
       <h3>📊 Peso e ganho</h3>
@@ -3883,23 +3866,24 @@ async function renderLote(id){
       <div class="row"><span class="k">Arrobas por cabeça</span><span class="v">${num(v.arrobas_atuais_cab,2)} @</span></div>
       <div class="row"><span class="k">Ganho de peso por dia</span><span class="v ${v.gmd>3?'neg':''}">${v.gmd!=null?num(v.gmd,2)+' kg':'<span class="mut" style="font-size:14px">aparece na 2ª pesagem</span>'}</span></div>
       ${v.gmd>3?'<div class="msg err">⚠ Ganho alto demais para ser verdade. Confira os pesos e as datas.</div>':''}
-      ${reguaTemProd?'':`<div class="row"><span class="k">Custo de cada @ que o gado ganhou</span><span class="v">${prodA!=null?brl(prodA):'<span class="mut" style="font-size:14px">aparece com gasto lançado e 2ª pesagem</span>'}</span></div>`}
+      ${prodA!=null?`<div class="row"><span class="k">Custo de cada @ que o gado ganhou</span><span class="v">${brl(prodA)}</span></div>`:''}
       <p class="mut" style="margin-top:10px">${num(v.peso_inicial_kg,0)} kg → ${num(v.peso_atual_kg,0)} kg em ${v.dias_periodo??0} dias</p>
     </div>`;
 
-  const nGastos=(cus||[]).length, nPes=(pes||[]).length;
+  const nGastos=(cus||[]).length, nPes=(pes||[]).length, nSan=(san||[]).length;
+  // Lote vendido mantém as três listas (cada uma tem o botão de lançar depois da venda).
+  const listas=[
+    (fechado||nSan)?cardSanitario:'',
+    (fechado||nGastos)?cardCustos:'',
+    (fechado||nPes)?cardPesagens:'',
+    (!fechado && v.gmd!=null)?cardPeso:''
+  ].join('');
   html+=formSanitario;
   html+=`<details class="vm" id="lote-mais" ontoggle="vmAbriu(this)">
-      <summary><span>Ver mais${vencendo.length?` <span class="pill warn" style="margin-left:6px">${vencendo.length===1?'1 vacina vencendo':vencendo.length+' vacinas vencendo'}</span>`:''}<small>Vacinas, gastos e pesagens lançados, contas${fechado?'':' e simulador'}</small></span></summary>
+      <summary><span>Ver mais${vencendo.length?` <span class="pill warn" style="margin-left:6px">${vencendo.length===1?'1 vacina vencendo':vencendo.length+' vacinas vencendo'}</span>`:''}<small>O que você já lançou neste lote</small></span></summary>
       <div class="vm-corpo">
         ${dadosVenda}
-        ${cardSanitario}
-        ${cardCustos}
-        ${cardPesagens}
-        ${fechado?'':reguaArrobaHTML(v,semCompra)}
-        ${cardContas}
-        ${cardPeso}
-        ${fechado?'':`<button class="btn" style="margin:2px 0 10px;background:var(--terra)" onclick="simularLote('${id}')">🔮 Vender agora ou esperar? Fazer a conta</button>`}
+        ${listas||'<p class="mut" style="padding:6px 2px 10px">Nada lançado ainda. O que você lançar em Pesei, Gastei e Sanitário aparece aqui.</p>'}
       </div>
     </details>
     <div style="height:30px"></div>`;
@@ -3996,13 +3980,14 @@ async function salvarPreco(id){
   const val = raw===''? null : parseFloat(raw);
   const {error}=await db.from('lote').update({preco_arroba_praticado:val}).eq('id',id);
   if(error) return msg('preco-msg',error.message);
-  msg('preco-msg','Preço salvo! Recalculando…','ok'); renderLote(id);
+  msg('preco-msg','Preço salvo! Recalculando…','ok'); if(PRECO_VOLTA_LOTE) renderLote(id); else renderFecharLote(id);
 }
 let EDIT_PES=null, EDIT_CUS=null;
 const hoje = () => { const d=new Date(); d.setMinutes(d.getMinutes()-d.getTimezoneOffset()); return d.toISOString().slice(0,10); }; // data local (antes era UTC: depois das 21h no Recife caía no dia seguinte)
 
 // ---------- fechar lote (registrar venda) ----------
-async function renderFecharLote(id,editar){
+let PRECO_VOLTA_LOTE=false;
+async function renderFecharLote(id,editar,foco){
   if(ehEquipe()) return renderLotesEquipe(); // funcionário não vê plano, venda, simulador nem edita lote
   const body=$('app-body'); body.innerHTML='<p class="mut center" style="padding:30px">Carregando…</p>';
   const [{data:v,error},{data:l}]=await Promise.all([
@@ -4018,10 +4003,24 @@ async function renderFecharLote(id,editar){
   const dataV = ed ? l.data_saida : hoje();
   const pesoV = ed ? (l.peso_venda_kg??'') : (v.peso_atual_kg!=null?Number(v.peso_atual_kg).toFixed(0):'');
   const precoV = ed ? (l.preco_arroba_venda??'') : (v.preco_arroba_usado!=null?Number(v.preco_arroba_usado).toFixed(2):'');
+  // Antes de vender: preço da @, régua contra o mercado e simulador (saíram do "Ver mais" em 10/11/2026).
+  PRECO_VOLTA_LOTE = foco==='pl-preco';
+  const antesVenda = ed ? '' : `
+    <div class="card" id="card-antes-venda">
+      <h3>Ainda vai vender?</h3>
+      <label for="pl-preco">Quanto o frigorífico está pagando por @? (R$)</label>
+      <input id="pl-preco" type="number" inputmode="decimal" step="0.01" placeholder="${v.preco_arroba_referencia!=null?`em branco = preço do mercado (${brl(v.preco_arroba_referencia)})`:'preço da @ em reais'}" value="${v.preco_arroba_praticado??''}" />
+      <button class="btn sec" style="margin-top:12px" onclick="salvarPreco('${id}')">Salvar preço</button>
+      <div id="preco-msg"></div>
+      <button class="btn" style="margin-top:14px;background:var(--terra)" onclick="simularLote('${id}')">🔮 Vender agora ou esperar? Fazer a conta</button>
+    </div>
+    ${reguaArrobaHTML(v,loteSemCompra(v))}
+    <div class="nome" style="font-size:19px;margin:14px 2px 6px">Já vendeu? Coloque os números</div>`;
   body.innerHTML=`<button class="back" onclick="renderLote('${id}')">← Voltar ao lote</button>
     <div class="nome" style="font-size:22px;margin:6px 0">${ed?'✏️ Corrigir a venda':'✅ Vendi este lote'}: ${esc(v.nome)}</div>
     ${slotTutorial('venda')}
-    <p class="mut">${ed?'Ajuste o que foi lançado errado. O lote continua vendido e a conta é refeita.':'Coloque os números da venda, os da nota do frigorífico. É com eles que o app mostra quanto sobrou de verdade.'}</p>
+    ${antesVenda}
+    <p class="mut">${ed?'Ajuste o que foi lançado errado. O lote continua vendido e a conta é refeita.':'Use os números da nota do frigorífico. É com eles que o app mostra quanto sobrou de verdade.'}</p>
     <div class="card">
       <label for="fv-data">Em que dia vendeu?</label>
       <input id="fv-data" type="date" value="${esc(dataV)}" />
@@ -4038,6 +4037,7 @@ async function renderFecharLote(id,editar){
       <button class="btn" style="margin-top:16px" onclick="salvarFechamento('${id}','${esc(v.data_inicial||'')}')">${ed?'Salvar a correção':'Salvar a venda'}</button>
     </div>
     <p class="mut" style="margin:4px 2px 30px">${ed?'Quer desfazer a venda inteira? Na tela do lote, abra "Ver mais" e toque em "Desfazer a venda".':'O lote vendido sai da lista da fazenda e fica guardado em "Ver mais", em Meus lotes. Errou algo? Dá para corrigir depois.'}</p>`;
+  if(foco && $(foco)) setTimeout(()=>{ const el=$(foco); el.scrollIntoView({behavior:'smooth',block:'center'}); try{ el.focus({preventScroll:true}); }catch(e){} },60);
 }
 async function salvarFechamento(id,dataEntrada){
   if(!podeEditar()) return;
