@@ -177,9 +177,28 @@
   @keyframes ticker{from{transform:translateX(0)}to{transform:translateX(-50%)}}
   .ticker-item{display:inline-block;padding:0 22px;font-size:13px;font-weight:700;color:#fff}
   .ticker-item .uf{opacity:.75;font-weight:600;margin-right:4px}
-  .nav{display:flex;border-top:1px solid var(--linha)}
-  .nav button{flex:1;background:#fff;color:var(--cinza);padding:11px 6px;font-weight:700;font-size:13px;border-radius:0;border-bottom:3px solid transparent}
-  .nav button.on{color:var(--verde);border-bottom-color:var(--verde)}
+  /* Menu de três traços (10/11/2026): substitui a barra de abas. O botão leva a
+     palavra "Menu" escrita (ícone sozinho não é entendido por quem tem 55+).
+     Os itens guardam os ids nav-* de sempre: setNav() e viewAtual() seguem iguais. */
+  .menu-btn{flex:0 0 auto;width:auto;min-height:48px;padding:8px 16px;border-radius:12px;background:var(--verde-suave);
+    color:var(--verde);border:2px solid var(--verde);font-size:17px;font-weight:800;display:flex;align-items:center;gap:8px}
+  .menu-btn .tracos{font-size:22px;line-height:1}
+  .menu-overlay{position:fixed;inset:0;z-index:280;background:rgba(17,42,30,.62);display:flex;justify-content:flex-end}
+  .menu-overlay.hidden{display:none}
+  .menu-painel{width:min(86vw,360px);height:100%;background:#fff;overflow-y:auto;display:flex;flex-direction:column;gap:6px;
+    padding:calc(14px + env(safe-area-inset-top,0px)) 14px calc(18px + env(safe-area-inset-bottom,0px));
+    box-shadow:-6px 0 24px rgba(0,0,0,.25);outline:none}
+  .menu-topo{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px}
+  .menu-topo strong{font-size:20px;color:var(--verde)}
+  .menu-painel button{width:100%;min-height:58px;padding:12px 16px;border-radius:14px;background:#fff;color:var(--texto);
+    font-size:19px;font-weight:700;text-align:left;display:flex;align-items:center;gap:12px;border:1.5px solid var(--linha)}
+  .menu-painel button .ico{font-size:24px;line-height:1;width:30px;text-align:center;flex:0 0 auto}
+  .menu-painel button.on{background:var(--verde-suave);border-color:var(--verde);color:var(--verde);font-weight:800}
+  .menu-painel button.on::after{content:"você está aqui";margin-left:auto;font-size:13px;font-weight:700;color:var(--cinza)}
+  .menu-painel button.hidden{display:none}
+  .menu-painel button.menu-fechar{width:auto;min-height:48px;font-size:16px;background:var(--bg);border:none;padding:8px 14px}
+  .menu-painel button.menu-sair{margin-top:auto;color:var(--vermelho);border-color:var(--vermelho-bg);background:var(--vermelho-bg);justify-content:center}
+  .menu-sep{height:1px;background:var(--linha);margin:8px 0;flex:0 0 auto}
   table.imp{width:100%;border-collapse:collapse;font-size:12px;margin-top:10px}
   table.imp th,table.imp td{padding:6px 5px;border-bottom:1px solid var(--linha);text-align:left;white-space:nowrap}
   table.imp th{color:var(--cinza);font-weight:700;text-transform:uppercase;font-size:10px}
@@ -225,7 +244,6 @@
     .wrap{padding:16px}
     .cards-grid,.quote-grid,.dashboard-grid{grid-template-columns:1fr}
     .planos-grid{grid-template-columns:1fr}
-    .nav button{font-size:12px;padding:11px 3px}
   }
 
   /* ---------- iPhone instalado: margens seguras (06/10/2026) ----------
@@ -421,8 +439,44 @@
   .acoes3 button .ico{font-size:26px;line-height:1}
   .acoes3 button.on{background:var(--dourado)}
   .acoes3 button.vendi{background:var(--verde-suave);color:var(--verde);border:2px solid var(--verde)}
+  .acoes3.acoes4{grid-template-columns:repeat(2,minmax(0,1fr))}
   @media(max-width:360px){.acoes3 button{font-size:17px}}
   .acao-form{border:2px solid var(--verde)}
+  /* Sanitário por toque (10/11/2026): escolhe o tipo e a vacina tocando, sem digitar */
+  .toque-perg{font-size:18px;font-weight:800;color:var(--texto);margin:16px 0 8px}
+  .toque-grade{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .toque-grade button,.toque-lista button{min-height:64px;border-radius:14px;background:#fff;color:var(--texto);border:2px solid var(--linha);
+    font-size:18px;font-weight:800;padding:10px 12px;width:100%}
+  .toque-grade button{display:flex;align-items:center;justify-content:center;gap:8px;text-align:center}
+  .toque-grade button .ico{font-size:24px;line-height:1}
+  .toque-lista{display:flex;flex-direction:column;gap:8px}
+  .toque-lista button{text-align:left;display:block}
+  .toque-lista button small{display:block;font-size:14px;font-weight:500;color:var(--cinza);margin-top:3px;line-height:1.4}
+  .toque-grade button[aria-pressed="true"],.toque-lista button[aria-pressed="true"]{background:var(--verde-suave);border-color:var(--verde);color:var(--verde)}
+  .toque-lista button[aria-pressed="true"]::before{content:"✅ "}
+  .selo-obrig{display:inline-block;background:var(--vermelho);color:#fff;font-size:12px;font-weight:800;padding:2px 9px;border-radius:999px;margin-left:6px;vertical-align:middle}
+  .san-dia{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:16px;font-size:18px;font-weight:800}
+  .san-dia button{width:auto;min-height:48px;padding:8px 16px;border-radius:12px;background:var(--bg);color:var(--texto);border:2px solid var(--linha);font-size:18px;font-weight:800}
+  details.san-mais{margin-top:14px;border-top:1px solid var(--linha)}
+  details.san-mais>summary{list-style:none;cursor:pointer;min-height:52px;display:flex;flex-direction:column;justify-content:center;
+    font-size:17px;font-weight:800;color:var(--verde);padding:8px 0}
+  details.san-mais>summary::-webkit-details-marker{display:none}
+  details.san-mais>summary span::before{content:"▸ "}
+  details.san-mais[open]>summary span::before{content:"▾ "}
+  details.san-mais>summary small{font-size:14px;font-weight:500;color:var(--cinza)}
+  #app-body textarea{width:100%;font:inherit;font-size:18px;padding:14px;border:1.5px solid var(--linha);border-radius:12px;min-height:84px;resize:vertical;background:#fff;color:var(--texto)}
+  .san-extra{display:block;font-size:14px;color:var(--cinza);margin-top:3px;line-height:1.4;white-space:pre-wrap;word-break:break-word}
+  /* Contatos da fazenda (10/11/2026) */
+  .contato{padding:14px 0;border-bottom:1px solid var(--linha)}
+  .contato:last-child{border-bottom:none}
+  .contato .c-nome{font-size:19px;font-weight:800}
+  .contato .c-tel{font-size:17px;color:var(--texto);margin-top:2px}
+  .contato .c-obs{font-size:15px;color:var(--cinza);margin-top:3px;white-space:pre-wrap;word-break:break-word}
+  .contato .c-acoes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:10px}
+  .contato .c-acoes a{display:flex;align-items:center;justify-content:center;gap:8px;min-height:58px;border-radius:14px;
+    font-size:18px;font-weight:800;text-decoration:none;background:var(--verde);color:#fff}
+  .contato .c-acoes a.zap{background:#1f8f4e}
+  .contato .c-mexer{display:flex;gap:6px;margin-top:6px}
   .frase-arroba{font-size:19px;line-height:1.4;font-weight:700;margin-top:14px}
   /* Um número por lote na lista */
   .lote-num{margin-top:12px;background:var(--bg);border-radius:12px;padding:12px 14px}
@@ -443,8 +497,6 @@
   .ticker-item{font-size:15px;padding:0 18px}
   .ticker-item.minha{color:#f3d98b}
   .ticker-item .dt{opacity:.8;font-weight:600;font-size:13px}
-  .nav button{font-size:14px}
-  @media(max-width:672px){.nav button{font-size:13px;padding:12px 2px}}
   /* Faixas discretas: teste grátis e instalar não disputam com o botão da tela */
   .trial-linha{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:14px;color:var(--cinza);padding:2px 2px 0}
   .trial-linha .din-link{color:var(--verde);min-height:40px}
@@ -523,20 +575,12 @@
         <span style="font-weight:800;font-size:14px;letter-spacing:-.3px;white-space:nowrap"><span style="color:var(--verde)">Certo</span> <span style="color:var(--dourado)">Agro</span></span>
         <small id="faz-nome">—</small>
       </div>
-      <button class="btn ghost" onclick="logout()">Sair</button>
+      <button type="button" class="menu-btn" id="menu-btn" aria-haspopup="dialog" aria-expanded="false" aria-controls="menu-painel" onclick="abrirMenu()"><span class="tracos" aria-hidden="true">☰</span>Menu</button>
     </div>
     <!-- Várias fazendas: só aparece com 2+ fazendas ativas (renderSeletorFazenda) -->
     <div id="faz-barra" class="faz-barra hidden"></div>
     <div class="ticker-wrap" onclick="renderCotacoes()">
       <div class="ticker-track" id="ticker-track">Carregando a cotação da @…</div>
-    </div>
-    <div class="nav">
-      <button class="on" id="nav-dash" onclick="renderDashboard()">🏠 Início</button>
-      <button id="nav-lotes" onclick="renderLotes()">🐂 Meus lotes</button>
-      <button id="nav-cot" onclick="renderCotacoes()">📈 Cotação</button>
-      <button id="nav-ajuda" onclick="renderAjuda()">💬 Ajuda</button>
-      <button id="nav-conta" onclick="renderConta()">👤 Conta</button>
-      <button id="nav-admin" class="hidden" onclick="renderAdmin()">🛠️ Admin</button>
     </div>
   </header>
   <div id="trial-banner" class="wrap trial-banner hidden"></div>
@@ -644,6 +688,23 @@
   </div>
 </div>
 <!-- Trocar de fazenda (multi-fazenda) — preenchido por abrirSeletorFazenda() -->
+<!-- Menu de três traços (10/11/2026). Fica fora do #scr-app para os ids nav-* existirem sempre
+     (boot() mexe em #nav-admin). Abre por abrirMenu(); fecha com toque fora, Fechar e Esc. -->
+<div id="menu-overlay" class="menu-overlay hidden" onclick="if(event.target===this)fecharMenu()">
+  <nav id="menu-painel" class="menu-painel" role="dialog" aria-modal="true" aria-label="Menu" tabindex="-1">
+    <div class="menu-topo"><strong>Menu</strong>
+      <button type="button" class="menu-fechar" onclick="fecharMenu()">✕ Fechar</button></div>
+    <button type="button" class="on" id="nav-dash" aria-current="page" onclick="menuIr('dash')"><span class="ico" aria-hidden="true">🏠</span>Início</button>
+    <button type="button" id="nav-lotes" onclick="menuIr('lotes')"><span class="ico" aria-hidden="true">🐂</span>Meus lotes</button>
+    <button type="button" id="nav-cot" onclick="menuIr('cot')"><span class="ico" aria-hidden="true">📈</span>Cotação</button>
+    <button type="button" id="nav-contatos" onclick="menuIr('contatos')"><span class="ico" aria-hidden="true">📞</span>Contatos</button>
+    <button type="button" id="nav-ajuda" onclick="menuIr('ajuda')"><span class="ico" aria-hidden="true">💬</span>Ajuda</button>
+    <button type="button" id="nav-conta" onclick="menuIr('conta')"><span class="ico" aria-hidden="true">👤</span>Conta</button>
+    <button type="button" id="nav-admin" class="hidden" onclick="menuIr('admin')"><span class="ico" aria-hidden="true">🛠️</span>Admin</button>
+    <div class="menu-sep"></div>
+    <button type="button" class="menu-sair" id="menu-sair" onclick="menuSair()">Sair</button>
+  </nav>
+</div>
 <div id="faz-overlay" class="pwa-overlay hidden" onclick="if(event.target===this)fecharSeletorFazenda()">
   <div id="faz-dialog" class="pwa-dialog" role="dialog" aria-modal="true" aria-labelledby="faz-titulo" tabindex="-1"></div>
 </div>
@@ -740,6 +801,7 @@ function telefoneValido(v){
 const show = id => $(id).classList.remove('hidden');
 const hide = id => $(id).classList.add('hidden');
 function screen(s){['scr-login','scr-app','scr-faz','scr-nova-senha','scr-sem-acesso','scr-boasvindas','scr-convite'].forEach(hide);show(s);
+  fecharMenu(false); // o menu nunca fica aberto por cima de outra tela
   if(s==='scr-login') atualizarFaixaConviteLogin();
   // Primeira visita: o aviso de instalar já aparece na tela de login.
   atualizarFaixaInstalarLogin(s==='scr-login');
@@ -747,19 +809,58 @@ function screen(s){['scr-login','scr-app','scr-faz','scr-nova-senha','scr-sem-ac
 }
 function fmtData(d){ if(!d) return '—'; const [y,m,day]=String(d).split('-'); return `${day}/${m}/${y}`; }
 function fmtDataHora(ts){ if(!ts) return '—'; const d=new Date(ts); return d.toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}); }
+const NAV_TELAS=['dash','lotes','cot','contatos','ajuda','conta','admin'];
 function setNav(w){
-  $('nav-dash').classList.toggle('on',w==='dash');
-  $('nav-lotes').classList.toggle('on',w==='lotes');
-  $('nav-cot').classList.toggle('on',w==='cot');
-  $('nav-ajuda').classList.toggle('on',w==='ajuda');
-  $('nav-conta').classList.toggle('on',w==='conta');
-  $('nav-admin').classList.toggle('on',w==='admin');
+  // Os itens moram no menu de três traços; o da tela atual fica marcado.
+  NAV_TELAS.forEach(k=>{
+    const b=$('nav-'+k); if(!b) return;
+    b.classList.toggle('on',w===k);
+    if(w===k) b.setAttribute('aria-current','page'); else b.removeAttribute('aria-current');
+  });
   // App simples: letra e botão maiores em todas as telas, menos no Admin (fica como era).
   $('app-body')?.classList.toggle('simples',w!=='admin');
   // Faixa "instale no celular" mora só no Início, até instalar.
   atualizarFaixaInstalar(w==='dash');
   pwaTelaMudou();
 }
+// ---------- menu de três traços (10/11/2026) ----------
+let MENU_FOCO_ANTES=null;
+function menuAberto(){ const ov=$('menu-overlay'); return !!ov && !ov.classList.contains('hidden'); }
+function abrirMenu(){
+  // No tutorial quem manda na tela é o balão: o menu espera (Esc ou "Pular tutorial" liberam).
+  if(typeof TOUR!=='undefined' && TOUR.aberto) return;
+  const ov=$('menu-overlay'), p=$('menu-painel'); if(!ov||!p) return;
+  MENU_FOCO_ANTES=document.activeElement;
+  ov.classList.remove('hidden');
+  $('menu-btn')?.setAttribute('aria-expanded','true');
+  (p.querySelector('button.on:not(.hidden)')||p).focus();
+}
+function fecharMenu(devolverFoco=true){
+  if(!menuAberto()) return;
+  $('menu-overlay').classList.add('hidden');
+  $('menu-btn')?.setAttribute('aria-expanded','false');
+  const f=MENU_FOCO_ANTES; MENU_FOCO_ANTES=null;
+  if(devolverFoco){ try{ (f&&f.focus?f:$('menu-btn')).focus(); }catch(e){} }
+}
+function menuIr(w){
+  fecharMenu(false);
+  window.scrollTo({top:0});
+  ({dash:renderDashboard, lotes:renderLotes, cot:renderCotacoes, contatos:renderContatos,
+    ajuda:renderAjuda, conta:renderConta, admin:renderAdmin}[w]||renderDashboard)();
+}
+function menuSair(){ fecharMenu(false); logout(); }
+document.addEventListener('keydown',(e)=>{
+  if(!menuAberto()) return;
+  if(e.key==='Escape'){ e.preventDefault(); fecharMenu(); return; }
+  if(e.key!=='Tab') return;
+  // Tab circula só dentro do menu enquanto ele está aberto.
+  const foc=[...$('menu-painel').querySelectorAll('button')].filter(b=>!b.disabled && b.getClientRects().length);
+  if(!foc.length){ e.preventDefault(); return; }
+  const pri=foc[0], ult=foc[foc.length-1];
+  if(e.shiftKey && (document.activeElement===pri || !$('menu-painel').contains(document.activeElement))){ e.preventDefault(); ult.focus(); }
+  else if(!e.shiftKey && document.activeElement===ult){ e.preventDefault(); pri.focus(); }
+});
+
 // Quem é admin mora na tabela admin_sistema do banco (função eh_admin).
 // Incluir/remover admin não exige mais mexer em código nem publicar.
 let EH_ADMIN=false;
@@ -825,6 +926,7 @@ async function logout(){
   fecharSeletorFazenda();
   FAZENDAS=[]; FAZENDA=null; FAZENDA_COBRANCA_ID=null; ASSINATURAS_CONTA=[]; USUARIO_ID=null;
   FAZENDAS_EQUIPE=[]; NOMES_EQUIPE={}; EQUIPE_DADOS=null; CONVITE_RESULTADO=null;
+  limparContatos();
   const cb=$('convite-banner'); if(cb){ cb.classList.add('hidden'); cb.innerHTML=''; }
   const barra=$('faz-barra'); if(barra){ barra.classList.add('hidden'); barra.innerHTML=''; }
   await db.auth.signOut(); screen('scr-login');
@@ -1391,6 +1493,7 @@ function podeEditar(){
 //  · DONO = quem cadastrou a fazenda; FUNCIONÁRIO = quem aceitou um convite por e-mail;
 //  · o funcionário só entra nas fazendas que o dono marcou no convite;
 //  · ele lança pesagem, custo e vacina, e corrige/apaga só o que ELE lançou;
+//    nos Contatos da fazenda (10/11/2026) ele vê e mexe em tudo, igual ao dono;
 //  · ele NÃO vê lucro, custo da @, simulador, preço de venda, total do lote,
 //    plano/pagamento, Admin nem Equipe. Isso é garantido no banco: a tabela lote
 //    e a vw_lote_analise não devolvem nada para ele — a tela dele usa só a RPC
@@ -1621,7 +1724,9 @@ async function renderLoteEquipe(id){
     db.from('custo').select('*').eq('lote_id',id).order('data',{ascending:false}),
     db.from('sanitario').select('*').eq('lote_id',id).order('data',{ascending:false}),
     carregarNomesEquipe(FAZENDA.id),
+    carregarContatos(),
   ]);
+  SAN_LOTE={}; (san||[]).forEach(s=>{ SAN_LOTE[s.id]=s; });
   const v=lotes.find(l=>l.lote_id===id);
   if(!v){
     body.innerHTML=`<button class="back" onclick="renderLotes()">← Voltar</button>
@@ -1686,24 +1791,13 @@ async function renderLoteEquipe(id){
     <div class="card">
       <h3>💉 Sanitário</h3>
       ${slotTutorial('sanitario')}
-      ${lerSo?'':guiaVacinacaoHTML(v.fase)}
-      ${proximasSanitario(san).map(s=>`<div class="msg err">⚠ ${labelEvento(s.evento)}${s.produto?' — '+esc(s.produto):''} — próxima dose ${fmtData(s.proxima_data)}</div>`).join('')}
-      ${(san||[]).map(s=>`<div class="list-item"><span>${fmtData(s.data)} · ${labelEvento(s.evento)}${s.produto?' — '+esc(s.produto):''}${s.proxima_data?' <span class="mut">(próx.: '+fmtData(s.proxima_data)+')</span>':''}${autorHTML(s)}</span>
+      ${proximasSanitario(san).map(s=>`<div class="msg err">⚠ ${labelEvento(s.evento)}${s.produto?' · '+esc(s.produto):''} · próxima dose ${fmtData(s.proxima_data)}</div>`).join('')}
+      ${(san||[]).map(s=>`<div class="list-item"><span>${fmtData(s.data)} · ${labelEvento(s.evento)}${s.produto?' · '+esc(s.produto):''}${s.proxima_data?' <span class="mut">(próxima: '+fmtData(s.proxima_data)+')</span>':''}${autorHTML(s)}${sanExtraHTML(s)}</span>
         <span><b>${s.custo!=null?brl(s.custo):''}</b>
-          ${meu(s)&&!lerSo?`<button class="btn ghost mini" title="Apagar" onclick="delSanitario('${id}','${s.id}',this)">🗑️</button>`:''}
-        </span></div>`).join('')||'<p class="mut">Sem eventos sanitários.</p>'}
-      ${lerSo?'':`<div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
-        <input id="san-data" type="date" value="${hoje()}" style="flex:1;min-width:130px" aria-label="Data do evento" />
-        <select id="san-evento" style="flex:1;min-width:130px" aria-label="Tipo de evento">
-          <option value="vacina">Vacina</option><option value="vermifugo">Vermífugo</option>
-          <option value="exame">Exame</option><option value="tratamento">Tratamento</option>
-        </select>
-        <input id="san-produto" placeholder="Produto (ex: Aftosa)" style="flex:1;min-width:140px" aria-label="Produto" />
-        <input id="san-proxima" type="date" style="flex:1;min-width:130px" title="Próxima dose (opcional)" aria-label="Próxima dose (opcional)" />
-        <input id="san-custo" type="number" inputmode="decimal" placeholder="R$ custo (opc.)" style="flex:1;min-width:110px" aria-label="Custo em reais (opcional)" />
-        <button class="btn mini" id="san-add" aria-label="Lançar evento sanitário" onclick="addSanitario('${id}')">+</button>
-      </div>`}
-      <div id="san-msg"></div>
+          ${meu(s)&&!lerSo?`<button class="btn ghost mini" title="Corrigir" onclick="editSanitario('${id}','${s.id}')">✏️</button>
+          <button class="btn ghost mini" title="Apagar" onclick="delSanitario('${id}','${s.id}',this)">🗑️</button>`:''}
+        </span></div>`).join('')||'<p class="mut">Nada anotado ainda.</p>'}
+      ${lerSo?'<div id="san-msg"></div>':sanFormHTML(id,v.fase)}
     </div>
     <div style="height:30px"></div>`;
   renderGraficoPeso(pes);
@@ -3578,6 +3672,7 @@ async function renderLote(id){
     db.from('custo').select('*').eq('lote_id',id).order('data',{ascending:false}),
     db.from('sanitario').select('*').eq('lote_id',id).order('data',{ascending:false}),
     carregarNomesEquipe(FAZENDA.id),
+    carregarContatos(),
   ]);
   const v=vs; const lucro=Number(v.lucro_cab);
   const fechado = !v.ativo;
@@ -3593,13 +3688,13 @@ async function renderLote(id){
 
   SAN_LOTE={}; (san||[]).forEach(s=>{ SAN_LOTE[s.id]=s; });
   const semCompra=loteSemCompra(v);
-  const recemCriado=LOTE_RECEM_CRIADO===id; LOTE_RECEM_CRIADO=null;
+  LOTE_RECEM_CRIADO=null;
 
   // ===== App simples (09/11/2026) =====
   // Na frente: resumo (Gastou / Vale hoje / Sobra), a frase da @ quando já existe
-  // a 2ª pesagem, e três botões grandes: Pesei, Gastei, Vendi. Cada botão abre o
-  // seu formulário (antes os formulários ficavam sempre abertos). Vacinas,
-  // históricos, gráfico, contas por cabeça e simulador ficam em "Ver mais".
+  // a 2ª pesagem, e quatro botões grandes: Pesei, Gastei, Sanitário, Vendi. Cada
+  // botão abre o seu formulário (antes os formulários ficavam sempre abertos).
+  // Históricos, gráfico, contas por cabeça e simulador ficam em "Ver mais".
   // Os números são os mesmos da vw_lote_analise; nada de conta nova aqui.
   const hojeA=v.preco_arroba_usado!=null?Number(v.preco_arroba_usado):null;
   const prodA=v.custo_arroba_produzida!=null?Number(v.custo_arroba_produzida):null;
@@ -3676,9 +3771,10 @@ async function renderLote(id){
 
   // --- os três botões e os formulários que eles abrem ---
   if(!fechado){
-    html+=`<div class="acoes3" id="lote-acoes">
+    html+=`<div class="acoes3 acoes4" id="lote-acoes">
       <button type="button" id="btn-acao-pes" onclick="abrirAcaoLote('pes')"><span class="ico" aria-hidden="true">⚖️</span>Pesei</button>
       <button type="button" id="btn-acao-cus" onclick="abrirAcaoLote('cus')"><span class="ico" aria-hidden="true">💵</span>Gastei</button>
+      <button type="button" id="btn-acao-san" onclick="abrirAcaoLote('san')"><span class="ico" aria-hidden="true">💉</span>Sanitário</button>
       <button type="button" class="vendi" id="btn-acao-vendi" onclick="renderFecharLote('${id}')"><span class="ico" aria-hidden="true">✅</span>Vendi</button>
     </div>`;
   }
@@ -3711,7 +3807,7 @@ async function renderLote(id){
       <button class="btn btn-grande" id="cus-add" style="margin-top:16px" onclick="addCusto('${id}')">Salvar gasto</button>
       </div>
       <button class="btn ghost" style="width:100%;margin-top:6px" onclick="fecharAcaoLote()">Cancelar</button>
-      <div class="ajuda">Vacina com data da próxima dose? Lance em "Ver mais", em Vacinas e remédios. Lance em um lugar só, para não contar duas vezes.</div>
+      <div class="ajuda">Vacina ou remédio? Use o botão Sanitário: ele guarda a próxima dose e o custo. Lance em um lugar só, para não contar duas vezes.</div>
     </div>`;
 
   // --- "Ver mais": tudo o que saiu da frente ---
@@ -3747,34 +3843,21 @@ async function renderLote(id){
 
   const cardSanitario=`
     <div class="card" id="card-sanitario">
-      <h3>💉 Vacinas e remédios</h3>
-      ${slotTutorial('sanitario')}
-      <p class="mut">Anote vacina, vermífugo, exame ou tratamento. Se tiver próxima dose, coloque a data: o app avisa antes de vencer.</p>
-      ${guiaVacinacaoHTML(v.fase, recemCriado)}
+      <h3>💉 Vacinas e remédios lançados</h3>
       ${vencendo.map(s=>`<div class="msg err">⚠ ${labelEvento(s.evento)}${s.produto?' · '+esc(s.produto):''} · próxima dose ${fmtData(s.proxima_data)}</div>`).join('')}
-      ${(san||[]).map(s=>`<div class="list-item"><span>${fmtData(s.data)} · ${labelEvento(s.evento)}${s.produto?' · '+esc(s.produto):''}${s.proxima_data?' <span class="mut">(próxima: '+fmtData(s.proxima_data)+')</span>':''}${autorDonoHTML(s)}</span>
+      ${(san||[]).map(s=>`<div class="list-item"><span>${fmtData(s.data)} · ${labelEvento(s.evento)}${s.produto?' · '+esc(s.produto):''}${s.proxima_data?' <span class="mut">(próxima: '+fmtData(s.proxima_data)+')</span>':''}${autorDonoHTML(s)}${sanExtraHTML(s)}</span>
         <span style="text-align:right"><b>${s.custo!=null?brl(s.custo):''}</b><br>
           <button class="btn ghost mini" onclick="editSanitario('${id}','${s.id}')">Corrigir</button>
           <button class="btn ghost mini" onclick="delSanitario('${id}','${s.id}',this)">Apagar</button>
-        </span></div>`).join('')||'<p class="mut">Nada anotado ainda.</p>'}
-      <div id="san-form" style="margin-top:6px">
-        <label for="san-evento">O que foi feito?</label>
-        <select id="san-evento">
-          <option value="vacina">Vacina</option><option value="vermifugo">Vermífugo (contra verme)</option>
-          <option value="exame">Exame</option><option value="tratamento">Tratamento (remédio para doença)</option>
-        </select>
-        <label for="san-produto">Nome da vacina ou do remédio</label>
-        <input id="san-produto" placeholder="Ex: Aftosa" />
-        <label for="san-data">Em que dia?</label>
-        <input id="san-data" type="date" value="${hoje()}" />
-        <label for="san-proxima">Dia da próxima dose (se tiver)</label>
-        <input id="san-proxima" type="date" />
-        <label for="san-custo">Quanto custou? (R$, se quiser)</label>
-        <input id="san-custo" type="number" inputmode="decimal" placeholder="Ex: 320" />
-        <div class="ajuda">Este valor já entra no gasto do lote. Não lance de novo em "Gastei".</div>
-        <div id="san-msg"></div>
-        <button class="btn" id="san-add" style="margin-top:14px" onclick="addSanitario('${id}')">Salvar</button>
-      </div>
+        </span></div>`).join('')||'<p class="mut">Nada anotado ainda. Toque em "Sanitário" quando vacinar ou medicar o lote.</p>'}
+      ${fechado?`<button class="btn sec" style="margin-top:12px" onclick="abrirAcaoLote('san',true)">Lançar vacina ou remédio deste lote</button>`:''}
+    </div>`;
+  const formSanitario=`
+    <div class="card acao-form hidden" id="acao-san">
+      <h3>💉 Sanitário</h3>
+      ${slotTutorial('sanitario')}
+      ${sanFormHTML(id,v.fase)}
+      <button class="btn ghost" style="width:100%;margin-top:6px" onclick="fecharAcaoLote()">Cancelar</button>
     </div>`;
 
   const cardContas=`
@@ -3805,6 +3888,7 @@ async function renderLote(id){
     </div>`;
 
   const nGastos=(cus||[]).length, nPes=(pes||[]).length;
+  html+=formSanitario;
   html+=`<details class="vm" id="lote-mais" ontoggle="vmAbriu(this)">
       <summary><span>Ver mais${vencendo.length?` <span class="pill warn" style="margin-left:6px">${vencendo.length===1?'1 vacina vencendo':vencendo.length+' vacinas vencendo'}</span>`:''}<small>Vacinas, gastos e pesagens lançados, contas${fechado?'':' e simulador'}</small></span></summary>
       <div class="vm-corpo">
@@ -3829,22 +3913,24 @@ function abrirAcaoLote(qual,manter){
   const alvo=$('acao-'+qual); if(!alvo) return null;
   const jaAberto=!alvo.classList.contains('hidden');
   if(jaAberto && !manter){ fecharAcaoLote(); return null; }
-  ['pes','cus'].forEach(k=>{
+  ['pes','cus','san'].forEach(k=>{
     $('acao-'+k)?.classList.toggle('hidden',k!==qual);
     $('btn-acao-'+k)?.classList.toggle('on',k===qual);
   });
   // No tutorial quem rola a tela e segura o foco é o balão.
   if(!TOUR.aberto){
     alvo.scrollIntoView({behavior:'smooth',block:'center'});
-    const campo=$(qual==='pes'?'pes-peso':'cus-valor');
+    // Sanitário é por toque: não abre o teclado sozinho.
+    const campo=qual==='san'?null:$(qual==='pes'?'pes-peso':'cus-valor');
     if(campo) setTimeout(()=>{ try{ campo.focus({preventScroll:true}); }catch(e){} },60);
   }
   return alvo;
 }
 function fecharAcaoLote(){
-  ['pes','cus'].forEach(k=>{ $('acao-'+k)?.classList.add('hidden'); $('btn-acao-'+k)?.classList.remove('on'); });
+  ['pes','cus','san'].forEach(k=>{ $('acao-'+k)?.classList.add('hidden'); $('btn-acao-'+k)?.classList.remove('on'); });
   // Cancelou no meio de uma correção: o formulário volta a ser de lançamento novo.
   if(EDIT_PES){ EDIT_PES=null; if($('pes-add')) $('pes-add').textContent='Salvar peso'; if($('pes-peso')) $('pes-peso').value=''; if($('pes-msg')) $('pes-msg').innerHTML=''; }
+  if(EDIT_SAN){ EDIT_SAN=null; sanLimparForm(); }
   if(EDIT_CUS){ EDIT_CUS=null; if($('cus-add')) $('cus-add').textContent='Salvar gasto'; if($('cus-valor')) $('cus-valor').value=''; if($('cus-msg')) $('cus-msg').innerHTML=''; }
 }
 // Abre o "Ver mais" do lote e leva até um campo dele (ex.: o preço da @).
@@ -4041,9 +4127,24 @@ async function delCusto(loteId,cusId,btn){
   renderLote(loteId);
 }
 
-// ---------- sanitário (vacinas/vermífugo/exames) ----------
+// ---------- sanitário (vacinas/vermífugo/remédio/exames) ----------
+// Formulário por toque (10/11/2026): a pessoa toca no que fez, toca na vacina e
+// salva. Não digita no caminho comum. O mesmo formulário serve ao dono (botão
+// Sanitário do lote) e ao funcionário (cartão Sanitário da tela dele).
 let EDIT_SAN=null, SAN_LOTE={};
-function labelEvento(e){ return {vacina:'💉 Vacina',vermifugo:'🪱 Vermífugo',exame:'🔬 Exame',tratamento:'🩺 Tratamento'}[e]||esc(e); }
+// Valores gravados em sanitario.evento (não mudar): vacina, vermifugo, tratamento, exame.
+const SAN_TIPOS=[
+  {v:'vacina',     ico:'💉', nome:'Vacina',    rotulo:'Qual vacina?'},
+  {v:'vermifugo',  ico:'🪱', nome:'Vermífugo', rotulo:'Qual produto? (se quiser)', ex:'Ex: Ivermectina'},
+  {v:'tratamento', ico:'💊', nome:'Remédio',   rotulo:'Qual produto? (se quiser)', ex:'Ex: antibiótico'},
+  {v:'exame',      ico:'🔬', nome:'Exame',     rotulo:'Qual exame? (se quiser)',   ex:'Ex: brucelose'},
+];
+function labelEvento(e){ const t=SAN_TIPOS.find(x=>x.v===e); return t?`${t.ico} ${t.nome}`:esc(e); }
+// Estado do formulário aberto: fase do lote (escolhe a lista de vacinas), tipo e vacina tocados.
+let SAN_FORM={fase:null, evento:null, vacina:null};
+// As colunas sanitario.obs e sanitario.contato_id chegam por migration. Enquanto
+// ela não rodar, o app salva sem os dois campos (null = ainda não sabemos).
+let SAN_EXTRAS=null;
 
 // Guia de vacinação por fase do gado (conteúdo educativo — Brasil).
 // ob:true = obrigatória por lei/exportação. Aftosa segue o calendário do estado
@@ -4066,66 +4167,197 @@ const GUIA_VACINA = {
     {n:'Botulismo', q:'Anual, onde há deficiência de fósforo / gado roendo osso (osteofagia).', ob:false},
   ], nota:'Na terminação o foco é não perder campanha oficial e evitar qualquer bloqueio sanitário pra venda.' },
 };
-function guiaVacinacaoHTML(fase, aberto){
-  const g = GUIA_VACINA[fase] || GUIA_VACINA.recria;
-  return `<details${aberto?' open':''} class="guia-vac" id="guia-vac" style="background:#F4EEDF;border-radius:8px;padding:10px 12px;margin:10px 0">
-    <summary style="cursor:pointer;font-weight:700;color:#112A1E">📋 O que vacinar nesta fase: ${g.titulo}</summary>
-    <div style="margin-top:8px">
-      ${g.itens.map(i=>`<div style="padding:7px 0;border-bottom:1px solid #E6DFCE">
-        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
-          <b>${i.n}</b>
-          <span style="display:flex;gap:6px;align-items:center;flex-shrink:0">
-            ${i.ob?'<span class="pill" style="background:var(--vermelho,#b91c1c);color:#fff;font-size:10px">obrigatória</span>':''}
-            <button class="btn ghost mini" onclick="usarVacina('${i.n.replace(/'/g,"\\'")}')">usar</button>
-          </span>
-        </div>
-        <div class="mut" style="font-size:12px;margin-top:2px">${i.q}</div>
-      </div>`).join('')}
-      <p class="mut" style="font-size:12px;margin-top:8px">💡 ${g.nota}</p>
-      <p class="mut" style="font-size:11px;margin-top:6px">Guia geral pra orientar. O calendário exato muda por região, estação de monta e recomendação do seu veterinário.</p>
-    </div>
-  </details>`;
+// Vacinas da fase, com as obrigatórias primeiro (ordem do guia mantida dentro de cada grupo).
+function sanVacinasDaFase(fase){
+  const g=GUIA_VACINA[fase]||GUIA_VACINA.recria;
+  return [...g.itens.filter(i=>i.ob), ...g.itens.filter(i=>!i.ob)];
 }
-function usarVacina(nome){
-  const p=$('san-produto'); if(!p) return;
-  $('san-evento').value='vacina'; p.value=nome;
-  if(TOUR.aberto){ tourGancho('usar-vacina'); return; }
-  p.scrollIntoView({behavior:'smooth',block:'center'}); p.focus();
+function sanOpcoesContatoHTML(sel){
+  const ord=[...CONTATOS.filter(c=>c.categoria==='veterinario'), ...CONTATOS.filter(c=>c.categoria!=='veterinario')];
+  return `<option value="">Ninguém</option>`+ord.map(c=>
+    `<option value="${esc(c.id)}"${c.id===sel?' selected':''}>${esc(c.nome)} (${esc(contatoCat(c.categoria).nome)})</option>`).join('');
+}
+function sanFormHTML(loteId, fase){
+  SAN_FORM={fase:fase||null, evento:null, vacina:null};
+  const g=GUIA_VACINA[fase]||GUIA_VACINA.recria;
+  const extras=SAN_EXTRAS!==false;
+  return `<div id="san-form">
+      <input type="hidden" id="san-evento" value="" />
+      <div id="san-escolha">
+        <div class="toque-perg" id="san-tipo-rot">O que você fez?</div>
+        <div class="toque-grade" role="group" aria-labelledby="san-tipo-rot">
+          ${SAN_TIPOS.map(t=>`<button type="button" data-tipo="${t.v}" aria-pressed="false" onclick="sanEscolherTipo('${t.v}')"><span class="ico" aria-hidden="true">${t.ico}</span>${t.nome}</button>`).join('')}
+        </div>
+        <div id="san-vacinas" class="hidden">
+          <div class="toque-perg" id="san-vac-rot">Qual vacina?</div>
+          <div class="toque-lista" role="group" aria-labelledby="san-vac-rot">
+            ${sanVacinasDaFase(fase).map((i,k)=>`<button type="button" data-vac="${k}" aria-pressed="false" onclick="sanEscolherVacina(${k})">${esc(i.n)}${i.ob?'<span class="selo-obrig">obrigatória</span>':''}<small>${esc(i.q)}</small></button>`).join('')}
+            <button type="button" data-vac="outro" aria-pressed="false" onclick="sanEscolherVacina('outro')">Outro: digitar o nome</button>
+          </div>
+          <div class="ajuda" style="margin-top:8px">${esc(g.nota)} O calendário certo muda por região: confirme com o seu veterinário.</div>
+        </div>
+      </div>
+      <div id="san-produto-grupo" class="hidden">
+        <label for="san-produto" id="san-produto-rot">Qual produto? (se quiser)</label>
+        <input id="san-produto" maxlength="120" autocomplete="off" />
+      </div>
+      <div class="san-dia" id="san-dia-linha">
+        <span>Dia:</span>
+        <button type="button" id="san-dia-btn" onclick="sanTrocarDia()" aria-label="Dia: hoje. Toque para trocar o dia">Hoje ▾</button>
+      </div>
+      <div id="san-data-grupo" class="hidden">
+        <label for="san-data">Em que dia foi?</label>
+        <input id="san-data" type="date" value="${hoje()}" max="${hoje()}" />
+      </div>
+      <details class="san-mais" id="san-mais">
+        <summary><span>Mais detalhes</span><small>${extras?'Próxima dose, custo, anotação, quem atendeu':'Próxima dose e custo'}</small></summary>
+        <label for="san-proxima">Dia da próxima dose (se tiver)</label>
+        <input id="san-proxima" type="date" />
+        <div class="ajuda">O app avisa antes de vencer.</div>
+        <label for="san-custo">Quanto custou? (R$, se quiser)</label>
+        <input id="san-custo" type="number" inputmode="decimal" placeholder="Ex: 320" />
+        <div class="ajuda">Este valor já entra no gasto do lote. Não lance de novo em "Gastei".</div>
+        ${extras?`<label for="san-obs">Anotação (se quiser)</label>
+        <textarea id="san-obs" maxlength="500" placeholder="Ex: o que o veterinário recomendou"></textarea>
+        ${CONTATOS_OK===false?'':`<label for="san-contato">Quem atendeu?</label>
+        <select id="san-contato">${sanOpcoesContatoHTML(null)}</select>
+        ${CONTATOS.length?'':`<div class="ajuda">Você ainda não tem contatos guardados.</div>
+        <button type="button" class="btn sec" style="margin-top:8px" onclick="renderContatos(true)">Cadastrar contato</button>`}`}`:''}
+      </details>
+      <div id="san-msg"></div>
+      <button class="btn btn-grande" id="san-add" style="margin-top:16px" onclick="addSanitario('${loteId}')">Salvar</button>
+    </div>`;
+}
+function sanMarcar(seletor, attr, valor){
+  document.querySelectorAll('#san-form '+seletor).forEach(b=>b.setAttribute('aria-pressed', String(b.getAttribute(attr)===String(valor))));
+}
+function sanEscolherTipo(tipo){
+  const t=SAN_TIPOS.find(x=>x.v===tipo); if(!t || !$('san-form')) return;
+  const mudou=SAN_FORM.evento!==tipo;
+  SAN_FORM.evento=tipo; $('san-evento').value=tipo;
+  sanMarcar('[data-tipo]','data-tipo',tipo);
+  const ehVacina=tipo==='vacina';
+  $('san-vacinas').classList.toggle('hidden',!ehVacina);
+  if(mudou){ SAN_FORM.vacina=null; sanMarcar('[data-vac]','data-vac','__nada__'); $('san-produto').value=''; }
+  // Vacina: o nome vem do toque na lista ("Outro" abre o campo). Os outros 3: campo já aberto, opcional.
+  $('san-produto-grupo').classList.toggle('hidden', ehVacina && SAN_FORM.vacina!=='outro');
+  $('san-produto-rot').textContent=ehVacina?'Nome da vacina':t.rotulo;
+  $('san-produto').placeholder=ehVacina?'Ex: Leptospirose':(t.ex||'');
+  if($('san-msg')) $('san-msg').innerHTML=$('san-msg').dataset.fixo||'';
+}
+function sanEscolherVacina(k){
+  if(!$('san-form')) return;
+  if(SAN_FORM.evento!=='vacina') sanEscolherTipo('vacina');
+  SAN_FORM.vacina=k;
+  sanMarcar('[data-vac]','data-vac',k);
+  const outro=k==='outro';
+  $('san-produto-grupo').classList.toggle('hidden',!outro);
+  if(outro){
+    $('san-produto').value='';
+    if(!TOUR.aberto) setTimeout(()=>{ try{ $('san-produto').focus(); }catch(e){} },60);
+  }else{
+    $('san-produto').value=sanVacinasDaFase(SAN_FORM.fase)[k]?.n||'';
+  }
+  if(TOUR.aberto) tourGancho('usar-vacina');
+}
+function sanTrocarDia(){
+  $('san-dia-linha')?.classList.add('hidden');
+  $('san-data-grupo')?.classList.remove('hidden');
+  const d=$('san-data'); if(!d) return;
+  try{ d.focus(); if(d.showPicker) d.showPicker(); }catch(e){}
+}
+// Volta o formulário ao estado de lançamento novo (depois de cancelar uma correção).
+function sanLimparForm(){
+  if(!$('san-form')) return;
+  SAN_FORM.evento=null; SAN_FORM.vacina=null;
+  $('san-evento').value=''; $('san-produto').value='';
+  sanMarcar('[data-tipo]','data-tipo','__nada__'); sanMarcar('[data-vac]','data-vac','__nada__');
+  $('san-vacinas').classList.add('hidden'); $('san-produto-grupo').classList.add('hidden');
+  $('san-data').value=hoje();
+  $('san-dia-linha').classList.remove('hidden'); $('san-data-grupo').classList.add('hidden');
+  $('san-proxima').value=''; $('san-custo').value='';
+  if($('san-obs')) $('san-obs').value='';
+  if($('san-contato')) $('san-contato').value='';
+  $('san-mais').open=false;
+  $('san-add').textContent='Salvar';
+  delete $('san-msg').dataset.fixo; $('san-msg').innerHTML='';
+}
+function sanExtraHTML(s){
+  const quem=s.contato_id && CONTATO_MAP[s.contato_id];
+  return (s.obs?`<span class="san-extra">📝 ${esc(s.obs)}</span>`:'')
+       + (quem?`<span class="san-extra">Quem atendeu: ${esc(quem.nome)}</span>`:'');
 }
 function addDias(dataStr,dias){ const d=new Date(dataStr+'T00:00:00'); d.setDate(d.getDate()+dias); return d.toISOString().slice(0,10); }
 function proximasSanitario(san){
   const limite=addDias(hoje(),14);
   return (san||[]).filter(s=>s.proxima_data && s.proxima_data<=limite);
 }
+// Banco ainda sem a migration: coluna ou tabela que o PostgREST/Postgres não conhece.
+function erroColunaOuTabelaAusente(error){
+  const c=error?.code, m=String(error?.message||'');
+  return c==='PGRST204' || c==='PGRST205' || c==='42703' || c==='42P01' || /schema cache/i.test(m);
+}
 async function addSanitario(id){
   if(!podeEditar()) return;
   const data=$('san-data').value, evento=$('san-evento').value,
         produto=$('san-produto').value.trim()||null, proxima=$('san-proxima').value||null,
-        custoRaw=$('san-custo').value, custo=custoRaw?parseFloat(custoRaw):null;
+        custoRaw=$('san-custo').value, custo=custoRaw?parseFloat(custoRaw):null,
+        obs=($('san-obs')?.value||'').trim()||null, contatoId=$('san-contato')?.value||null;
+  if(!SAN_TIPOS.some(t=>t.v===evento)) return msg('san-msg','Toque no que você fez: vacina, vermífugo, remédio ou exame.');
   if(!data) return msg('san-msg','Informe a data do evento.');
   if(data>hoje()) return msg('san-msg','Data no futuro? Confira.');
   if(custo!=null && (isNaN(custo) || custo<0)) return msg('san-msg','O custo precisa ser um número. Se não teve custo, deixe em branco.');
   if(proxima && proxima<data) return msg('san-msg','A próxima dose está antes da data do evento. Confira.');
-  let error;
-  if(EDIT_SAN){ ({error}=await db.from('sanitario').update({data,evento,produto,proxima_data:proxima,custo}).eq('id',EDIT_SAN)); EDIT_SAN=null; }
-  else ({error}=await db.from('sanitario').insert({lote_id:id,data,evento,produto,proxima_data:proxima,custo}));
+  const base={data,evento,produto,proxima_data:proxima,custo};
+  const editando=EDIT_SAN;
+  const gravar=p=>editando ? db.from('sanitario').update(p).eq('id',editando) : db.from('sanitario').insert({lote_id:id,...p});
+  let error, semExtras=false;
+  if(SAN_EXTRAS===false){ ({error}=await gravar(base)); semExtras=!!(obs||contatoId); }
+  else{
+    ({error}=await gravar({...base, obs, contato_id:contatoId}));
+    if(error && erroColunaOuTabelaAusente(error)){
+      // Banco sem as colunas novas: salva o que já existia, sem erro cru.
+      SAN_EXTRAS=false; semExtras=!!(obs||contatoId);
+      ({error}=await gravar(base));
+    }else if(!error) SAN_EXTRAS=true;
+  }
   if(error) return msg('san-msg',erroLancamento(error));
+  EDIT_SAN=null;
   await renderLote(id);
+  if(semExtras) pwaToast('Salvo. A anotação e quem atendeu ainda não ficam guardados nesta versão.');
   tourGancho('sanitario');
 }
 // Corrigir um evento sanitário (regra: tudo que foi lançado fica; errou, edita).
-// Mesmo padrão de pesagem/custo: preenche o formulário e o + vira ✓ salvar.
-// O texto do produto vem do cache SAN_LOTE (nunca dentro do onclick).
+// O formulário abre com o tipo e o produto já marcados. Os textos vêm do cache
+// SAN_LOTE (nunca dentro do onclick).
 function editSanitario(loteId,sanId){
-  const s=SAN_LOTE[sanId]; if(!s) return;
+  const s=SAN_LOTE[sanId]; if(!s || !$('san-form')) return;
+  abrirAcaoLote('san',true);
+  sanLimparForm();
   EDIT_SAN=sanId;
-  $('san-data').value=s.data||hoje(); $('san-evento').value=s.evento||'vacina';
-  $('san-produto').value=s.produto||''; $('san-proxima').value=s.proxima_data||'';
+  const tipo=SAN_TIPOS.some(t=>t.v===s.evento)?s.evento:'vacina';
+  sanEscolherTipo(tipo);
+  if(tipo==='vacina'){
+    const k=sanVacinasDaFase(SAN_FORM.fase).findIndex(i=>i.n===s.produto);
+    if(k>=0){ SAN_FORM.vacina=k; sanMarcar('[data-vac]','data-vac',k); $('san-produto').value=s.produto; }
+    else if(s.produto){
+      SAN_FORM.vacina='outro'; sanMarcar('[data-vac]','data-vac','outro');
+      $('san-produto-grupo').classList.remove('hidden'); $('san-produto').value=s.produto;
+    }
+  }else{
+    $('san-produto').value=s.produto||'';
+  }
+  $('san-data').value=s.data||hoje();
+  if(s.data && s.data!==hoje()){ $('san-dia-linha').classList.add('hidden'); $('san-data-grupo').classList.remove('hidden'); }
+  $('san-proxima').value=s.proxima_data||'';
   $('san-custo').value=s.custo!=null?s.custo:'';
+  if($('san-obs')) $('san-obs').value=s.obs||'';
+  if($('san-contato')){ $('san-contato').innerHTML=sanOpcoesContatoHTML(s.contato_id||null); $('san-contato').value=CONTATO_MAP[s.contato_id]?s.contato_id:''; }
+  $('san-mais').open=!!(s.proxima_data || s.custo!=null || s.obs || s.contato_id);
   $('san-add').textContent='Salvar a correção';
   msg('san-msg','Corrigindo o lançamento de '+fmtData(s.data)+'. Ajuste e toque em Salvar a correção.','ok');
-  $('san-produto').scrollIntoView({behavior:'smooth',block:'center'});
-  $('san-produto').focus();
+  $('san-msg').dataset.fixo=$('san-msg').innerHTML;
+  $('san-form').scrollIntoView({behavior:'smooth',block:'start'});
 }
 async function delSanitario(loteId,sanId,btn){
   if(!podeEditar()) return;
@@ -4133,6 +4365,185 @@ async function delSanitario(loteId,sanId,btn){
   const {error}=await db.from('sanitario').delete().eq('id',sanId);
   if(error) return msg('san-msg',erroLancamento(error));
   renderLote(loteId);
+}
+
+// ---------- contatos da fazenda (10/11/2026) ----------
+// Telefones úteis da fazenda aberta: veterinário, casa de ração, comprador, frete,
+// funcionário. Dono e equipe ativa veem e mexem (regra no banco: RLS da tabela
+// contato). Fazenda só para consulta (teste vencido ou arquivada): só lê.
+// Texto do usuário nunca vai dentro de onclick: os botões levam só o id, e os
+// dados vêm do cache CONTATO_MAP.
+const CONTATO_CATS=[
+  {v:'veterinario', ico:'🩺', nome:'Veterinário'},
+  {v:'racao',       ico:'🌾', nome:'Casa de ração'},
+  {v:'comprador',   ico:'🥩', nome:'Comprador ou frigorífico'},
+  {v:'frete',       ico:'🚚', nome:'Frete ou boiadeiro'},
+  {v:'funcionario', ico:'👷', nome:'Funcionário'},
+  {v:'outro',       ico:'📇', nome:'Outro'},
+];
+// CONTATOS_OK: true = lista carregada; false = o banco ainda não tem a tabela; null = falhou agora.
+let CONTATOS=[], CONTATO_MAP={}, CONTATOS_FAZ=null, CONTATOS_OK=null, EDIT_CONTATO=null, CONTATO_CAT=null;
+function contatoCat(v){ return CONTATO_CATS.find(c=>c.v===v) || CONTATO_CATS[CONTATO_CATS.length-1]; }
+function limparContatos(){ CONTATOS=[]; CONTATO_MAP={}; CONTATOS_FAZ=null; CONTATOS_OK=null; EDIT_CONTATO=null; CONTATO_CAT=null; }
+async function carregarContatos(){
+  const fid=FAZENDA?.id;
+  if(!fid){ limparContatos(); return; }
+  const [{data,error}]=await Promise.all([
+    db.from('contato').select('*').eq('fazenda_id',fid).order('nome'),
+    sanSondarExtras(),
+  ]);
+  if(fid!==FAZENDA?.id) return; // trocou de fazenda no meio
+  CONTATOS_FAZ=fid;
+  if(error){ CONTATOS=[]; CONTATO_MAP={}; CONTATOS_OK=erroColunaOuTabelaAusente(error)?false:null; return; }
+  CONTATOS=data||[]; CONTATO_MAP={}; CONTATOS.forEach(c=>{ CONTATO_MAP[c.id]=c; });
+  CONTATOS_OK=true;
+}
+// Uma vez por sessão: o banco já tem sanitario.obs / contato_id? (não devolve linha nenhuma)
+async function sanSondarExtras(){
+  if(SAN_EXTRAS!==null) return;
+  const {error}=await db.from('sanitario').select('obs,contato_id').limit(0);
+  if(!error) SAN_EXTRAS=true;
+  else if(erroColunaOuTabelaAusente(error)) SAN_EXTRAS=false;
+}
+// Telefone: só dígitos, sem zeros na frente, com 55 quando vier sem o código do país.
+// Aceita o que a pessoa digitar: "034 99999 0000", "+55 (34) 99999-0000", "5534999990000".
+function telefoneDigitos(v){ return String(v??'').replace(/\D/g,'').replace(/^0+/,''); }
+function telefoneComPais(v){
+  const d=telefoneDigitos(v); if(!d) return '';
+  return '55'+((d.startsWith('55') && d.length>=12) ? d.slice(2).replace(/^0+/,'') : d);
+}
+function telefoneBonito(v){
+  const p=telefoneComPais(v); if(!p) return '';
+  const d=p.slice(2);
+  if(d.length===11) return `(${d.slice(0,2)}) ${d.slice(2,7)}-${d.slice(7)}`;
+  if(d.length===10) return `(${d.slice(0,2)}) ${d.slice(2,6)}-${d.slice(6)}`;
+  return d;
+}
+function contatosSoLeitura(){ return MODO_LEITURA || !!FAZENDA?.arquivada_em; }
+function erroContato(error){
+  const m=String(error?.message||'');
+  if(/TRIAL_EXPIRADO/.test(m) || error?.code==='P1004') return 'Esta fazenda está só para consulta agora. Os contatos continuam aqui, mas não dá para mexer.';
+  if(error?.code==='42501' || /row-level security/i.test(m)) return 'Você não pode mexer nos contatos desta fazenda.';
+  if(error?.code==='23514') return 'Confira o nome e o telefone com DDD e tente de novo.';
+  return 'Não consegui salvar agora. Tente de novo em instantes.';
+}
+function contatoHTML(c, lerSo){
+  const pais=telefoneComPais(c.telefone);
+  return `<div class="contato">
+      <div class="c-nome">${esc(c.nome)}</div>
+      <div class="c-tel">${esc(telefoneBonito(c.telefone)||c.telefone)}</div>
+      ${c.obs?`<div class="c-obs">${esc(c.obs)}</div>`:''}
+      ${pais?`<div class="c-acoes">
+        <a href="tel:+${esc(pais)}"><span aria-hidden="true">📞</span>Ligar</a>
+        <a class="zap" href="https://wa.me/${esc(pais)}" target="_blank" rel="noopener"><span aria-hidden="true">💬</span>WhatsApp</a>
+      </div>`:''}
+      ${lerSo?'':`<div class="c-mexer">
+        <button type="button" class="btn ghost mini" data-id="${esc(c.id)}" onclick="abrirFormContato(this.dataset.id)">Corrigir</button>
+        <button type="button" class="btn ghost mini" data-id="${esc(c.id)}" onclick="apagarContato(this.dataset.id,this)">Apagar</button>
+      </div>`}
+    </div>`;
+}
+async function renderContatos(abrirForm){
+  setNav('contatos');
+  EDIT_CONTATO=null; CONTATO_CAT=null;
+  const body=$('app-body'); body.innerHTML='<p class="mut center" style="padding:30px">Carregando…</p>';
+  if(!FAZENDA?.id){ body.innerHTML='<div class="msg err">Abra uma fazenda para ver os contatos.</div>'; return; }
+  await carregarContatos();
+  if(viewAtual()!=='contatos') return; // a pessoa já foi para outra tela
+  const titulo=`<div class="nome" style="font-size:22px;margin:10px 0 4px">📞 Contatos da fazenda</div>
+    <p class="mut" style="margin-bottom:12px">Os telefones da ${esc(FAZENDA.nome)} num lugar só.</p>`;
+  if(CONTATOS_OK===false){
+    body.innerHTML=`${titulo}<div class="card vazio"><h2>Os contatos chegam em breve</h2>
+      <p>Estamos terminando de preparar esta parte. Volte daqui a pouco.</p></div>`;
+    return;
+  }
+  if(CONTATOS_OK===null){
+    body.innerHTML=`${titulo}<div class="msg err" style="font-size:16px">Não consegui carregar os contatos agora. Confira a internet e tente de novo.</div>
+      <button class="btn sec" style="margin-top:12px" onclick="renderContatos()">Tentar de novo</button>`;
+    return;
+  }
+  const lerSo=contatosSoLeitura();
+  const grupos=CONTATO_CATS.map(cat=>({cat, itens:CONTATOS.filter(c=>contatoCat(c.categoria).v===cat.v)})).filter(g=>g.itens.length);
+  const form=lerSo?'':`
+    <div class="card acao-form hidden" id="contato-form">
+      <h3 id="contato-form-titulo">📞 Novo contato</h3>
+      <div class="toque-perg" id="contato-cat-rot">Quem é?</div>
+      <div class="toque-grade" role="group" aria-labelledby="contato-cat-rot">
+        ${CONTATO_CATS.map(c=>`<button type="button" data-cat="${c.v}" aria-pressed="false" onclick="contatoEscolherCat('${c.v}')"><span class="ico" aria-hidden="true">${c.ico}</span>${c.nome}</button>`).join('')}
+      </div>
+      <label for="contato-nome">Nome</label>
+      <input id="contato-nome" maxlength="80" autocomplete="off" placeholder="Ex: Dr. João" />
+      <label for="contato-tel">Telefone com DDD</label>
+      <input id="contato-tel" type="tel" inputmode="tel" maxlength="20" autocomplete="off" placeholder="Ex: 34 99999 0000" />
+      <label for="contato-obs">Observação (se quiser)</label>
+      <input id="contato-obs" maxlength="200" autocomplete="off" placeholder="Ex: atende sábado de manhã" />
+      <div id="contato-msg"></div>
+      <button type="button" class="btn btn-grande" id="contato-salvar" style="margin-top:16px" onclick="salvarContato()">Salvar contato</button>
+      <button type="button" class="btn ghost" style="width:100%;margin-top:6px" onclick="fecharFormContato()">Cancelar</button>
+    </div>`;
+  const lista=grupos.length
+    ? grupos.map(g=>`<div class="card"><h3>${g.cat.ico} ${g.cat.nome}</h3>${g.itens.map(c=>contatoHTML(c,lerSo)).join('')}</div>`).join('')
+    : `<div class="card vazio" id="contatos-vazio"><h2>Nenhum contato guardado</h2>
+        <p>Guarde aqui o telefone do veterinário, da casa de ração e de quem compra o seu gado.</p>
+        ${lerSo?'':'<button type="button" class="btn btn-grande" onclick="abrirFormContato()">Cadastrar o primeiro contato</button>'}</div>`;
+  body.innerHTML=`${titulo}
+    ${lerSo?'<div class="msg err" style="font-size:15px;margin-bottom:10px">Esta fazenda está só para consulta. Dá para ligar e chamar no WhatsApp, mas não para mexer na lista.</div>':''}
+    ${!lerSo && grupos.length?'<button type="button" class="btn btn-grande" id="contato-novo" style="margin-bottom:12px" onclick="abrirFormContato()">➕ Novo contato</button>':''}
+    ${form}
+    <div id="contatos-msg"></div>
+    ${lista}
+    <div style="height:30px"></div>`;
+  if(abrirForm && !lerSo) abrirFormContato();
+}
+function contatoEscolherCat(v){
+  CONTATO_CAT=v;
+  document.querySelectorAll('#contato-form [data-cat]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.cat===v)));
+}
+function abrirFormContato(id){
+  if(!podeEditar()) return;
+  const f=$('contato-form'); if(!f) return;
+  const c=id?CONTATO_MAP[id]:null;
+  EDIT_CONTATO=c?c.id:null;
+  $('contato-form-titulo').textContent=c?'📞 Corrigir contato':'📞 Novo contato';
+  $('contato-nome').value=c?c.nome:''; $('contato-tel').value=c?(telefoneBonito(c.telefone)||c.telefone):''; $('contato-obs').value=c?(c.obs||''):'';
+  contatoEscolherCat(c?contatoCat(c.categoria).v:null);
+  $('contato-salvar').textContent=c?'Salvar a correção':'Salvar contato';
+  $('contato-msg').innerHTML='';
+  f.classList.remove('hidden');
+  $('contato-novo')?.classList.add('hidden'); $('contatos-vazio')?.classList.add('hidden');
+  f.scrollIntoView({behavior:'smooth',block:'start'});
+}
+function fecharFormContato(){
+  EDIT_CONTATO=null; CONTATO_CAT=null;
+  $('contato-form')?.classList.add('hidden');
+  $('contato-novo')?.classList.remove('hidden'); $('contatos-vazio')?.classList.remove('hidden');
+}
+async function salvarContato(){
+  if(!podeEditar()) return;
+  const nome=$('contato-nome').value.trim(), tel=$('contato-tel').value.trim(), obs=$('contato-obs').value.trim()||null;
+  if(!CONTATO_CATS.some(c=>c.v===CONTATO_CAT)) return msg('contato-msg','Toque em quem é este contato: veterinário, casa de ração, comprador…');
+  if(!nome) return msg('contato-msg','Coloque o nome.');
+  if(!telefoneValido(telefoneComPais(tel))) return msg('contato-msg','Coloque o telefone com DDD. Exemplo: 34 99999 0000.');
+  // Guarda só os dígitos, sem o 55: a tela monta o formato e os links.
+  const d=telefoneComPais(tel).slice(2);
+  const linha={categoria:CONTATO_CAT, nome, telefone:d, obs};
+  const btn=$('contato-salvar'); btn.disabled=true;
+  const {error}=EDIT_CONTATO
+    ? await db.from('contato').update(linha).eq('id',EDIT_CONTATO)
+    : await db.from('contato').insert({fazenda_id:FAZENDA.id, ...linha});
+  btn.disabled=false;
+  if(error) return msg('contato-msg',erroContato(error));
+  const corrigiu=!!EDIT_CONTATO;
+  await renderContatos();
+  pwaToast(corrigiu?'Contato corrigido.':'Contato guardado.');
+}
+async function apagarContato(id,btn){
+  if(!podeEditar()) return;
+  if(btn.dataset.arm!=='1'){ btn.dataset.arm='1'; btn.textContent='Toque de novo para apagar'; btn.style.color='var(--vermelho)'; return; }
+  const {error}=await db.from('contato').delete().eq('id',id);
+  if(error) return msg('contatos-msg',erroContato(error));
+  await renderContatos();
+  pwaToast('Contato apagado.');
 }
 
 // ---------- gráfico de peso/GMD do lote ----------
@@ -4604,7 +5015,7 @@ function tocarTutorial(btn){
 // botão "Ver como funciona" (Início vazio e Ajuda). A tela escurece, o alvo fica
 // aceso com borda dourada e um balão ancorado explica o passo. Passo de AÇÃO
 // avança quando a pessoa faz a ação de verdade (os ganchos ficam em novoLote,
-// salvarLote, addCusto, addPesagem, usarVacina e addSanitario); o alvo continua
+// salvarLote, addCusto, addPesagem, sanEscolherVacina e addSanitario); o alvo continua
 // clicável e 4 faixas transparentes seguram o toque no resto. O balão é
 // role=dialog, então outroDialogoAberto() segura o convite de instalar o app.
 // Escape pula. Funcionário (ehEquipe) nunca vê.
@@ -4628,10 +5039,10 @@ const TOUR_PASSOS=[
     titulo:'Gastou com o lote? Toque em Gastei', texto:'O botão <b>Gastei</b> abre isto aqui. Digite o valor, escolha com o quê e toque em <b>Salvar gasto</b>. Sal, ração, vacina, mão de obra: tudo que você gasta com o lote.'},
   {id:'pesagem', n:5, alvo:'#acao-pes', abre:'pes', video:'pesagem', proximo:true, espera:'pesagem',
     titulo:'Pesou o gado? Toque em Pesei', texto:'O peso da chegada já conta como a 1ª pesagem. Daqui a uns 30 dias, toque em <b>Pesei</b> e lance o peso novo: o app mostra quanto o gado ganha por dia e quanto custa a sua @.'},
-  {id:'vacina-guia', n:6, alvo:'#guia-vac', abre:'mais', video:'sanitario', espera:'usar-vacina', pularPasso:'painel',
-    titulo:'O que vacinar nesta fase', texto:'As vacinas ficam em <b>Ver mais</b>. Este guia mostra as da fase do lote. Toque em <b>usar</b> na vacina que você aplicou.'},
-  {id:'vacina-add', n:6, alvo:'#san-form', abre:'mais', video:'sanitario', espera:'sanitario', pularPasso:'painel',
-    titulo:'Anote a vacina', texto:'O nome já foi preenchido. Confira o dia, coloque a próxima dose se tiver e toque em <b>Salvar</b>.'},
+  {id:'vacina-guia', n:6, alvo:'#san-escolha', abre:'san', video:'sanitario', espera:'usar-vacina', pularPasso:'painel',
+    titulo:'Vacinou ou deu remédio? Toque em Sanitário', texto:'O botão <b>Sanitário</b> abre isto aqui. Toque em <b>Vacina</b> e depois na vacina que você aplicou. A lista mostra as vacinas da fase do lote.'},
+  {id:'vacina-add', n:6, alvo:'#san-form', abre:'san', video:'sanitario', espera:'sanitario', pularPasso:'painel',
+    titulo:'Anote a vacina', texto:'A vacina já está marcada e o dia já vem hoje. Tem próxima dose ou custo? Abra <b>Mais detalhes</b>. Depois toque em <b>Salvar</b>.'},
   {id:'painel', n:7, alvo:'#painel-dinheiro', painel:true, concluir:true,
     titulo:'Seu dinheiro num lugar só', texto:'Aqui você vê quanto gastou e quanto vai sobrar.'},
 ];
@@ -4696,8 +5107,8 @@ async function tourIr(id){
   TOUR.mudando=false; TOUR.sumiu=0;
   if(!el){ return tourAvancar(); }          // tela sem esse alvo (ex.: lote vendido): segue
   if(p.id==='vacina-guia'){
-    el.open=true;
-    const usar=el.querySelector('button'); if(usar) usar.classList.add('coach-pulse');
+    // Pisca o botão "Vacina" (o primeiro da grade) até a pessoa tocar.
+    const vac=el.querySelector('[data-tipo="vacina"]'); if(vac) vac.classList.add('coach-pulse');
   }
   tourDesenharBalao(p);
   tourMostrar();
@@ -5240,7 +5651,7 @@ function telaAtualId(){
   return ['scr-login','scr-app','scr-faz','scr-nova-senha','scr-sem-acesso','scr-boasvindas'].find(id=>$(id) && !$(id).classList.contains('hidden')) || null;
 }
 function viewAtual(){
-  return ['dash','lotes','cot','ajuda','conta','admin'].find(w=>$('nav-'+w) && $('nav-'+w).classList.contains('on')) || null;
+  return NAV_TELAS.find(w=>$('nav-'+w) && $('nav-'+w).classList.contains('on')) || null;
 }
 function campoEmFoco(){
   const a = document.activeElement;
