@@ -454,6 +454,18 @@
   .toque-lista button small{display:block;font-size:14px;font-weight:500;color:var(--cinza);margin-top:3px;line-height:1.4}
   .toque-grade button[aria-pressed="true"],.toque-lista button[aria-pressed="true"]{background:var(--verde-suave);border-color:var(--verde);color:var(--verde)}
   .toque-lista button[aria-pressed="true"]::before{content:"✅ "}
+  .toque-lista button:disabled{opacity:.55}
+  .toque-grade button .cp-dica{display:block;font-size:13px;font-weight:500;color:var(--cinza)}
+  /* Compras da fazenda (10/11/2026) */
+  .compra{padding:14px 0;border-bottom:1px solid var(--linha)}
+  .compra:last-of-type{border-bottom:none}
+  .compra .cp-topo{display:flex;justify-content:space-between;gap:10px;font-size:17px}
+  .compra .cp-topo b{white-space:nowrap}
+  .compra .cp-desc{font-size:16px;color:var(--cinza);margin-top:2px;overflow-wrap:anywhere}
+  .compra .cp-pe{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px}
+  .compra .pill{font-size:13px;padding:4px 10px;text-transform:none;letter-spacing:0;background:var(--bg);color:var(--texto)}
+  .compra .pill.cp-faz{background:var(--verde-suave);color:var(--verde)}
+  .compra .cp-mexer{display:flex;gap:6px}
   .selo-obrig{display:inline-block;background:var(--vermelho);color:#fff;font-size:12px;font-weight:800;padding:2px 9px;border-radius:999px;margin-left:6px;vertical-align:middle}
   .san-dia{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:16px;font-size:18px;font-weight:800}
   .san-dia button{width:auto;min-height:48px;padding:8px 16px;border-radius:12px;background:var(--bg);color:var(--texto);border:2px solid var(--linha);font-size:18px;font-weight:800}
@@ -696,6 +708,7 @@
       <button type="button" class="menu-fechar" onclick="fecharMenu()">✕ Fechar</button></div>
     <button type="button" class="on" id="nav-dash" aria-current="page" onclick="menuIr('dash')"><span class="ico" aria-hidden="true">🏠</span>Início</button>
     <button type="button" id="nav-lotes" onclick="menuIr('lotes')"><span class="ico" aria-hidden="true">🐂</span>Meus lotes</button>
+    <button type="button" id="nav-compras" onclick="menuIr('compras')"><span class="ico" aria-hidden="true">🛒</span>Compras</button>
     <button type="button" id="nav-cot" onclick="menuIr('cot')"><span class="ico" aria-hidden="true">📈</span>Cotação</button>
     <button type="button" id="nav-contatos" onclick="menuIr('contatos')"><span class="ico" aria-hidden="true">📞</span>Contatos</button>
     <button type="button" id="nav-ajuda" onclick="menuIr('ajuda')"><span class="ico" aria-hidden="true">💬</span>Ajuda</button>
@@ -809,7 +822,7 @@ function screen(s){['scr-login','scr-app','scr-faz','scr-nova-senha','scr-sem-ac
 }
 function fmtData(d){ if(!d) return '—'; const [y,m,day]=String(d).split('-'); return `${day}/${m}/${y}`; }
 function fmtDataHora(ts){ if(!ts) return '—'; const d=new Date(ts); return d.toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}); }
-const NAV_TELAS=['dash','lotes','cot','contatos','ajuda','conta','admin'];
+const NAV_TELAS=['dash','lotes','compras','cot','contatos','ajuda','conta','admin'];
 function setNav(w){
   // Os itens moram no menu de três traços; o da tela atual fica marcado.
   NAV_TELAS.forEach(k=>{
@@ -817,6 +830,8 @@ function setNav(w){
     b.classList.toggle('on',w===k);
     if(w===k) b.setAttribute('aria-current','page'); else b.removeAttribute('aria-current');
   });
+  // Compras é dinheiro da fazenda: só o dono vê o item (funcionário não).
+  $('nav-compras')?.classList.toggle('hidden', ehEquipe());
   // App simples: letra e botão maiores em todas as telas, menos no Admin (fica como era).
   $('app-body')?.classList.toggle('simples',w!=='admin');
   // Faixa "instale no celular" mora só no Início, até instalar.
@@ -831,6 +846,7 @@ function abrirMenu(){
   if(typeof TOUR!=='undefined' && TOUR.aberto) return;
   const ov=$('menu-overlay'), p=$('menu-painel'); if(!ov||!p) return;
   MENU_FOCO_ANTES=document.activeElement;
+  $('nav-compras')?.classList.toggle('hidden', ehEquipe());
   ov.classList.remove('hidden');
   $('menu-btn')?.setAttribute('aria-expanded','true');
   (p.querySelector('button.on:not(.hidden)')||p).focus();
@@ -845,7 +861,7 @@ function fecharMenu(devolverFoco=true){
 function menuIr(w){
   fecharMenu(false);
   window.scrollTo({top:0});
-  ({dash:renderDashboard, lotes:renderLotes, cot:renderCotacoes, contatos:renderContatos,
+  ({dash:renderDashboard, lotes:renderLotes, compras:renderCompras, cot:renderCotacoes, contatos:renderContatos,
     ajuda:renderAjuda, conta:renderConta, admin:renderAdmin}[w]||renderDashboard)();
 }
 function menuSair(){ fecharMenu(false); logout(); }
@@ -926,7 +942,7 @@ async function logout(){
   fecharSeletorFazenda();
   FAZENDAS=[]; FAZENDA=null; FAZENDA_COBRANCA_ID=null; ASSINATURAS_CONTA=[]; USUARIO_ID=null;
   FAZENDAS_EQUIPE=[]; NOMES_EQUIPE={}; EQUIPE_DADOS=null; CONVITE_RESULTADO=null;
-  limparContatos();
+  limparContatos(); limparCompras();
   const cb=$('convite-banner'); if(cb){ cb.classList.add('hidden'); cb.innerHTML=''; }
   const barra=$('faz-barra'); if(barra){ barra.classList.add('hidden'); barra.innerHTML=''; }
   await db.auth.signOut(); screen('scr-login');
@@ -3145,12 +3161,14 @@ async function renderDashboard(){
   if(ehEquipe()) return renderDashboardEquipe();
   setNav('dash');
   const body=$('app-body'); body.innerHTML='<p class="mut center" style="padding:30px">Carregando…</p>';
-  const [{data:lotes,error},{data:vacinasProx},{data:custos},{data:sans}]=await Promise.all([
+  const [{data:lotes,error},{data:vacinasProx},{data:custos},{data:sans},comprasFaz]=await Promise.all([
     db.from('vw_lote_analise').select('*').eq('fazenda_id',FAZENDA.id).order('nome'),
     db.from('sanitario').select('*, lote:lote_id!inner(nome, fazenda_id)').eq('lote.fazenda_id',FAZENDA.id).not('proxima_data','is',null).lte('proxima_data',addDias(hoje(),14)).order('proxima_data'),
     // Painel de dinheiro: todos os custos e o custo do sanitário da fazenda (RLS do dono já filtra).
     db.from('custo').select('valor, categoria, data, lote:lote_id!inner(fazenda_id)').eq('lote.fazenda_id',FAZENDA.id),
     db.from('sanitario').select('custo, data, lote:lote_id!inner(fazenda_id)').eq('lote.fazenda_id',FAZENDA.id).not('custo','is',null),
+    // Compras da fazenda toda (10/11/2026): entram no Gastou da fazenda, em lote nenhum.
+    carregarComprasFazenda(FAZENDA.id),
   ]);
   if(error){ body.innerHTML=`<div class="msg err">${esc(error.message)}</div>`; return; }
   const todos=lotes||[];
@@ -3179,7 +3197,8 @@ async function renderDashboard(){
   const comPreco=ativos.filter(l=>l.preco_arroba_usado!=null);
   const precoMedio=comPreco.reduce((s,l)=>s+Number(l.preco_arroba_usado||0),0)/Math.max(comPreco.length,1);
 
-  const din=contaDinheiro(todos,custos||[],sans||[]);
+  const din=contaDinheiro(todos,custos||[],sans||[],comprasFaz||[]);
+  din.comprasFalhou=(comprasFaz===null); // falhou agora: avisa, não finge que é zero
   // App simples (09/11/2026): na frente só o trio Gastou / Vale hoje / Sobra e a
   // pizza. O lucro aparece de UM jeito só (o trio). Mês a mês, lotes, avisos e
   // os outros cartões continuam, dentro de "Ver mais". Nenhuma conta mudou.
@@ -3301,21 +3320,27 @@ function fraseArroba(lotes){
   if(!ref.length) return `@ ${lotes.length>1?'média ':''}${brl(media)}, preço que você informou`;
   return `@ média ${brl(media)}, entre o preço que você informou e a Scot Consultoria`;
 }
-function contaDinheiro(lotes,custos,sans){
+function contaDinheiro(lotes,custos,sans,comprasFaz=[]){
   const ativos=lotes.filter(l=>l.ativo!==false), vendidos=lotes.filter(l=>l.ativo===false);
   const semCompra=ativos.filter(loteSemCompra);
   const semCotacao=ativos.filter(l=>!loteSemCompra(l) && valorLoteHoje(l)==null);
   const naConta=ativos.filter(l=>!loteSemCompra(l) && valorLoteHoje(l)!=null);
   const recebido=vendidos.reduce((s,l)=>s+(Number(l.receita_venda_total)||0),0);
   const estimado=naConta.reduce((s,l)=>s+valorLoteHoje(l),0);
-  const gastou=[...naConta,...vendidos].reduce((s,l)=>s+gastouLote(l),0);
-  const valeHoje=recebido+estimado, sobra=valeHoje-gastou;
   const temConta=(naConta.length+vendidos.length)>0;
+  // Compras da fazenda toda (tabela compra_fazenda): somam no Gastou da FAZENDA e
+  // por isso diminuem o Sobra da fazenda. Não entram na conta de nenhum lote nem
+  // no preço de empate (esses vêm da vw_lote_analise, que não lê essa tabela).
+  const comprasFazenda=comprasFaz.reduce((s,c)=>s+(Number(c.valor)||0),0);
+  const gastouLotes=[...naConta,...vendidos].reduce((s,l)=>s+gastouLote(l),0);
+  const gastou=gastouLotes+(temConta?comprasFazenda:0);
+  const valeHoje=recebido+estimado, sobra=valeHoje-gastou;
   // Para onde foi o dinheiro: tudo o que foi lançado (compra + custos + sanitário).
   const porCat={}; CATEGORIAS_DINHEIRO.forEach(c=>{ porCat[c.chave]=0; });
   lotes.forEach(l=>{ porCat.compra+=compraLote(l); });
   custos.forEach(c=>{ const k=(c.categoria in porCat && c.categoria!=='compra')?c.categoria:'outro'; porCat[k]+=Number(c.valor)||0; });
   sans.forEach(s=>{ porCat.sanitario+=Number(s.custo)||0; });
+  comprasFaz.forEach(c=>{ const k=(c.categoria in porCat && c.categoria!=='compra')?c.categoria:'outro'; porCat[k]+=Number(c.valor)||0; });
   const categorias=CATEGORIAS_DINHEIRO.map(c=>({...c, valor:porCat[c.chave]})).filter(c=>c.valor>0);
   // Gasto mês a mês: compra no mês da entrada, custos e sanitário pela data.
   const meses=ultimosMeses(6), idx={};
@@ -3324,6 +3349,7 @@ function contaDinheiro(lotes,custos,sans){
   lotes.forEach(l=>soma(l.data_inicial, compraLote(l)));
   custos.forEach(c=>soma(c.data, Number(c.valor)||0));
   sans.forEach(s=>soma(s.data, Number(s.custo)||0));
+  comprasFaz.forEach(c=>soma(c.data, Number(c.valor)||0));
 
   // valeSem/fonte: os mesmos números da frase, soltos, para a tela simples
   // mostrar em bloco (nenhuma conta nova).
@@ -3343,7 +3369,7 @@ function contaDinheiro(lotes,custos,sans){
   const notas=[];
   if(semCompra.length && temConta) notas.push(`${semCompra.length} lote(s) sem o valor de compra não entram na conta.`);
   if(semCotacao.length) notas.push(`${semCotacao.length} lote(s) sem cotação da @ não entram na conta.`);
-  return {gastou, valeHoje, recebido, estimado, sobra, temConta, frase, notas,
+  return {gastou, gastouLotes, comprasFazenda, valeHoje, recebido, estimado, sobra, temConta, frase, notas,
     valeSem, fonte:naConta.length?fraseArroba(naConta):fonteSem, temAtivos:ativos.length>0,
     loteSemCompraId:semCompra[0]?.lote_id||null, categorias, meses};
 }
@@ -3388,7 +3414,9 @@ function painelDinheiroPartes(d){
         <div class="din-bloco"><div class="lbl">${soVendido?'Recebeu':'Vale hoje'}</div><div class="val">${brl0(d.valeHoje)}</div>${d.recebido>0 && d.estimado>0?`<small>${brl0(d.recebido)} já recebidos + ${brl0(d.estimado)} do gado na fazenda</small>`:''}</div>
         <div class="din-bloco"><div class="lbl">${falta?'Falta (prejuízo)':'Sobra'}</div><div class="val ${falta?'neg':'pos'}">${brl0(Math.abs(d.sobra))}</div></div>
       </div>
-      ${d.estimado>0 && d.fonte?`<p class="din-nota">Vale hoje se vender com a ${d.fonte}.</p>`:''}`;
+      ${d.estimado>0 && d.fonte?`<p class="din-nota">Vale hoje se vender com a ${d.fonte}.</p>`:''}
+      ${d.comprasFalhou?'<p class="din-nota" id="din-compras-falhou">Não consegui somar as compras da fazenda toda agora. O Gastou acima está sem elas.</p>':''}
+      ${d.comprasFazenda>0?`<p class="din-nota" id="din-compras-faz">O Gastou inclui <b>${brl0(d.comprasFazenda)}</b> de compras da fazenda toda. Elas não entram na conta de nenhum lote. <a href="#" style="color:var(--verde);font-weight:700" onclick="menuIr('compras');return false">Ver compras</a></p>`:''}`;
   }else if(d.valeSem!=null){
     topo+=`<div class="din-bloco"><div class="lbl">Seu gado vale hoje</div><div class="val">${brl0(d.valeSem)}</div></div>
       <p class="din-nota">Conta feita com a ${d.fonte}.</p>`;
@@ -3410,7 +3438,7 @@ function painelDinheiroPartes(d){
         ${[...d.categorias].sort((a,b)=>b.valor-a.valor).map(c=>`<li><span class="sw" style="background:var(--cat-${c.chave})" aria-hidden="true"></span><span class="nm">${c.nome}</span><span class="vl">${brl0(c.valor)}</span><span class="pc">${pctTexto(c.valor/total*100)}</span></li>`).join('')}
         <li class="total"><span class="nm">Total lançado</span><span class="vl">${brl0(total)}</span><span class="pc">100%</span></li>
       </ul>
-    </div>${!ex && d.notas.length?'<p class="din-nota">Inclui o que foi lançado em todos os lotes.</p>':''}`
+    </div>${!ex && d.notas.length?'<p class="din-nota">Inclui o que foi lançado em todos os lotes.</p>':''}${!ex && d.comprasFazenda>0?'<p class="din-nota">Inclui as compras da fazenda toda.</p>':''}`
     :'<p class="mut">Nada lançado ainda. Diga quanto pagou pelo gado e lance os gastos: o desenho aparece aqui.</p>'}
   </div>`;
 
@@ -3838,7 +3866,7 @@ async function renderLote(id){
           <button class="btn ghost mini" onclick="editPesagem('${id}','${p.id}','${p.data}',${p.peso_medio_kg})">Corrigir</button>
           <button class="btn ghost mini" onclick="delPesagem('${id}','${p.id}',this)">Apagar</button>
         </span></div>`}));
-  const lCus=(cus||[]).map(c=>({d:c.data, h:`<div class="list-item"><span>${fmtData(c.data)} · ${fechado?'💵 ':''}${catNome(c)}${autorDonoHTML(c)}</span>
+  const lCus=(cus||[]).map(c=>({d:c.data, h:`<div class="list-item"><span>${fmtData(c.data)} · ${fechado?'💵 ':''}${catNome(c)}${autorDonoHTML(c)}${c.descricao?`<br><small class="mut cus-desc">${esc(c.descricao)}</small>`:''}</span>
         <span style="text-align:right"><b>${brl(c.valor)}</b><br>
           <button class="btn ghost mini" onclick="editCusto('${id}','${c.id}','${c.data}',${esc(JSON.stringify(String(c.categoria??'')))},${Number(c.valor)})">Corrigir</button>
           <button class="btn ghost mini" onclick="delCusto('${id}','${c.id}',this)">Apagar</button>
@@ -4554,6 +4582,255 @@ async function apagarContato(id,btn){
   if(error) return msg('contatos-msg',erroContato(error));
   await renderContatos();
   pwaToast('Contato apagado.');
+}
+
+// ---------- compras da fazenda (10/11/2026) ----------
+// Pedido dela: o fazendeiro pensa no rebanho todo. Aqui ele lança a compra e, SE
+// QUISER, diz para qual lote foi. Sem estoque, sem quantidade.
+//  · compra COM lote  = linha normal da tabela custo (a mesma do botão Gastei):
+//    entra na conta do lote como sempre e aparece no histórico do Gastei;
+//  · compra SEM lote ("Fazenda toda") = tabela compra_fazenda: soma no Gastou da
+//    fazenda (Início) e não entra na conta de nenhum lote.
+// Só o dono vê esta tela (funcionário não vê o dinheiro da fazenda). Trocar o
+// destino de uma compra já lançada passa pela RPC compra_mover (uma transação só).
+// Texto do usuário nunca vai dentro de onclick: os botões levam só a chave, e os
+// dados vêm do cache COMPRA_MAP.
+const COMPRA_CATS=[
+  {v:'alimentacao', ico:'🌾', nome:'Comida', dica:'sal, ração'},
+  {v:'sanitario',   ico:'💉', nome:'Vacina e remédio'},
+  {v:'mao_obra',    ico:'👷', nome:'Mão de obra'},
+  {v:'operacional', ico:'⛽', nome:'Combustível e manutenção'},
+  {v:'fixo',        ico:'🧾', nome:'Conta fixa', dica:'luz, arrendamento'},
+  {v:'outro',       ico:'📦', nome:'Outro'},
+];
+// COMPRAS_FAZ_OK: true = o banco tem a tabela compra_fazenda; false = ainda não tem; null = não sei (ou falhou agora).
+let COMPRAS_FAZ_OK=null, COMPRAS=[], COMPRA_MAP={}, COMPRAS_LOTES=[], COMPRAS_ERRO=false, COMPRAS_MES='';
+let EDIT_COMPRA=null, COMPRA_FORM={cat:null,dest:null}; // dest: '' = fazenda toda; id do lote; null = nada escolhido
+function compraCat(v){ return COMPRA_CATS.find(c=>c.v===v) || COMPRA_CATS[COMPRA_CATS.length-1]; }
+function limparCompras(){ COMPRAS=[]; COMPRA_MAP={}; COMPRAS_LOTES=[]; COMPRAS_ERRO=false; COMPRAS_MES=''; EDIT_COMPRA=null; COMPRA_FORM={cat:null,dest:null}; COMPRAS_FAZ_OK=null; }
+// Compras da fazenda toda. Devolve [] quando o banco ainda não tem a tabela (o app
+// segue como antes) e null quando falhou agora (quem chama avisa, não finge zero).
+async function carregarComprasFazenda(fid, forcar){
+  if(!fid || ehEquipe()) return [];
+  if(COMPRAS_FAZ_OK===false && !forcar) return [];
+  const {data,error}=await db.from('compra_fazenda').select('id,data,categoria,descricao,valor,criado_em').eq('fazenda_id',fid);
+  if(error){
+    if(erroColunaOuTabelaAusente(error)){ COMPRAS_FAZ_OK=false; return []; }
+    COMPRAS_FAZ_OK=null; return null;
+  }
+  COMPRAS_FAZ_OK=true;
+  return data||[];
+}
+async function carregarCompras(){
+  const fid=FAZENDA.id;
+  const [lot,cus,cf]=await Promise.all([
+    db.from('lote').select('id,nome,data_saida').eq('fazenda_id',fid).order('nome'),
+    db.from('custo').select('id,lote_id,data,categoria,descricao,valor,criado_em, lote:lote_id!inner(fazenda_id)').eq('lote.fazenda_id',fid),
+    carregarComprasFazenda(fid,true),
+  ]);
+  if(fid!==FAZENDA?.id) return false; // trocou de fazenda no meio
+  COMPRAS_ERRO=!!(lot.error || cus.error || cf===null);
+  COMPRAS_LOTES=lot.data||[];
+  const linha=(c,origem)=>({id:c.id, origem, lote_id:origem==='lote'?c.lote_id:null, data:c.data, categoria:c.categoria,
+    descricao:c.descricao||null, valor:Number(c.valor)||0, criado_em:c.criado_em||'', k:origem+':'+c.id});
+  COMPRAS=[...(cf||[]).map(c=>linha(c,'fazenda')), ...((cus.data)||[]).map(c=>linha(c,'lote'))]
+    .sort((a,b)=>String(b.data).localeCompare(String(a.data)) || String(b.criado_em).localeCompare(String(a.criado_em)));
+  COMPRA_MAP={}; COMPRAS.forEach(c=>{ COMPRA_MAP[c.k]=c; });
+  return true;
+}
+function compraLotePorId(id){ return COMPRAS_LOTES.find(l=>l.id===id) || null; }
+function comprasLotesAtivos(){ return COMPRAS_LOTES.filter(l=>!l.data_saida); }
+function erroCompra(error){
+  const m=String(error?.message||''), c=error?.code;
+  if(/TRIAL_EXPIRADO/.test(m) || c==='P1004') return 'Esta fazenda está só para consulta agora. As compras continuam aqui, mas não dá para mexer.';
+  if(c==='PGRST202' || erroColunaOuTabelaAusente(error)) return 'Esta parte chega em breve. Por enquanto, apague esta compra e lance de novo no lugar certo.';
+  if(c==='42501' || /row-level security/i.test(m)) return 'Você não pode mexer nesta compra.';
+  if(c==='23514') return 'Confira o valor e o tipo da compra e tente de novo.';
+  return 'Não consegui salvar agora. Confira a internet e tente de novo.';
+}
+function compraEtiquetaHTML(c){
+  if(c.origem==='fazenda') return '<span class="pill cp-faz">Fazenda toda</span>';
+  const l=compraLotePorId(c.lote_id);
+  return `<span class="pill">🐂 ${esc(l?l.nome:'Lote')}${l&&l.data_saida?' (vendido)':''}</span>`;
+}
+function compraHTML(c, lerSo){
+  const cat=compraCat(c.categoria);
+  return `<div class="compra" data-origem="${c.origem}">
+      <div class="cp-topo"><span>${fmtData(c.data)} · ${cat.nome}</span><b>${brl(c.valor)}</b></div>
+      ${c.descricao?`<div class="cp-desc">${esc(c.descricao)}</div>`:''}
+      <div class="cp-pe">${compraEtiquetaHTML(c)}
+        ${lerSo?'':`<span class="cp-mexer">
+          <button type="button" class="btn ghost mini" data-k="${esc(c.k)}" onclick="abrirFormCompra(this.dataset.k)">Corrigir</button>
+          <button type="button" class="btn ghost mini" data-k="${esc(c.k)}" onclick="apagarCompra(this.dataset.k,this)">Apagar</button>
+        </span>`}
+      </div>
+    </div>`;
+}
+// Resumo de 3 números + lista, já com o filtro de mês (tudo no aparelho, sem ir ao banco).
+function comprasListaHTML(){
+  const lerSo=contatosSoLeitura();
+  const nomesMes=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+  const meses=[...new Set(COMPRAS.map(c=>String(c.data).slice(0,7)))].sort().reverse();
+  if(COMPRAS_MES && !meses.includes(COMPRAS_MES)) COMPRAS_MES='';
+  const lista=COMPRAS_MES?COMPRAS.filter(c=>String(c.data).slice(0,7)===COMPRAS_MES):COMPRAS;
+  const soma=f=>lista.filter(f).reduce((s,c)=>s+c.valor,0);
+  const total=soma(()=>true), lotes=soma(c=>c.origem==='lote'), faz=soma(c=>c.origem==='fazenda');
+  if(!COMPRAS.length){
+    return `<div class="card vazio" id="compras-vazio"><h2>Nenhuma compra lançada</h2>
+        <p>Comprou sal, ração, remédio, diesel? Lance aqui. Se quiser, diga para qual lote foi.</p></div>`;
+  }
+  const filtro=meses.length>1?`<label for="compras-mes" style="margin-top:0">Mostrar</label>
+      <select id="compras-mes" onchange="comprasFiltrarMes(this.value)">
+        <option value="">Tudo</option>
+        ${meses.map(m=>`<option value="${m}"${m===COMPRAS_MES?' selected':''}>${nomesMes[Number(m.slice(5,7))-1]||''} de ${m.slice(0,4)}</option>`).join('')}
+      </select>`:'';
+  return `<div class="card" id="compras-resumo">
+      <h3>Quanto comprou${COMPRAS_MES?' no mês':''}</h3>
+      ${filtro}
+      <div class="din-trio" style="margin-top:10px">
+        <div class="din-bloco"><div class="lbl">Total comprado</div><div class="val" id="cp-total">${brl0(total)}</div></div>
+        <div class="din-bloco"><div class="lbl">Foi para lotes</div><div class="val" id="cp-lotes">${brl0(lotes)}</div></div>
+        <div class="din-bloco"><div class="lbl">Fazenda toda</div><div class="val" id="cp-faz">${brl0(faz)}</div></div>
+      </div>
+    </div>
+    <div class="card" id="compras-lista">
+      <h3>O que já foi comprado</h3>
+      ${lista.map(c=>compraHTML(c,lerSo)).join('')}
+      <p class="din-nota">O que você pagou pelo gado e o custo lançado no botão Sanitário ficam dentro de cada lote e não aparecem nesta lista.</p>
+    </div>`;
+}
+function comprasFiltrarMes(v){
+  COMPRAS_MES=v||'';
+  const box=$('compras-box'); if(box) box.innerHTML=comprasListaHTML();
+}
+async function renderCompras(){
+  if(ehEquipe()) return renderLotesEquipe(); // funcionário não vê o dinheiro da fazenda
+  setNav('compras');
+  EDIT_COMPRA=null; COMPRA_FORM={cat:null,dest:null};
+  const body=$('app-body'); body.innerHTML='<p class="mut center" style="padding:30px">Carregando…</p>';
+  if(!FAZENDA?.id){ body.innerHTML='<div class="msg err">Abra uma fazenda para ver as compras.</div>'; return; }
+  const ok=await carregarCompras();
+  if(!ok || viewAtual()!=='compras') return; // a pessoa já foi para outra tela ou outra fazenda
+  const titulo=`<div class="nome" style="font-size:22px;margin:10px 0 4px">🛒 Compras da fazenda</div>
+    <p class="mut" style="margin-bottom:12px">Tudo o que a ${esc(FAZENDA.nome)} comprou. Dizer o lote é opcional.</p>`;
+  if(COMPRAS_ERRO){
+    body.innerHTML=`${titulo}<div class="msg err" style="font-size:16px">Não consegui carregar as compras agora. Confira a internet e tente de novo.</div>
+      <button class="btn sec" style="margin-top:12px" onclick="renderCompras()">Tentar de novo</button>`;
+    return;
+  }
+  const lerSo=contatosSoLeitura();
+  const semFaz=COMPRAS_FAZ_OK!==true;
+  const podeLancar=!lerSo && (!semFaz || comprasLotesAtivos().length>0);
+  const form=lerSo?'':`
+    <div class="card acao-form hidden" id="compra-form">
+      <h3 id="compra-form-titulo">🛒 Nova compra</h3>
+      <div class="toque-perg" id="compra-cat-rot">O que comprou?</div>
+      <div class="toque-grade" role="group" aria-labelledby="compra-cat-rot">
+        ${COMPRA_CATS.map(c=>`<button type="button" data-cat="${c.v}" aria-pressed="false" onclick="compraEscolherCat('${c.v}')"><span class="ico" aria-hidden="true">${c.ico}</span><span>${c.nome}${c.dica?`<small class="cp-dica">${c.dica}</small>`:''}</span></button>`).join('')}
+      </div>
+      <label for="compra-valor">Quanto pagou? (R$)</label>
+      <input id="compra-valor" type="number" inputmode="decimal" min="0" step="0.01" placeholder="Ex: 850" />
+      <label for="compra-data">Em que dia?</label>
+      <input id="compra-data" type="date" value="${hoje()}" max="${hoje()}" />
+      <label for="compra-desc">O que foi? (se quiser)</label>
+      <input id="compra-desc" maxlength="200" autocomplete="off" placeholder="Ex: 20 sacos de sal" />
+      <div class="toque-perg" id="compra-dest-rot">Foi para algum lote?</div>
+      <p class="mut" style="margin:-4px 0 8px">Não precisa dizer. Se foi para a fazenda inteira, deixe em Fazenda toda.</p>
+      <div class="toque-lista" id="compra-dest" role="group" aria-labelledby="compra-dest-rot"></div>
+      <div id="compra-msg"></div>
+      <button type="button" class="btn btn-grande" id="compra-salvar" style="margin-top:16px" onclick="salvarCompra()">Salvar compra</button>
+      <button type="button" class="btn ghost" style="width:100%;margin-top:6px" onclick="fecharFormCompra()">Cancelar</button>
+      <div class="ajuda">Vacina ou remédio que você já lançou no botão Sanitário do lote não precisa lançar aqui de novo, para não contar duas vezes.</div>
+    </div>`;
+  body.innerHTML=`${titulo}
+    ${lerSo?'<div class="msg err" style="font-size:15px;margin-bottom:10px">Esta fazenda está só para consulta. Dá para ver as compras, mas não para mexer.</div>':''}
+    ${podeLancar?'<button type="button" class="btn btn-grande" id="compra-nova" style="margin-bottom:12px" onclick="abrirFormCompra()">🛒 Lancei uma compra</button>':''}
+    ${!lerSo && !podeLancar?'<div class="msg ok" id="compras-em-breve" style="display:block;font-size:16px;margin-bottom:12px">A compra da fazenda toda chega em breve. Por enquanto, para lançar uma compra, cadastre um lote e escolha esse lote aqui.</div>':''}
+    ${form}
+    <div id="compras-msg"></div>
+    <div id="compras-box">${comprasListaHTML()}</div>
+    <div style="height:30px"></div>`;
+}
+// Botões de destino: Fazenda toda + um por lote na fazenda. Ao corrigir a compra
+// de um lote já vendido, esse lote também aparece (para não perder de onde ela é).
+function compraDestHTML(loteExtra){
+  const semFaz=COMPRAS_FAZ_OK!==true;
+  const lotes=comprasLotesAtivos();
+  const extra=loteExtra && !lotes.some(l=>l.id===loteExtra) ? compraLotePorId(loteExtra) : null;
+  const btn=(dest,rotulo,dica,desligado)=>`<button type="button" data-dest="${esc(dest)}" aria-pressed="false"${desligado?' disabled':''} onclick="compraEscolherDestino(this.dataset.dest)">${rotulo}${dica?`<small>${dica}</small>`:''}</button>`;
+  return btn('', '🏡 Fazenda toda', semFaz?'Chega em breve. Por enquanto, escolha um lote.':'Não entra na conta de nenhum lote.', semFaz)
+    + lotes.map(l=>btn(l.id, '🐂 '+esc(l.nome), '', false)).join('')
+    + (extra?btn(extra.id, '🐂 '+esc(extra.nome), 'Lote já vendido.', false):'');
+}
+function compraEscolherCat(v){
+  COMPRA_FORM.cat=v;
+  document.querySelectorAll('#compra-form [data-cat]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.cat===v)));
+}
+function compraEscolherDestino(v){
+  COMPRA_FORM.dest=v;
+  document.querySelectorAll('#compra-dest [data-dest]').forEach(b=>b.setAttribute('aria-pressed',String(v!==null && b.dataset.dest===v)));
+}
+function abrirFormCompra(k){
+  if(!podeEditar()) return;
+  const f=$('compra-form'); if(!f) return;
+  const c=k?COMPRA_MAP[k]:null;
+  EDIT_COMPRA=c?c.k:null;
+  $('compra-form-titulo').textContent=c?'🛒 Corrigir compra':'🛒 Nova compra';
+  $('compra-valor').value=c?c.valor:''; $('compra-data').value=c?c.data:hoje(); $('compra-desc').value=c?(c.descricao||''):'';
+  compraEscolherCat(c?compraCat(c.categoria).v:null);
+  $('compra-dest').innerHTML=compraDestHTML(c&&c.origem==='lote'?c.lote_id:null);
+  // Padrão: Fazenda toda já marcada. Banco sem a tabela nova: nada marcado, a pessoa escolhe o lote.
+  compraEscolherDestino(c ? (c.origem==='fazenda'?'':c.lote_id) : (COMPRAS_FAZ_OK===true?'':null));
+  $('compra-salvar').textContent=c?'Salvar a correção':'Salvar compra';
+  $('compra-msg').innerHTML='';
+  f.classList.remove('hidden');
+  $('compra-nova')?.classList.add('hidden');
+  f.scrollIntoView({behavior:'smooth',block:'start'});
+}
+function fecharFormCompra(){
+  EDIT_COMPRA=null; COMPRA_FORM={cat:null,dest:null};
+  $('compra-form')?.classList.add('hidden');
+  $('compra-nova')?.classList.remove('hidden');
+}
+async function salvarCompra(){
+  if(!podeEditar()) return;
+  const valor=parseFloat($('compra-valor').value), data=$('compra-data').value, descricao=$('compra-desc').value.trim().slice(0,200)||null;
+  const cat=COMPRA_FORM.cat, dest=COMPRA_FORM.dest;
+  if(!COMPRA_CATS.some(c=>c.v===cat)) return msg('compra-msg','Toque no que você comprou: comida, vacina, mão de obra…');
+  if(!valor||valor<=0) return msg('compra-msg','Coloque quanto pagou, em reais.');
+  if(!data||data>hoje()) return msg('compra-msg','Compra no futuro? Confira o dia.');
+  if(dest===null || (dest==='' && COMPRAS_FAZ_OK!==true)) return msg('compra-msg','Toque no lote para onde foi a compra.');
+  if(dest!=='' && !compraLotePorId(dest)) return msg('compra-msg','Esse lote não está mais na fazenda. Escolha outro.');
+  const campos={data, categoria:cat, descricao, valor};
+  const ed=EDIT_COMPRA?COMPRA_MAP[EDIT_COMPRA]:null;
+  const btn=$('compra-salvar'); btn.disabled=true;
+  let error;
+  if(!ed){
+    ({error}=dest===''
+      ? await db.from('compra_fazenda').insert({fazenda_id:FAZENDA.id, ...campos})
+      : await db.from('custo').insert({lote_id:dest, ...campos}));
+  }else if((ed.origem==='fazenda'?'':ed.lote_id)===dest){
+    // Mesmo destino: corrige no lugar.
+    ({error}=await db.from(ed.origem==='fazenda'?'compra_fazenda':'custo').update(campos).eq('id',ed.id));
+  }else{
+    // Trocou o destino: o banco tira de um lugar e põe no outro de uma vez só.
+    ({error}=await db.rpc('compra_mover',{p_origem:ed.origem, p_id:ed.id, p_destino_lote:dest||null,
+      p_data:data, p_categoria:cat, p_descricao:descricao, p_valor:valor}));
+  }
+  btn.disabled=false;
+  if(error) return msg('compra-msg',erroCompra(error));
+  await renderCompras();
+  pwaToast(ed?'Compra corrigida.':'Compra lançada.');
+}
+async function apagarCompra(k,btn){
+  if(!podeEditar()) return;
+  const c=COMPRA_MAP[k]; if(!c) return;
+  if(btn.dataset.arm!=='1'){ btn.dataset.arm='1'; btn.textContent='Toque de novo para apagar'; btn.style.color='var(--vermelho)'; return; }
+  btn.disabled=true;
+  const {error}=await db.from(c.origem==='fazenda'?'compra_fazenda':'custo').delete().eq('id',c.id);
+  if(error){ btn.disabled=false; return msg('compras-msg',erroCompra(error)); }
+  await renderCompras();
+  pwaToast('Compra apagada.');
 }
 
 // ---------- gráfico de peso/GMD do lote ----------
